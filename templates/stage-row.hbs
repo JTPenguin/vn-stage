@@ -7,6 +7,7 @@
     <button type="button" class="vn-icon" data-action="adjust" data-tooltip="Adjust size and height"><i class="fa-solid fa-sliders"></i></button>
     <button type="button" class="vn-icon {{#if flip}}active{{/if}}" data-action="flip" data-tooltip="Flip"><i class="fa-solid fa-left-right"></i></button>
     <button type="button" class="vn-icon" data-action="switchSide" data-tooltip="Other side"><i class="fa-solid fa-arrow-right-arrow-left"></i></button>
+    {{#if @root.editing}}{{#unless inGroup}}<button type="button" class="vn-icon" data-action="addMember" data-tooltip="Add to this group"><i class="fa-solid fa-user-plus"></i></button>{{/unless}}{{/if}}
     <button type="button" class="vn-icon" data-action="remove" data-tooltip="Remove"><i class="fa-solid fa-xmark"></i></button>
   </span>
 </div>

@@ -10,6 +10,7 @@ import { isStage, makeStage, unmakeStage, setBackground, currentBackground } fro
 import { getCast, addToCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip } from "./cast.js";
 import { artIndex, characterArt, clearArtCache } from "./art.js";
 import { layout } from "./layout.js";
+import { listGroups, getGroup, memberNames, createGroup, addFolder, addMember, stageGroup, setStageGroup } from "./groups.js";
 import { startView, stopView, viewLocked, viewFitted } from "./view.js";
 import { StageWindow } from "./window.js";
 
@@ -17,11 +18,13 @@ Hooks.once("init", () => {
   registerSettings();
   foundry.applications.handlebars.loadTemplates({
     "vn-stage.row": `modules/${MODULE}/templates/stage-row.hbs`,
+    "vn-stage.bg": `modules/${MODULE}/templates/stage-bg.hbs`,
   });
   const api = {
     isStage, makeStage, unmakeStage, setBackground, currentBackground,
     getCast, addToCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip,
     artIndex, characterArt, clearArtCache, layout,
+    listGroups, getGroup, memberNames, createGroup, addFolder, addMember, stageGroup, setStageGroup,
     openWindow: () => StageWindow.open(),
     status,
   };
@@ -64,7 +67,8 @@ for (const hook of ["createTile", "updateTile", "deleteTile"]) {
 }
 
 Hooks.on("updateSetting", (setting) => {
-  if (setting.key === `${MODULE}.characterPrefs`) StageWindow.refresh();
+  const keys = ["characterPrefs", "groups", "recent"].map((k) => `${MODULE}.${k}`);
+  if (keys.includes(setting.key)) StageWindow.refresh();
 });
 
 // GM shortcut: drop an actor on the left or right half of a stage.

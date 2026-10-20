@@ -23,6 +23,22 @@ export function registerSettings() {
     filePicker: "image",
   });
 
+  // Groups: { [id]: { label, folders: [], add: [], remove: [], deleted } }. Members also come from manifest tags.
+  game.settings.register(MODULE, "groups", {
+    scope: "world",
+    config: false,
+    type: Object,
+    default: {},
+  });
+
+  // Characters put on a stage lately, newest first (the Recent group): { names: [] }.
+  game.settings.register(MODULE, "recent", {
+    scope: "world",
+    config: false,
+    type: Object,
+    default: { names: [] },
+  });
+
   // Which Stage window sections this GM has collapsed (this machine only).
   game.settings.register(MODULE, "collapsed", {
     scope: "client",

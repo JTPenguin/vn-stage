@@ -6,19 +6,65 @@
   </section>
   {{else}}
 
+  <section class="vn-groupbar">
+    <i class="fa-solid fa-layer-group" data-tooltip="Group: sets the Cast list and the Background strip"></i>
+    <select name="group" aria-label="Group">
+      <option value="" {{#if allSelected}}selected{{/if}}>All characters</option>
+      <option value="__recent" {{#if recentSelected}}selected{{/if}}>Recent</option>
+      {{#if groups.length}}
+      <optgroup label="Groups">
+        {{#each groups}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+      </optgroup>
+      {{/if}}
+    </select>
+    {{#if group}}{{#unless editing}}
+    <button type="button" class="vn-icon" data-action="editGroup" data-tooltip="Edit group"><i class="fa-solid fa-pen"></i></button>
+    {{/unless}}{{/if}}
+    <button type="button" class="vn-icon" data-action="newGroup" data-tooltip="New group"><i class="fa-solid fa-plus"></i></button>
+  </section>
+
+  {{#if editing}}
+  <div class="vn-editbar">
+    <span>Editing <strong>{{group.label}}</strong></span>
+    <button type="button" data-action="renameGroup">Rename</button>
+    <button type="button" data-action="deleteGroup">Delete</button>
+    <button type="button" class="vn-done" data-action="doneEditing"><i class="fa-solid fa-check"></i> Done</button>
+  </div>
+  {{/if}}
+
   <section class="vn-section vn-background {{#if collapsed.background}}collapsed{{/if}}" data-section="background">
     <h3 data-action="toggleSection"><i class="fa-solid fa-chevron-down vn-chevron"></i> Background</h3>
-    <div class="vn-bg-strip">
-      {{#each backgrounds.choices}}
-      <button type="button" class="vn-bg-choice {{#if current}}current{{/if}} {{#if pinned}}pinned{{/if}}" data-action="setBackground" data-src="{{src}}" data-tooltip="{{label}}" aria-label="{{label}}">
-        <img src="{{src}}" alt="" loading="lazy">
-        {{#if pinned}}<i class="fa-solid fa-house vn-bg-pin"></i>{{/if}}
-      </button>
+
+    {{#if editing}}
+    <ul class="vn-folder-chips">
+      {{#each group.folders}}
+      <li data-folder="{{this}}"><span>{{this}}</span><button type="button" class="vn-icon" data-action="removeFolder" data-tooltip="Remove this folder from the group"><i class="fa-solid fa-xmark"></i></button></li>
       {{/each}}
+      <li><button type="button" data-action="addFolder"><i class="fa-solid fa-folder-plus"></i> Add folder…</button></li>
+    </ul>
+    {{/if}}
+
+    {{#if bg.strips.[0].showHeading}}
+    <div class="vn-bg-strip">{{#each bg.pinned}}{{> "vn-stage.bg"}}{{/each}}</div>
+    {{#each bg.strips}}
+    <div class="vn-bg-folder-group {{#if collapsed}}collapsed{{/if}}" data-folder="{{folder}}">
+      <h4 data-action="toggleFolder"><i class="fa-solid fa-chevron-down vn-chevron"></i> {{heading}}</h4>
+      <div class="vn-bg-strip">{{#each choices}}{{> "vn-stage.bg"}}{{else}}<p class="vn-empty">No images</p>{{/each}}</div>
     </div>
+    {{/each}}
+    {{else}}
+    <div class="vn-bg-strip">
+      {{#each bg.pinned}}{{> "vn-stage.bg"}}{{/each}}
+      {{#each bg.strips}}{{#each choices}}{{> "vn-stage.bg"}}{{/each}}{{/each}}
+    </div>
+    {{/if}}
+
     <div class="vn-bg-row">
       <button type="button" data-action="browseBackground"><i class="fa-solid fa-folder-open"></i> Browse…</button>
-      <span class="vn-bg-folder">{{#if backgrounds.folder}}{{backgrounds.folder}}{{else}}Browse to a scenario's scene art to swap between its images here.{{/if}}</span>
+      <span class="vn-bg-folder">
+        {{#if bg.grouped}}{{#unless group.folders.length}}This group has no background folders yet. Add them with Edit group.{{/unless}}
+        {{else}}{{#if bg.folder}}{{bg.folder}}{{else}}Browse to a scenario's scene art to swap between its images here.{{/if}}{{/if}}
+      </span>
     </div>
   </section>
 
@@ -40,17 +86,29 @@
     <h3 data-action="toggleSection"><i class="fa-solid fa-chevron-down vn-chevron"></i> Cast
       <button type="button" class="vn-icon" data-action="refreshCast" data-tooltip="Re-read the art folder"><i class="fa-solid fa-rotate"></i></button>
     </h3>
-    <input type="search" name="filter" value="{{filter}}" placeholder="Search" autocomplete="off">
+    <div class="vn-cast-tools">
+      <input type="search" name="filter" value="{{filter}}" placeholder="Search" autocomplete="off">
+      {{#if editing}}
+      <button type="button" class="{{#if showEveryone}}active{{/if}}" data-action="toggleEveryone"><i class="fa-solid fa-users"></i> Show everyone</button>
+      {{/if}}
+    </div>
     <ul class="vn-cast-list">
       {{#each cast}}
-      <li data-name="{{name}}" data-search="{{search}}" class="{{#if onStage}}on-stage{{/if}}">
+      <li data-name="{{name}}" data-search="{{search}}" class="{{#if onStage}}on-stage{{/if}} {{#if @root.editing}}{{#unless member}}not-member{{/unless}}{{/if}}">
         <img src="{{thumb}}" alt="" loading="lazy">
         <span class="vn-name">{{name}}</span>
+        {{#if @root.editing}}
+          {{#if member}}
+          <button type="button" class="vn-icon" data-action="removeMember" data-tooltip="Remove from this group"><i class="fa-solid fa-user-minus"></i></button>
+          {{else}}
+          <button type="button" class="vn-icon" data-action="addMember" data-tooltip="Add to this group"><i class="fa-solid fa-user-plus"></i></button>
+          {{/if}}
+        {{/if}}
         <button type="button" data-action="add" data-side="left">Left</button>
         <button type="button" data-action="add" data-side="right">Right</button>
       </li>
       {{else}}
-      <li class="vn-empty">No characters found. Set the art folder in the module settings.</li>
+      <li class="vn-empty">{{emptyCast}}</li>
       {{/each}}
     </ul>
   </section>

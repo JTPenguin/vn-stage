@@ -94,12 +94,12 @@ const IMAGE = /\.(webp|png|jpe?g|avif|gif)$/i;
 const folderCache = new Map(); // folder → Promise<string[]>
 
 /** Folder part of a path, with its trailing slash. */
-function folderOf(path) {
+export function folderOf(path) {
   return path.slice(0, path.lastIndexOf("/") + 1);
 }
 
 /** Paths are kept decoded, as Foundry stores them; the file browser hands back encoded ones. */
-function decodePath(path) {
+export function decodePath(path) {
   try { return decodeURIComponent(path); } catch { return path; }
 }
 
@@ -113,10 +113,11 @@ export function backgroundFolder(scene = canvas.scene) {
  * quick-swap folder, except the default background's folder (the Lodge's also
  * holds its old layer images), so the scenario's scenes stay on offer.
  */
-export async function pickBackground(path, { scene = canvas.scene } = {}) {
+export async function pickBackground(path, { scene = canvas.scene, keepFolder = false } = {}) {
   requireGM();
   const src = decodePath(path);
   await setBackground(src, { scene });
+  if (keepFolder) return; // a stage with a group keeps the group's folders
   const folder = folderOf(src);
   const safety = safetyBackground();
   if (!folder || folder === (safety && folderOf(safety))) return;

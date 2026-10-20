@@ -1,5 +1,6 @@
 import { MODULE } from "./constants.js";
 import { layout } from "./layout.js";
+import { noteRecent } from "./groups.js";
 
 /**
  * The cast is the source of truth for who stands on a stage: a scene flag
@@ -41,6 +42,7 @@ export async function addToCast({ name, actorUuid = null, side = "left", scene =
   } else {
     cast.push({ id: foundry.utils.randomID(), name, actorUuid, side });
   }
+  await noteRecent(name);
   return saveCast(scene, cast);
 }
 

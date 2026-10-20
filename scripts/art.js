@@ -49,6 +49,7 @@ export async function characterArt(name) {
     faceBox: vn.face_box ?? null,
     adjust: vn.adjust ?? 1,
     size: vn.size ?? null,
+    groups: Array.isArray(m.groups) ? m.groups : [],
     expressions,
   };
 }

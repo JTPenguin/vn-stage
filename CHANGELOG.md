@@ -5,6 +5,10 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 ## [Unreleased]
 
 ### Added
+- Groups: a name, any number of background folders and its characters, chosen from the Group menu at the top of the Stage window (each stage remembers its group). Members come from the manifests' `groups` tags (written by the Character Art Pipeline), plus hand additions, minus hand removals. With a group selected, the Cast list shows its members and the Background strip shows all its folders (a collapsible heading per folder when there's more than one); Browse… then sets a one-off background without changing any folder.
+- Built-in menu entries: All characters (as before groups) and Recent (the last 24 characters put on any stage).
+- Edit group mode (pencil): Rename, Delete (confirmed), folder chips with remove and Add folder…, add or remove members (Show everyone lists non-members), and add from On stage rows. Normal mode shows none of these. New group (+) is always available.
+- API: `listGroups`, `getGroup`, `memberNames`, `createGroup`, `addFolder`, `addMember`, `stageGroup`, `setStageGroup` (for the Landing and E4).
 - Collapsible Stage window sections (Background, On stage, Cast): click a heading; the state is remembered on each machine (client setting).
 - Background quick swaps: the Stage window shows a thumbnail strip of every image in the stage's background folder, with the default background pinned first; one click swaps. Browsing to an image sets that folder (remembered per stage), except the default background's own folder. Hover shows the name without its number ("Absalom Docks").
 - Stage window (GM, scene-control button in the token controls): Make stage, the background (current image and a file browser), On stage (left and right columns with forward, back, flip, other side and remove), and the Cast list from the art folder with search and Left / Right buttons.

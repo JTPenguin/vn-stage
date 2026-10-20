@@ -1,11 +1,18 @@
 import { MODULE } from "./constants.js";
 import { artIndex, characterArt } from "./art.js";
 import { getCast, addToCast, removeFromCast, switchSide, moveInSide, characterPrefs, setFlip } from "./cast.js";
-import { isStage, makeStage, setBackground, currentBackground, pickBackground, backgroundFolder, folderImages, backgroundLabel } from "./stage.js";
+import {
+  isStage, makeStage, setBackground, currentBackground, pickBackground, backgroundFolder,
+  folderImages, backgroundLabel, decodePath,
+} from "./stage.js";
+import {
+  ALL, RECENT, listGroups, getGroup, memberNames, createGroup, renameGroup, deleteGroup,
+  addFolder, removeFolder, addMember, removeMember, stageGroup, setStageGroup,
+} from "./groups.js";
 import { safetyBackground } from "./settings.js";
 import { AdjustWindow } from "./adjust.js";
 
-const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 
 /** The Stage window: every GM control for the stage being viewed, in one place. */
 export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -13,7 +20,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     id: "vn-stage-window",
     classes: ["vn-stage"],
     window: { title: "VN Stage", icon: "fa-solid fa-masks-theater", resizable: true },
-    position: { width: 560, height: 720 },
+    position: { width: 560, height: 760 },
     actions: {
       makeStage: StageWindow.#onMakeStage,
       browseBackground: StageWindow.#onBrowseBackground,
@@ -27,6 +34,17 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       adjust: StageWindow.#onAdjust,
       refreshCast: StageWindow.#onRefreshCast,
       toggleSection: StageWindow.#onToggleSection,
+      toggleFolder: StageWindow.#onToggleFolder,
+      newGroup: StageWindow.#onNewGroup,
+      editGroup: StageWindow.#onEditGroup,
+      doneEditing: StageWindow.#onDoneEditing,
+      renameGroup: StageWindow.#onRenameGroup,
+      deleteGroup: StageWindow.#onDeleteGroup,
+      addFolder: StageWindow.#onAddFolder,
+      removeFolder: StageWindow.#onRemoveFolder,
+      addMember: StageWindow.#onAddMember,
+      removeMember: StageWindow.#onRemoveMember,
+      toggleEveryone: StageWindow.#onToggleEveryone,
     },
   };
 
@@ -39,19 +57,36 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     return this.#instance.render({ force: true });
   }
 
-  /** Re-render if open (the cast, background or scene changed). */
+  /** Re-render if open (the cast, background, groups or scene changed). */
   static refresh() {
     if (this.#instance?.rendered) this.#instance.render();
   }
 
   #filter = "";
+  #editing = false;      // Edit group mode: the rarely used group controls
+  #showEveryone = false; // in Edit group mode, list everyone, not just members
+  #groupLabel = null;
+
+  get title() {
+    return this.#groupLabel ? `VN Stage · ${this.#groupLabel}` : "VN Stage";
+  }
 
   async _prepareContext() {
     const scene = canvas.scene;
     const stage = isStage(scene);
-    const context = { sceneName: scene?.name ?? "", stage, filter: this.#filter, collapsed: game.settings.get(MODULE, "collapsed") };
+    const collapsed = game.settings.get(MODULE, "collapsed");
+    const context = { sceneName: scene?.name ?? "", stage, filter: this.#filter, collapsed };
+    this.#groupLabel = null;
     if (!stage) return context;
 
+    const index = await artIndex();
+    const selected = stageGroup(scene);
+    const group = getGroup(selected);
+    if (!group) this.#editing = false;
+    const editing = this.#editing;
+    this.#groupLabel = group?.label ?? (selected === RECENT ? "Recent" : null);
+
+    const members = new Set(group ? memberNames(group.id, index) : []);
     const cast = getCast(scene);
     const rows = await Promise.all(cast.map(async (e) => {
       const art = await characterArt(e.name);
@@ -61,30 +96,58 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
         thumb: art?.thumb ?? actor?.img ?? "icons/svg/mystery-man.svg",
         fallback: !art,
         flip: !!characterPrefs(e.name).flip,
+        inGroup: members.has(e.name),
       };
     }));
     const side = (s) => rows.filter((r) => r.side === s).map((r, i, all) => ({ ...r, first: i === 0, last: i === all.length - 1 }));
     const onStage = new Set(cast.map((e) => e.name));
-    const index = await artIndex();
+
+    // The Cast list: the group's members, Recent in its order, or everyone.
+    const byName = new Map(index.map((a) => [a.name, a]));
+    let names;
+    if (editing && this.#showEveryone) names = index.map((a) => a.name);
+    else names = memberNames(selected, index);
+    let list = names.map((n) => byName.get(n)).filter(Boolean);
+    if (selected !== RECENT) list.sort((a, b) => a.name.localeCompare(b.name));
 
     return {
       ...context,
-      background: currentBackground(scene),
-      backgrounds: await backgroundChoices(scene),
+      editing,
+      showEveryone: this.#showEveryone,
+      groups: listGroups(index).map((g) => ({ ...g, selected: g.id === selected })),
+      allSelected: selected === ALL,
+      recentSelected: selected === RECENT,
+      group,
+      bg: await backgroundStrips(scene, group, collapsed),
       left: side("left"),
       right: side("right"),
-      cast: index.map((a) => ({ name: a.name, thumb: a.thumb, onStage: onStage.has(a.name), search: a.name.toLowerCase() })),
+      cast: list.map((a) => ({
+        name: a.name, thumb: a.thumb, onStage: onStage.has(a.name), search: a.name.toLowerCase(), member: members.has(a.name),
+      })),
+      emptyCast: selected === ALL
+        ? "No characters found. Set the art folder in the module settings."
+        : selected === RECENT ? "Nobody yet: characters you put on a stage appear here."
+          : "Nobody in this group yet. Use Edit group to add characters, or tag them in the art pipeline.",
     };
   }
 
   _onRender(context, options) {
     super._onRender(context, options);
+    const title = this.window?.title;
+    if (title) title.textContent = this.title;
+
     const input = this.element.querySelector("input[name=filter]");
     input?.addEventListener("input", () => {
       this.#filter = input.value;
       this.#applyFilter();
     });
     this.#applyFilter();
+
+    this.element.querySelector("select[name=group]")?.addEventListener("change", async (event) => {
+      this.#editing = false;
+      this.#showEveryone = false;
+      await setStageGroup(event.target.value);
+    });
   }
 
   #applyFilter() {
@@ -100,10 +163,11 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async #onBrowseBackground() {
     const FilePicker = foundry.applications.apps.FilePicker.implementation;
+    const grouped = !!getGroup(stageGroup());
     new FilePicker({
       type: "image",
       current: currentBackground() ?? "",
-      callback: (path) => pickBackground(path),
+      callback: (path) => pickBackground(path, { keepFolder: grouped }),
     }).render({ force: true });
   }
 
@@ -148,25 +212,136 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     await game.settings.set(MODULE, "collapsed", all);
   }
 
+  /** Collapse or expand one folder's images in the Background strip (same memory as the sections). */
+  static async #onToggleFolder(_event, target) {
+    const strip = target.closest("[data-folder]");
+    const collapsed = strip.classList.toggle("collapsed");
+    const all = { ...game.settings.get(MODULE, "collapsed"), [`folder:${strip.dataset.folder}`]: collapsed };
+    await game.settings.set(MODULE, "collapsed", all);
+  }
+
   static async #onRefreshCast() {
     await artIndex({ refresh: true });
     this.render();
   }
+
+  /* ---------------------------------------- */
+  /*  Groups                                  */
+  /* ---------------------------------------- */
+
+  static async #onNewGroup() {
+    const name = await askName("New group", "");
+    if (!name) return;
+    const id = await createGroup(name);
+    this.#editing = true;
+    this.#showEveryone = false;
+    await setStageGroup(id);
+  }
+
+  static #onEditGroup() {
+    this.#editing = true;
+    this.render();
+  }
+
+  static #onDoneEditing() {
+    this.#editing = false;
+    this.#showEveryone = false;
+    this.render();
+  }
+
+  static async #onRenameGroup() {
+    const group = getGroup(stageGroup());
+    if (!group) return;
+    const label = await askName("Rename group", group.label);
+    if (label) await renameGroup(group.id, label);
+  }
+
+  static async #onDeleteGroup() {
+    const group = getGroup(stageGroup());
+    if (!group) return;
+    const ok = await DialogV2.confirm({
+      window: { title: "Delete group" },
+      rejectClose: false,
+      content: `<p>Delete the group <strong>${foundry.utils.escapeHTML(group.label)}</strong>? Its characters and folders stay; only the group goes.</p>`,
+    });
+    if (!ok) return;
+    this.#editing = false;
+    await deleteGroup(group.id);
+    await setStageGroup(ALL);
+  }
+
+  static async #onAddFolder() {
+    const group = getGroup(stageGroup());
+    if (!group) return;
+    const FilePicker = foundry.applications.apps.FilePicker.implementation;
+    new FilePicker({
+      type: "folder",
+      current: group.folders.at(-1) ?? backgroundFolder() ?? "",
+      callback: (path) => {
+        let folder = decodePath(path);
+        if (!folder.endsWith("/")) folder += "/";
+        return addFolder(group.id, folder);
+      },
+    }).render({ force: true });
+  }
+
+  static async #onRemoveFolder(_event, target) {
+    const group = getGroup(stageGroup());
+    if (group) await removeFolder(group.id, target.closest("[data-folder]").dataset.folder);
+  }
+
+  static async #onAddMember(_event, target) {
+    const group = getGroup(stageGroup());
+    if (group) await addMember(group.id, target.closest("[data-name]").dataset.name);
+  }
+
+  static async #onRemoveMember(_event, target) {
+    const group = getGroup(stageGroup());
+    if (group) await removeMember(group.id, target.closest("[data-name]").dataset.name);
+  }
+
+  static #onToggleEveryone() {
+    this.#showEveryone = !this.#showEveryone;
+    this.render();
+  }
 }
 
-/** The quick-swap strip: the default background pinned first, then the stage's folder. */
-async function backgroundChoices(scene) {
+/** A one-field name dialog; resolves to the trimmed name, or null. */
+async function askName(title, value) {
+  const name = await DialogV2.prompt({
+    window: { title },
+    content: `<input type="text" name="name" value="${foundry.utils.escapeHTML(value ?? "")}" autofocus>`,
+    ok: { label: "Save", callback: (_event, button) => button.form.elements.name.value },
+    rejectClose: false,
+  });
+  return name?.trim() || null;
+}
+
+/**
+ * The Background strips: the default background pinned first, then each of the
+ * group's folders (with a heading when there's more than one, or while editing),
+ * or the stage's own last-browsed folder when there's no group.
+ */
+async function backgroundStrips(scene, group, collapsed) {
   const current = currentBackground(scene);
   const safety = safetyBackground();
-  const folder = backgroundFolder(scene);
-  const images = (await folderImages(folder)).filter((src) => src !== safety);
-  const choices = images.map((src) => ({ src, label: backgroundLabel(src) }));
-  if (safety) choices.unshift({ src: safety, label: "Default background", pinned: true });
-  const same = (a, b) => !!a && !!b && safeDecode(a) === safeDecode(b);
-  for (const c of choices) c.current = same(c.src, current);
-  return { choices, folder };
+  const same = (a, b) => !!a && !!b && decodePath(a) === decodePath(b);
+  const choice = (src, label, pinned = false) => ({ src, label, pinned, current: same(src, current) });
+
+  const folders = group ? group.folders : [backgroundFolder(scene)].filter(Boolean);
+  const strips = await Promise.all(folders.map(async (folder) => ({
+    folder,
+    heading: group ? folderLabel(folder) : null,
+    collapsed: !!collapsed[`folder:${folder}`],
+    choices: (await folderImages(folder)).filter((src) => !same(src, safety)).map((src) => choice(src, backgroundLabel(src))),
+  })));
+  const pinned = safety ? [choice(safety, "Default background", true)] : [];
+  const showHeadings = !!group && strips.length > 1;
+  for (const s of strips) s.showHeading = showHeadings;
+  return { pinned, strips, folder: group ? null : folders[0] ?? null, grouped: !!group };
 }
 
-function safeDecode(path) {
-  try { return decodeURIComponent(path); } catch { return path; }
+/** ".../scenarios/99-1/scenes/" → "99-1/scenes". */
+function folderLabel(folder) {
+  return folder.replace(/\/$/, "").split("/").slice(-2).join("/");
 }
