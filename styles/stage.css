@@ -12,6 +12,7 @@
 .vn-stage .vn-icon { padding: 0 0.35rem; min-width: 1.75rem; height: 1.6rem; line-height: 1; }
 .vn-stage .vn-icon.active { background: var(--color-warm-2, #c9593f); color: #fff; }
 .vn-stage h3 .vn-icon { margin-left: auto; }
+.vn-stage h3 .vn-icon.vn-icon-tight { margin-left: 0; }
 .vn-stage .vn-section h3[data-action=toggleSection] { cursor: pointer; user-select: none; }
 .vn-stage .vn-chevron { font-size: 0.75em; width: 0.9em; transition: transform 0.15s ease; }
 .vn-stage .vn-section.collapsed .vn-chevron { transform: rotate(-90deg); }
@@ -28,12 +29,6 @@
 .vn-stage .vn-bg-choice:hover:not(.current) { border-color: var(--color-border-highlight, #ff6400aa); }
 .vn-stage .vn-bg-pin { position: absolute; top: 3px; left: 3px; font-size: 0.7rem; color: #fff; text-shadow: 0 0 3px #000; line-height: 1; }
 
-.vn-stage .vn-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
-.vn-stage .vn-row { display: grid; grid-template-columns: 2.25rem 1fr; grid-template-rows: auto auto; column-gap: 0.4rem; align-items: center; padding: 0.2rem 0; }
-.vn-stage .vn-row img { grid-row: span 2; width: 2.25rem; height: 2.25rem; object-fit: cover; object-position: top; border-radius: 3px; border: none; }
-.vn-stage .vn-row .vn-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.vn-stage .vn-tools { display: flex; gap: 2px; }
-.vn-stage .vn-fallback { opacity: 0.5; font-size: 0.8em; }
 
 .vn-stage .vn-cast { flex: 1; display: flex; flex-direction: column; min-height: 0; border-bottom: none; }
 .vn-stage .vn-cast input[type=search] { margin-bottom: 0.4rem; }
@@ -70,41 +65,45 @@
 .vn-stage .vn-cast-tools button.active { background: var(--color-warm-2, #c9593f); color: #fff; }
 .vn-stage .vn-cast-list li.not-member { opacity: 0.6; }
 
-/* Expression select in On stage rows */
-.vn-stage .vn-row { grid-template-rows: auto auto; }
-.vn-stage .vn-tools { flex-wrap: wrap; }
-.vn-stage .vn-expression-select { height: 1.6rem; flex: 1 1 5.5rem; min-width: 5.5rem; padding: 0 0.2rem; font-size: var(--font-size-12, 12px); }
 
-/* Expression strip (clicking a portrait on the canvas) */
-.vn-expression-strip {
+/* Character menu (clicking a portrait on the stage) */
+.vn-character-menu {
   position: fixed; z-index: 80; padding: 0.4rem; border-radius: 6px;
   background: rgba(20, 18, 24, 0.92); border: 1px solid rgba(255, 255, 255, 0.15);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5); color: #eee; font-family: var(--font-body, Signika, sans-serif);
 }
-.vn-expression-strip .vn-expression-name { font-size: 12px; opacity: 0.75; margin: 0 0.15rem 0.3rem; }
-.vn-expression-strip .vn-expression-list { display: grid; grid-template-columns: repeat(4, 64px); gap: 0.35rem; }
+.vn-character-menu .vn-menu-name { font-size: 12px; opacity: 0.75; margin: 0 0.15rem 0.3rem; }
+.vn-character-menu .vn-expression-list { display: grid; grid-template-columns: repeat(4, 64px); gap: 0.35rem; }
 /* Foundry gives every button a fixed height and a row layout; this one is a 60 px face over a label. */
-.vn-expression-strip button.vn-expression {
+.vn-character-menu button.vn-expression {
   display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px;
   width: 64px; height: auto; min-height: 0; max-height: none; padding: 0; margin: 0;
   border: 2px solid transparent; border-radius: 5px; background: none; box-shadow: none;
   color: inherit; cursor: pointer; line-height: 1.1; overflow: visible;
 }
-.vn-expression-strip button.vn-expression:hover { border-color: rgba(255, 255, 255, 0.4); }
-.vn-expression-strip button.vn-expression.current { border-color: #e0a64a; }
-.vn-expression-strip .vn-expression-face { display: block; flex: none; width: 60px; height: 60px; border-radius: 3px; background-color: #333; background-repeat: no-repeat; }
-.vn-expression-strip .vn-expression-label { font-size: 11px; padding-bottom: 2px; }
+.vn-character-menu button.vn-expression:hover { border-color: rgba(255, 255, 255, 0.4); }
+.vn-character-menu button.vn-expression.current { border-color: #e0a64a; }
+.vn-character-menu .vn-expression-face { display: block; flex: none; width: 60px; height: 60px; border-radius: 3px; background-color: #333; background-repeat: no-repeat; }
+.vn-character-menu .vn-expression-label { font-size: 11px; padding-bottom: 2px; }
 
 /* The Party and presets */
 .vn-stage .vn-party-icon { display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; border-radius: 3px; background: color-mix(in srgb, var(--color-warm-2, #c9593f) 25%, transparent); }
 .vn-stage .vn-cast-list li .vn-party-icon { width: 2rem; height: 2rem; }
-.vn-stage .vn-party-row .vn-party-icon { grid-row: span 2; }
-.vn-stage .vn-party-members { margin-left: 1rem; padding-left: 0.4rem; border-left: 2px solid color-mix(in srgb, var(--color-warm-2, #c9593f) 40%, transparent); }
-.vn-stage .vn-member img { width: 1.9rem; height: 1.9rem; }
-.vn-stage .vn-full { margin-bottom: 0.4rem; }
 .vn-stage .vn-preset-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.2rem; }
 .vn-stage .vn-preset-list li { display: flex; align-items: center; gap: 0.4rem; }
 .vn-stage .vn-preset-load { flex: 1; justify-content: flex-start; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vn-stage .vn-preset-group { font-size: var(--font-size-12, 12px); opacity: 0.65; }
 .vn-stage .vn-preset-delete { opacity: 0.55; }
 .vn-stage .vn-preset-delete:hover { opacity: 1; }
+
+.vn-character-menu .vn-menu-actions { display: flex; align-items: center; gap: 0.25rem; margin-top: 0.4rem; padding-top: 0.35rem; border-top: 1px solid rgba(255, 255, 255, 0.12); }
+.vn-character-menu .vn-expression-list + .vn-menu-actions { margin-top: 0.4rem; }
+.vn-character-menu button.vn-menu-action {
+  width: 1.9rem; height: 1.9rem; min-height: 0; padding: 0; margin: 0; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 4px; background: rgba(255, 255, 255, 0.06);
+  color: inherit; box-shadow: none; cursor: pointer; font-size: 0.85rem;
+}
+.vn-character-menu button.vn-menu-action:hover { background: rgba(255, 255, 255, 0.16); }
+.vn-character-menu button.vn-menu-action.active { border-color: #e0a64a; color: #e0a64a; }
+.vn-character-menu .vn-menu-divider { width: 1px; align-self: stretch; margin: 0 0.2rem; background: rgba(255, 255, 255, 0.15); }

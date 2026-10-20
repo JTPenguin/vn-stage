@@ -14,14 +14,13 @@ import { listGroups, getGroup, memberNames, createGroup, addFolder, addMember, s
 import { startView, stopView, viewLocked, viewFitted } from "./view.js";
 import { StageWindow } from "./window.js";
 import { listPresets, savePreset, loadPreset, deletePreset } from "./presets.js";
-import { setExpression, resetAllExpressions, currentExpression, preloadStage, startClicks, stopClicks, isRelayGM } from "./expressions.js";
+import { setExpression, resetAllExpressions, currentExpression, preloadStage, isRelayGM } from "./expressions.js";
+import { startClicks, stopClicks } from "./interact.js";
 
 Hooks.once("init", () => {
   registerSettings();
   foundry.applications.handlebars.loadTemplates({
-    "vn-stage.row": `modules/${MODULE}/templates/stage-row.hbs`,
     "vn-stage.bg": `modules/${MODULE}/templates/stage-bg.hbs`,
-    "vn-stage.party": `modules/${MODULE}/templates/stage-party.hbs`,
   });
   const api = {
     isStage, makeStage, unmakeStage, setBackground, currentBackground,

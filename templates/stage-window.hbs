@@ -85,31 +85,10 @@
     </div>
   </section>
 
-  <section class="vn-section {{#if collapsed.onStage}}collapsed{{/if}}" data-section="onStage">
-    <h3 data-action="toggleSection"><i class="fa-solid fa-chevron-down vn-chevron"></i> On stage
-      <button type="button" class="vn-icon" data-action="resetExpressions" data-tooltip="Reset everyone's expression to neutral, on every stage"><i class="fa-solid fa-face-meh"></i></button>
-    </h3>
-    {{#if full.length}}
-    <div class="vn-full">
-      <h4>Whole width</h4>
-      {{#each full}}{{> "vn-stage.row"}}{{/each}}
-    </div>
-    {{/if}}
-    <div class="vn-sides">
-      <div class="vn-side">
-        <h4>Left</h4>
-        {{#each left}}{{> "vn-stage.row"}}{{else}}<p class="vn-empty">Nobody</p>{{/each}}
-      </div>
-      <div class="vn-side">
-        <h4>Right</h4>
-        {{#each right}}{{> "vn-stage.row"}}{{else}}<p class="vn-empty">Nobody</p>{{/each}}
-      </div>
-    </div>
-  </section>
-
   <section class="vn-section vn-cast {{#if collapsed.cast}}collapsed{{/if}}" data-section="cast">
     <h3 data-action="toggleSection"><i class="fa-solid fa-chevron-down vn-chevron"></i> Cast
-      <button type="button" class="vn-icon" data-action="refreshCast" data-tooltip="Re-read the art folder"><i class="fa-solid fa-rotate"></i></button>
+      <button type="button" class="vn-icon" data-action="resetExpressions" data-tooltip="Reset everyone's expression to neutral, on every stage"><i class="fa-solid fa-face-meh"></i></button>
+      <button type="button" class="vn-icon vn-icon-tight" data-action="refreshCast" data-tooltip="Re-read the art folder"><i class="fa-solid fa-rotate"></i></button>
     </h3>
     <div class="vn-cast-tools">
       <input type="search" name="filter" value="{{filter}}" placeholder="Search" autocomplete="off">

@@ -5,6 +5,10 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 ## [Unreleased]
 
 ### Changed
+- Characters are worked on the stage itself: clicking a portrait opens its character menu (`scripts/interact.js`), with the expressions and, for the GM, a row of actions: Flip, Adjust, Add to group (while editing one), Remove; for a party member, The Party's left, right and whole-width sides and Remove The Party. Players still get only the expressions of characters they own.
+- The Stage window's On stage section is gone (its rows, expression menus and buttons); Reset everyone to neutral moves to the Cast heading.
+
+### Changed
 - Crowded stages zoom out around each face's centre instead of the ground: faces stay where they stood at full size and only shrink, so they don't sink behind bottom HUDs; bodies shrink upward. The face guide follows.
 
 ### Added

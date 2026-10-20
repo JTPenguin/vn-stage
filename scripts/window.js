@@ -1,6 +1,6 @@
 import { MODULE } from "./constants.js";
-import { artIndex, characterArt } from "./art.js";
-import { getCast, resolveCast, addToCast, addParty, removeFromCast, switchSide, moveInSide, characterPrefs, setFlip, hasParty, PARTY_LABEL } from "./cast.js";
+import { artIndex } from "./art.js";
+import { getCast, resolveCast, addToCast, addParty, hasParty, PARTY_LABEL } from "./cast.js";
 import { listPresets, savePreset, loadPreset, deletePreset, findPresetByName } from "./presets.js";
 import {
   isStage, makeStage, setBackground, currentBackground, pickBackground, backgroundFolder,
@@ -11,12 +11,14 @@ import {
   addFolder, removeFolder, addMember, removeMember, stageGroup, setStageGroup,
 } from "./groups.js";
 import { safetyBackground } from "./settings.js";
-import { AdjustWindow } from "./adjust.js";
-import { setExpression, resetAllExpressions, currentExpression } from "./expressions.js";
+import { resetAllExpressions } from "./expressions.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 
-/** The Stage window: every GM control for the stage being viewed, in one place. */
+/**
+ * The Stage window: the GM's controls for the stage being viewed (group, presets,
+ * background, cast). Characters on stage are worked on the stage itself (interact.js).
+ */
 export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = {
     id: "vn-stage-window",
@@ -28,12 +30,6 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       browseBackground: StageWindow.#onBrowseBackground,
       setBackground: StageWindow.#onSetBackground,
       add: StageWindow.#onAdd,
-      remove: StageWindow.#onRemove,
-      switchSide: StageWindow.#onSwitchSide,
-      forward: StageWindow.#onForward,
-      back: StageWindow.#onBack,
-      flip: StageWindow.#onFlip,
-      adjust: StageWindow.#onAdjust,
       refreshCast: StageWindow.#onRefreshCast,
       toggleSection: StageWindow.#onToggleSection,
       toggleFolder: StageWindow.#onToggleFolder,
@@ -49,7 +45,6 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       toggleEveryone: StageWindow.#onToggleEveryone,
       resetExpressions: StageWindow.#onResetExpressions,
       addParty: StageWindow.#onAddParty,
-      partySide: StageWindow.#onPartySide,
       savePreset: StageWindow.#onSavePreset,
       loadPreset: StageWindow.#onLoadPreset,
       deletePreset: StageWindow.#onDeletePreset,
@@ -59,6 +54,12 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   static PARTS = { main: { template: `modules/${MODULE}/templates/stage-window.hbs`, scrollable: [".vn-cast-list"] } };
 
   static #instance = null;
+
+  /** The group being edited in the window (Edit group mode), or null. The character menu offers "Add to group" then. */
+  static get editingGroup() {
+    const app = this.#instance;
+    return app?.rendered && app.#editing ? stageGroup() : null;
+  }
 
   static open() {
     this.#instance ??= new StageWindow();
@@ -97,26 +98,6 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     const members = new Set(group ? memberNames(group.id, index) : []);
     const cast = getCast(scene);
     const resolved = resolveCast(scene);
-    const rowFor = async (e) => {
-      const art = await characterArt(e.name);
-      const actor = e.actorUuid ? fromUuidSync(e.actorUuid) : null;
-      return {
-        id: e.id, name: e.name, side: e.side,
-        thumb: art?.thumb ?? actor?.img ?? "icons/svg/mystery-man.svg",
-        fallback: !art,
-        flip: !!characterPrefs(e.name).flip,
-        inGroup: members.has(e.name),
-        expressions: Object.keys(art?.expressions ?? {}).map((key) => ({
-          key, label: key.charAt(0).toUpperCase() + key.slice(1), selected: key === currentExpression(e),
-        })),
-      };
-    };
-    const rows = await Promise.all(cast.map(async (e) => {
-      if (!e.party) return rowFor(e);
-      const partyMembers = (await Promise.all(resolved.filter((r) => r.partyOf === e.id).map(rowFor))).map((r) => ({ ...r, member: true }));
-      return { id: e.id, party: true, name: PARTY_LABEL, side: e.side, full: e.side === "full", members: partyMembers };
-    }));
-    const side = (s) => rows.filter((r) => r.side === s).map((r, i, all) => ({ ...r, first: i === 0, last: i === all.length - 1 }));
     const onStage = new Set(resolved.map((e) => e.name));
     const partyEntry = cast.find((e) => e.party);
 
@@ -137,9 +118,6 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       recentSelected: selected === RECENT,
       group,
       bg: await backgroundStrips(scene, group, collapsed),
-      left: side("left"),
-      right: side("right"),
-      full: side("full"),
       party: hasParty() ? { label: PARTY_LABEL, side: partyEntry?.side ?? null } : null,
       presets: listPresets(group?.id ?? null).map((p) => ({ ...p, groupLabel: group ? null : (p.group ? getGroup(p.group)?.label ?? p.group : null) })),
       cast: list.map((a) => ({
@@ -163,10 +141,6 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       this.#applyFilter();
     });
     this.#applyFilter();
-
-    for (const select of this.element.querySelectorAll("select[name=expression]")) {
-      select.addEventListener("change", () => setExpression(select.closest("[data-id]").dataset.id, select.value));
-    }
 
     this.element.querySelector("select[name=group]")?.addEventListener("change", async (event) => {
       this.#editing = false;
@@ -204,30 +178,11 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     await addToCast({ name: target.closest("[data-name]").dataset.name, side: target.dataset.side });
   }
 
-  static async #onRemove(_event, target) {
-    await removeFromCast(target.closest("[data-id]").dataset.id);
-  }
 
-  static async #onSwitchSide(_event, target) {
-    await switchSide(target.closest("[data-id]").dataset.id);
-  }
 
-  static async #onForward(_event, target) {
-    await moveInSide(target.closest("[data-id]").dataset.id, -1);
-  }
 
-  static async #onBack(_event, target) {
-    await moveInSide(target.closest("[data-id]").dataset.id, 1);
-  }
 
-  static async #onFlip(_event, target) {
-    const name = target.closest("[data-name]").dataset.name;
-    await setFlip(name, !characterPrefs(name).flip);
-  }
 
-  static #onAdjust(_event, target) {
-    AdjustWindow.open(target.closest("[data-id]").dataset.id);
-  }
 
   /** Collapse or expand a section, remembered on this machine. Toggled in place, without a re-render. */
   static async #onToggleSection(_event, target) {
@@ -333,10 +288,6 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     await addParty(target.dataset.side);
   }
 
-  /** The Party's row: switch between left, right and the whole width. */
-  static async #onPartySide(_event, target) {
-    await addParty(target.dataset.side);
-  }
 
   static async #onSavePreset() {
     const group = getGroup(stageGroup());
