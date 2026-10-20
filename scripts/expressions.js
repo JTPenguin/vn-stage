@@ -1,6 +1,6 @@
 import { MODULE, PART } from "./constants.js";
 import { characterArt } from "./art.js";
-import { getCast } from "./cast.js";
+import { getCast, resolveCast } from "./cast.js";
 import { layout } from "./layout.js";
 import { isStage } from "./stage.js";
 
@@ -28,8 +28,7 @@ export function canChange(entry, user = game.user) {
 }
 
 export async function setExpression(castId, key, { scene = canvas.scene } = {}) {
-  const cast = getCast(scene);
-  const entry = cast.find((e) => e.id === castId);
+  const entry = resolveCast(scene).find((e) => e.id === castId);
   if (!entry || !canChange(entry)) return;
   const actor = entry.actorUuid ? fromUuidSync(entry.actorUuid) : null;
   if (actor) {
@@ -37,8 +36,11 @@ export async function setExpression(castId, key, { scene = canvas.scene } = {}) 
     return actor.setFlag(MODULE, "expression", key);
   }
   if (!game.user.isGM) return;
-  if (key === NEUTRAL) delete entry.expression;
-  else entry.expression = key;
+  const cast = getCast(scene);
+  const raw = cast.find((e) => e.id === castId);
+  if (!raw) return;
+  if (key === NEUTRAL) delete raw.expression;
+  else raw.expression = key;
   await scene.setFlag(MODULE, "cast", cast);
   return layout(scene);
 }
@@ -69,7 +71,7 @@ export function isRelayGM() {
 export async function preloadStage(scene = canvas.scene) {
   if (!isStage(scene)) return;
   const srcs = [];
-  for (const e of getCast(scene)) {
+  for (const e of resolveCast(scene)) {
     const art = await characterArt(e.name);
     if (art) srcs.push(...Object.values(art.expressions));
   }
@@ -112,7 +114,7 @@ function onUp(event) {
   if (performance.now() - start.t > CLICK_TIME) return;
   const tile = portraitAt(event.clientX, event.clientY);
   if (!tile) return closeStrip();
-  const entry = getCast().find((e) => e.id === tile.document.getFlag(MODULE, "castId"));
+  const entry = resolveCast().find((e) => e.id === tile.document.getFlag(MODULE, "castId"));
   if (entry && canChange(entry)) openStrip(entry, event.clientX, event.clientY);
 }
 

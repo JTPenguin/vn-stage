@@ -1,0 +1,19 @@
+<div class="vn-party" data-id="{{id}}">
+  <div class="vn-row vn-party-row">
+    <span class="vn-party-icon"><i class="fa-solid fa-users"></i></span>
+    <span class="vn-name">{{name}} ({{members.length}})</span>
+    <span class="vn-tools">
+      {{#unless full}}
+      <button type="button" class="vn-icon" data-action="forward" data-tooltip="Forward" {{#if first}}disabled{{/if}}><i class="fa-solid fa-chevron-up"></i></button>
+      <button type="button" class="vn-icon" data-action="back" data-tooltip="Back" {{#if last}}disabled{{/if}}><i class="fa-solid fa-chevron-down"></i></button>
+      {{/unless}}
+      <button type="button" class="vn-icon {{#if (eq side 'left')}}active{{/if}}" data-action="partySide" data-side="left" data-tooltip="Left">L</button>
+      <button type="button" class="vn-icon {{#if (eq side 'right')}}active{{/if}}" data-action="partySide" data-side="right" data-tooltip="Right">R</button>
+      <button type="button" class="vn-icon {{#if full}}active{{/if}}" data-action="partySide" data-side="full" data-tooltip="Whole width"><i class="fa-solid fa-arrows-left-right-to-line"></i></button>
+      <button type="button" class="vn-icon" data-action="remove" data-tooltip="Remove The Party"><i class="fa-solid fa-xmark"></i></button>
+    </span>
+  </div>
+  <div class="vn-party-members">
+    {{#each members}}{{> "vn-stage.row"}}{{else}}<p class="vn-empty">No one is in the party yet (the Party sidebar).</p>{{/each}}
+  </div>
+</div>

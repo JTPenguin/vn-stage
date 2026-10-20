@@ -94,3 +94,17 @@
 .vn-expression-strip button.vn-expression.current { border-color: #e0a64a; }
 .vn-expression-strip .vn-expression-face { display: block; flex: none; width: 60px; height: 60px; border-radius: 3px; background-color: #333; background-repeat: no-repeat; }
 .vn-expression-strip .vn-expression-label { font-size: 11px; padding-bottom: 2px; }
+
+/* The Party and presets */
+.vn-stage .vn-party-icon { display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; border-radius: 3px; background: color-mix(in srgb, var(--color-warm-2, #c9593f) 25%, transparent); }
+.vn-stage .vn-cast-list li .vn-party-icon { width: 2rem; height: 2rem; }
+.vn-stage .vn-party-row .vn-party-icon { grid-row: span 2; }
+.vn-stage .vn-party-members { margin-left: 1rem; padding-left: 0.4rem; border-left: 2px solid color-mix(in srgb, var(--color-warm-2, #c9593f) 40%, transparent); }
+.vn-stage .vn-member img { width: 1.9rem; height: 1.9rem; }
+.vn-stage .vn-full { margin-bottom: 0.4rem; }
+.vn-stage .vn-preset-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.2rem; }
+.vn-stage .vn-preset-list li { display: flex; align-items: center; gap: 0.4rem; }
+.vn-stage .vn-preset-load { flex: 1; justify-content: flex-start; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vn-stage .vn-preset-group { font-size: var(--font-size-12, 12px); opacity: 0.65; }
+.vn-stage .vn-preset-delete { opacity: 0.55; }
+.vn-stage .vn-preset-delete:hover { opacity: 1; }

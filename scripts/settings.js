@@ -39,6 +39,14 @@ export function registerSettings() {
     default: { names: [] },
   });
 
+  // Presets: { [id]: { name, group, background, cast, saved } }.
+  game.settings.register(MODULE, "presets", {
+    scope: "world",
+    config: false,
+    type: Object,
+    default: {},
+  });
+
   // Which Stage window sections this GM has collapsed (this machine only).
   game.settings.register(MODULE, "collapsed", {
     scope: "client",

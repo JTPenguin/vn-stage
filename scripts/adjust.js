@@ -1,5 +1,5 @@
 import { MODULE, FRAME, SIZE_CHOICES, faceGuide } from "./constants.js";
-import { getCast, characterPrefs, setPrefs } from "./cast.js";
+import { resolveCast, characterPrefs, setPrefs } from "./cast.js";
 import { placements } from "./layout.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -27,7 +27,7 @@ export class AdjustWindow extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** Open for the cast entry `castId` on the viewed stage (one at a time). */
   static open(castId) {
-    const entry = getCast().find((e) => e.id === castId);
+    const entry = resolveCast().find((e) => e.id === castId);
     if (!entry) return;
     AdjustWindow.#open?.close();
     AdjustWindow.#open = new AdjustWindow({ entry });

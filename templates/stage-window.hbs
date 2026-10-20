@@ -32,6 +32,23 @@
   </div>
   {{/if}}
 
+  <section class="vn-section vn-presets {{#if collapsed.presets}}collapsed{{/if}}" data-section="presets">
+    <h3 data-action="toggleSection"><i class="fa-solid fa-chevron-down vn-chevron"></i> Presets
+      <button type="button" class="vn-icon" data-action="savePreset" data-tooltip="Save what's on stage as a preset{{#if group}} in {{group.label}}{{/if}}"><i class="fa-solid fa-floppy-disk"></i></button>
+    </h3>
+    <ul class="vn-preset-list">
+      {{#each presets}}
+      <li data-preset="{{id}}" data-name="{{name}}">
+        <button type="button" class="vn-preset-load" data-action="loadPreset" data-tooltip="Load: background and cast"><i class="fa-solid fa-play"></i> {{name}}</button>
+        {{#if groupLabel}}<span class="vn-preset-group">{{groupLabel}}</span>{{/if}}
+        <button type="button" class="vn-icon vn-preset-delete" data-action="deletePreset" data-tooltip="Delete preset"><i class="fa-solid fa-trash"></i></button>
+      </li>
+      {{else}}
+      <li class="vn-empty">No presets{{#if group}} in this group{{/if}} yet. Set up the stage, then save it with the disk button.</li>
+      {{/each}}
+    </ul>
+  </section>
+
   <section class="vn-section vn-background {{#if collapsed.background}}collapsed{{/if}}" data-section="background">
     <h3 data-action="toggleSection"><i class="fa-solid fa-chevron-down vn-chevron"></i> Background</h3>
 
@@ -72,6 +89,12 @@
     <h3 data-action="toggleSection"><i class="fa-solid fa-chevron-down vn-chevron"></i> On stage
       <button type="button" class="vn-icon" data-action="resetExpressions" data-tooltip="Reset everyone's expression to neutral, on every stage"><i class="fa-solid fa-face-meh"></i></button>
     </h3>
+    {{#if full.length}}
+    <div class="vn-full">
+      <h4>Whole width</h4>
+      {{#each full}}{{> "vn-stage.row"}}{{/each}}
+    </div>
+    {{/if}}
     <div class="vn-sides">
       <div class="vn-side">
         <h4>Left</h4>
@@ -95,6 +118,15 @@
       {{/if}}
     </div>
     <ul class="vn-cast-list">
+      {{#if party}}
+      <li class="vn-cast-party {{#if party.side}}on-stage{{/if}}" data-search="the party">
+        <span class="vn-party-icon"><i class="fa-solid fa-users"></i></span>
+        <span class="vn-name">{{party.label}}</span>
+        <button type="button" data-action="addParty" data-side="left">Left</button>
+        <button type="button" data-action="addParty" data-side="right">Right</button>
+        <button type="button" data-action="addParty" data-side="full" data-tooltip="Whole width">Full</button>
+      </li>
+      {{/if}}
       {{#each cast}}
       <li data-name="{{name}}" data-search="{{search}}" class="{{#if onStage}}on-stage{{/if}} {{#if @root.editing}}{{#unless member}}not-member{{/unless}}{{/if}}">
         <img src="{{thumb}}" alt="" loading="lazy">

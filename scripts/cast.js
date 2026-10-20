@@ -7,10 +7,41 @@ import { noteRecent } from "./groups.js";
  * listing each character in standing order. Portrait tiles are drawn from it
  * by `layout`, so every change here ends with a layout.
  *
- * Entry: { id, name, actorUuid|null, side: "left"|"right" }
+ * Entry: { id, name, actorUuid|null, side: "left"|"right" }, or The Party:
+ * { id, party: true, side: "left"|"right"|"full" }, which stands for the
+ * system's party members (PF2e's party actor) whenever the stage is drawn.
  */
 
 export const SIDES = ["left", "right"];
+export const PARTY_SIDES = ["left", "right", "full"];
+export const PARTY_LABEL = "The Party";
+
+/** The party's characters, if the system has a party (PF2e). */
+export function partyMembers() {
+  const party = game.actors.party;
+  const members = party?.members ?? [];
+  return members.filter((a) => a && (a.isOfType?.("character") ?? a.type === "character"));
+}
+
+export function hasParty() {
+  return !!game.actors.party;
+}
+
+/**
+ * The cast with The Party expanded into its members, in standing order. A member's
+ * id is "<party entry id>.<actor id>", so tiles, expressions and adjustments can
+ * find them; `partyOf` names the party entry.
+ */
+export function resolveCast(scene = canvas.scene) {
+  const out = [];
+  for (const e of getCast(scene)) {
+    if (!e.party) { out.push(e); continue; }
+    for (const actor of partyMembers()) {
+      out.push({ id: `${e.id}.${actor.id}`, name: actor.name, actorUuid: actor.uuid, side: e.side, partyOf: e.id });
+    }
+  }
+  return out;
+}
 
 export function getCast(scene = canvas.scene) {
   return foundry.utils.deepClone(scene?.getFlag(MODULE, "cast") ?? []);
@@ -46,6 +77,28 @@ export async function addToCast({ name, actorUuid = null, side = "left", scene =
   return saveCast(scene, cast);
 }
 
+/** Put The Party on the stage (or move it): left, right or the whole width. */
+export async function addParty(side = "left", { scene = canvas.scene } = {}) {
+  requireGM();
+  if (!PARTY_SIDES.includes(side)) throw new Error(`VN Stage | Unknown side "${side}".`);
+  const cast = getCast(scene);
+  const existing = cast.find((e) => e.party);
+  if (existing) {
+    if (existing.side === side) return;
+    existing.side = side;
+  } else {
+    cast.push({ id: foundry.utils.randomID(), party: true, side });
+  }
+  return saveCast(scene, cast);
+}
+
+/** Replace the whole cast (a preset). Entries get new ids. */
+export async function setCast(entries, { scene = canvas.scene } = {}) {
+  requireGM();
+  const cast = entries.map((e) => ({ ...foundry.utils.deepClone(e), id: foundry.utils.randomID() }));
+  return saveCast(scene, cast);
+}
+
 export async function removeFromCast(id, { scene = canvas.scene } = {}) {
   requireGM();
   return saveCast(scene, getCast(scene).filter((e) => e.id !== id));
@@ -58,7 +111,7 @@ export async function switchSide(id, { scene = canvas.scene } = {}) {
   const entry = cast.find((e) => e.id === id);
   if (!entry) return;
   cast.splice(cast.indexOf(entry), 1);
-  cast.push({ ...entry, side: entry.side === "left" ? "right" : "left" });
+  cast.push({ ...entry, side: entry.side === "left" ? "right" : "left" }); // Full width goes to the left
   return saveCast(scene, cast);
 }
 

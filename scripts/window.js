@@ -1,6 +1,7 @@
 import { MODULE } from "./constants.js";
 import { artIndex, characterArt } from "./art.js";
-import { getCast, addToCast, removeFromCast, switchSide, moveInSide, characterPrefs, setFlip } from "./cast.js";
+import { getCast, resolveCast, addToCast, addParty, removeFromCast, switchSide, moveInSide, characterPrefs, setFlip, hasParty, PARTY_LABEL } from "./cast.js";
+import { listPresets, savePreset, loadPreset, deletePreset, findPresetByName } from "./presets.js";
 import {
   isStage, makeStage, setBackground, currentBackground, pickBackground, backgroundFolder,
   folderImages, backgroundLabel, decodePath,
@@ -47,6 +48,11 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       removeMember: StageWindow.#onRemoveMember,
       toggleEveryone: StageWindow.#onToggleEveryone,
       resetExpressions: StageWindow.#onResetExpressions,
+      addParty: StageWindow.#onAddParty,
+      partySide: StageWindow.#onPartySide,
+      savePreset: StageWindow.#onSavePreset,
+      loadPreset: StageWindow.#onLoadPreset,
+      deletePreset: StageWindow.#onDeletePreset,
     },
   };
 
@@ -90,7 +96,8 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
 
     const members = new Set(group ? memberNames(group.id, index) : []);
     const cast = getCast(scene);
-    const rows = await Promise.all(cast.map(async (e) => {
+    const resolved = resolveCast(scene);
+    const rowFor = async (e) => {
       const art = await characterArt(e.name);
       const actor = e.actorUuid ? fromUuidSync(e.actorUuid) : null;
       return {
@@ -103,9 +110,15 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
           key, label: key.charAt(0).toUpperCase() + key.slice(1), selected: key === currentExpression(e),
         })),
       };
+    };
+    const rows = await Promise.all(cast.map(async (e) => {
+      if (!e.party) return rowFor(e);
+      const partyMembers = (await Promise.all(resolved.filter((r) => r.partyOf === e.id).map(rowFor))).map((r) => ({ ...r, member: true }));
+      return { id: e.id, party: true, name: PARTY_LABEL, side: e.side, full: e.side === "full", members: partyMembers };
     }));
     const side = (s) => rows.filter((r) => r.side === s).map((r, i, all) => ({ ...r, first: i === 0, last: i === all.length - 1 }));
-    const onStage = new Set(cast.map((e) => e.name));
+    const onStage = new Set(resolved.map((e) => e.name));
+    const partyEntry = cast.find((e) => e.party);
 
     // The Cast list: the group's members, Recent in its order, or everyone.
     const byName = new Map(index.map((a) => [a.name, a]));
@@ -126,6 +139,9 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       bg: await backgroundStrips(scene, group, collapsed),
       left: side("left"),
       right: side("right"),
+      full: side("full"),
+      party: hasParty() ? { label: PARTY_LABEL, side: partyEntry?.side ?? null } : null,
+      presets: listPresets(group?.id ?? null).map((p) => ({ ...p, groupLabel: group ? null : (p.group ? getGroup(p.group)?.label ?? p.group : null) })),
       cast: list.map((a) => ({
         name: a.name, thumb: a.thumb, onStage: onStage.has(a.name), search: a.name.toLowerCase(), member: members.has(a.name),
       })),
@@ -311,6 +327,45 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async #onResetExpressions() {
     await resetAllExpressions();
+  }
+
+  static async #onAddParty(_event, target) {
+    await addParty(target.dataset.side);
+  }
+
+  /** The Party's row: switch between left, right and the whole width. */
+  static async #onPartySide(_event, target) {
+    await addParty(target.dataset.side);
+  }
+
+  static async #onSavePreset() {
+    const group = getGroup(stageGroup());
+    const name = await askName(group ? `Save preset in ${group.label}` : "Save preset", "");
+    if (!name) return;
+    if (findPresetByName(name, group?.id ?? null)) {
+      const ok = await DialogV2.confirm({
+        window: { title: "Replace preset" },
+        content: `<p>Replace the preset <strong>${foundry.utils.escapeHTML(name)}</strong> with what's on stage now?</p>`,
+        rejectClose: false,
+      });
+      if (!ok) return;
+    }
+    await savePreset(name);
+    ui.notifications.info(`VN Stage | Saved preset "${name}".`);
+  }
+
+  static async #onLoadPreset(_event, target) {
+    await loadPreset(target.closest("[data-preset]").dataset.preset);
+  }
+
+  static async #onDeletePreset(_event, target) {
+    const row = target.closest("[data-preset]");
+    const ok = await DialogV2.confirm({
+      window: { title: "Delete preset" },
+      content: `<p>Delete the preset <strong>${foundry.utils.escapeHTML(row.dataset.name)}</strong>?</p>`,
+      rejectClose: false,
+    });
+    if (ok) await deletePreset(row.dataset.preset);
   }
 
   static #onToggleEveryone() {

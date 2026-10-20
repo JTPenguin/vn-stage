@@ -4,6 +4,11 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 
 ## [Unreleased]
 
+### Added
+- The Party: a cast entry that stands for the PF2e party's characters whenever the stage is drawn. Put it on the left, the right or the whole width (spread evenly) from the top of the Cast list; On stage shows it as one row (forward, back, side, remove) with its members beneath (expression, adjust, flip). A change to the party's membership redraws the stage (the active GM's screen).
+- Presets: save the stage's background and cast (sides and order; The Party as an entry) under a name, and load it in one click from the new Presets section. A preset saved with a group selected belongs to that group, is listed with it, and selects it again when loaded. Saving over a name asks first; deleting asks first.
+- API: `resolveCast`, `addParty`, `setCast`, `listPresets`, `savePreset`, `loadPreset`, `deletePreset`.
+
 ## [0.1.0] - 2026-10-20
 
 First release: the four required needs of the E3 plan (portraits on two sides, static backgrounds, GM and player expressions), plus groups and per-character adjustment.

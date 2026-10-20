@@ -7,12 +7,13 @@
 import { MODULE, FRAME } from "./constants.js";
 import { registerSettings } from "./settings.js";
 import { isStage, makeStage, unmakeStage, setBackground, currentBackground } from "./stage.js";
-import { getCast, addToCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip } from "./cast.js";
+import { getCast, resolveCast, addToCast, addParty, setCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip } from "./cast.js";
 import { artIndex, characterArt, clearArtCache } from "./art.js";
 import { layout } from "./layout.js";
 import { listGroups, getGroup, memberNames, createGroup, addFolder, addMember, stageGroup, setStageGroup } from "./groups.js";
 import { startView, stopView, viewLocked, viewFitted } from "./view.js";
 import { StageWindow } from "./window.js";
+import { listPresets, savePreset, loadPreset, deletePreset } from "./presets.js";
 import { setExpression, resetAllExpressions, currentExpression, preloadStage, startClicks, stopClicks, isRelayGM } from "./expressions.js";
 
 Hooks.once("init", () => {
@@ -20,12 +21,14 @@ Hooks.once("init", () => {
   foundry.applications.handlebars.loadTemplates({
     "vn-stage.row": `modules/${MODULE}/templates/stage-row.hbs`,
     "vn-stage.bg": `modules/${MODULE}/templates/stage-bg.hbs`,
+    "vn-stage.party": `modules/${MODULE}/templates/stage-party.hbs`,
   });
   const api = {
     isStage, makeStage, unmakeStage, setBackground, currentBackground,
-    getCast, addToCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip,
+    getCast, resolveCast, addToCast, addParty, setCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip,
     artIndex, characterArt, clearArtCache, layout,
     setExpression, resetAllExpressions, currentExpression,
+    listPresets, savePreset, loadPreset, deletePreset,
     listGroups, getGroup, memberNames, createGroup, addFolder, addMember, stageGroup, setStageGroup,
     openWindow: () => StageWindow.open(),
     status,
@@ -72,8 +75,15 @@ Hooks.on("updateScene", (scene, changes) => {
 // A saved expression changed on an actor (a player's choice, or the GM's): the
 // active GM's screen redraws the viewed stage. Other stages catch up when viewed.
 Hooks.on("updateActor", (actor, changes) => {
-  if (!foundry.utils.hasProperty(changes, `flags.${MODULE}`) || !isStage()) return;
-  const onStage = getCast().some((e) => e.actorUuid === actor.uuid);
+  if (!isStage()) return;
+  // The party's membership changed: a stage with The Party on it redraws.
+  if (actor === game.actors.party && foundry.utils.hasProperty(changes, "system.details.members")) {
+    if (!getCast().some((e) => e.party)) return;
+    if (isRelayGM()) layout(canvas.scene);
+    return StageWindow.refresh();
+  }
+  if (!foundry.utils.hasProperty(changes, `flags.${MODULE}`)) return;
+  const onStage = resolveCast().some((e) => e.actorUuid === actor.uuid);
   if (!onStage) return;
   if (isRelayGM()) layout(canvas.scene);
   StageWindow.refresh();
@@ -85,7 +95,7 @@ for (const hook of ["createTile", "updateTile", "deleteTile"]) {
 }
 
 Hooks.on("updateSetting", (setting) => {
-  const keys = ["characterPrefs", "groups", "recent"].map((k) => `${MODULE}.${k}`);
+  const keys = ["characterPrefs", "groups", "recent", "presets"].map((k) => `${MODULE}.${k}`);
   if (keys.includes(setting.key)) StageWindow.refresh();
 });
 

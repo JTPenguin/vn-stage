@@ -1,6 +1,6 @@
 import { MODULE, FRAME, PART, FACE, SIZE, faceGuide } from "./constants.js";
 import { characterArt } from "./art.js";
-import { getCast, characterPrefs } from "./cast.js";
+import { resolveCast, characterPrefs } from "./cast.js";
 import { isStage } from "./stage.js";
 import { currentExpression } from "./expressions.js";
 
@@ -28,9 +28,9 @@ export function layout(scene = canvas.scene) {
 
 async function doLayout(scene) {
   if (!game.user.isGM || !isStage(scene)) return;
-  const cast = getCast(scene);
+  const cast = resolveCast(scene);
   const placed = [];
-  for (const side of ["left", "right"]) {
+  for (const side of ["left", "right", "full"]) {
     const members = cast.filter((e) => e.side === side);
     for (const [i, entry] of members.entries()) {
       placed.push(await place(entry, i, members.length));
@@ -83,10 +83,14 @@ async function place(entry, i, n) {
     width = tex?.width ? (height * tex.width) / tex.height : height * (2 / 3);
   }
 
-  // Spread across the side's half, first-placed at the outside edge and in front.
-  const half = FRAME.width / 2;
-  const fromEdge = (half * (i + 0.5)) / n;
-  const cx = entry.side === "left" ? fromEdge : FRAME.width - fromEdge;
+  // Spread across the side's half, first-placed at the outside edge and in front;
+  // The Party at full width spreads evenly across the whole frame.
+  let cx;
+  if (entry.side === "full") cx = (FRAME.width * (i + 0.5)) / n;
+  else {
+    const fromEdge = (FRAME.width / 2 * (i + 0.5)) / n;
+    cx = entry.side === "left" ? fromEdge : FRAME.width - fromEdge;
+  }
   // Start from the head box: the face's top sits on the guide for this size,
   // unless that would lift the cut-off bottom edge into view; then (and with no
   // face measurement) the image stands on the bottom edge.
