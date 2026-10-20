@@ -4,7 +4,15 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-20
+
+First release: the four required needs of the E3 plan (portraits on two sides, static backgrounds, GM and player expressions), plus groups and per-character adjustment.
+
 ### Added
+- Expressions: left-click a portrait for a strip of its expressions (face close-ups from the manifest's face box); the GM can change anyone's, players their own characters' (actors they own). Clicks hit only the portrait's visible pixels and ignore drags. An actor-linked character keeps its expression on the actor, so it follows them to every stage; the active GM's screen redraws the stage when it changes. Characters without an actor keep theirs on the cast entry.
+- On stage rows: an expression menu for each character with expressions.
+- Reset everyone to neutral (On stage heading): clears every actor's saved expression and every stage's cast entries.
+- Every screen preloads all expressions of the characters on stage, so a change shows at once.
 - Groups: a name, any number of background folders and its characters, chosen from the Group menu at the top of the Stage window (each stage remembers its group). Members come from the manifests' `groups` tags (written by the Character Art Pipeline), plus hand additions, minus hand removals. With a group selected, the Cast list shows its members and the Background strip shows all its folders (a collapsible heading per folder when there's more than one); Browse… then sets a one-off background without changing any folder.
 - Built-in menu entries: All characters (as before groups) and Recent (the last 24 characters put on any stage).
 - Edit group mode (pencil): Rename, Delete (confirmed), folder chips with remove and Add folder…, add or remove members (Show everyone lists non-members), and add from On stage rows. Normal mode shows none of these. New group (+) is always available.

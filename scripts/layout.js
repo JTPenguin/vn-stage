@@ -2,6 +2,7 @@ import { MODULE, FRAME, PART, FACE, SIZE, faceGuide } from "./constants.js";
 import { characterArt } from "./art.js";
 import { getCast, characterPrefs } from "./cast.js";
 import { isStage } from "./stage.js";
+import { currentExpression } from "./expressions.js";
 
 /** Every face is drawn this tall (frame pixels), before size and per-character scale. */
 const TARGET_FACE = FACE * FRAME.height;
@@ -71,7 +72,7 @@ async function place(entry, i, n) {
 
   let src, width, height, k = null, fallback = false;
   if (art?.facePx && art.frame) {
-    src = art.portrait;
+    src = art.expressions[currentExpression(entry)] ?? art.portrait;
     k = (TARGET_FACE / art.facePx) * (art.adjust ?? 1) * scale;
     [width, height] = [art.frame[0] * k, art.frame[1] * k];
   } else {

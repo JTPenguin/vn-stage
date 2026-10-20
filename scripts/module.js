@@ -13,6 +13,7 @@ import { layout } from "./layout.js";
 import { listGroups, getGroup, memberNames, createGroup, addFolder, addMember, stageGroup, setStageGroup } from "./groups.js";
 import { startView, stopView, viewLocked, viewFitted } from "./view.js";
 import { StageWindow } from "./window.js";
+import { setExpression, resetAllExpressions, currentExpression, preloadStage, startClicks, stopClicks, isRelayGM } from "./expressions.js";
 
 Hooks.once("init", () => {
   registerSettings();
@@ -24,6 +25,7 @@ Hooks.once("init", () => {
     isStage, makeStage, unmakeStage, setBackground, currentBackground,
     getCast, addToCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip,
     artIndex, characterArt, clearArtCache, layout,
+    setExpression, resetAllExpressions, currentExpression,
     listGroups, getGroup, memberNames, createGroup, addFolder, addMember, stageGroup, setStageGroup,
     openWindow: () => StageWindow.open(),
     status,
@@ -47,17 +49,33 @@ Hooks.on("getSceneControlButtons", (controls) => {
 
 Hooks.on("canvasReady", () => {
   startView();
+  startClicks();
+  preloadStage();
   StageWindow.refresh();
   // Catch up on anything that changed while this stage wasn't viewed (a flip, new art).
   if (game.user.isGM && isStage()) layout(canvas.scene);
 });
-Hooks.on("canvasTearDown", () => stopView());
+Hooks.on("canvasTearDown", () => {
+  stopView();
+  stopClicks();
+});
 
 // Stage or cast flags changed on the scene being viewed.
 Hooks.on("updateScene", (scene, changes) => {
   if (scene.id !== canvas.scene?.id) return;
   if (!foundry.utils.hasProperty(changes, `flags.${MODULE}`)) return;
   if (isStage(scene) !== viewFitted()) startView(); // became, or stopped being, a stage
+  if (foundry.utils.hasProperty(changes, `flags.${MODULE}.cast`)) preloadStage(scene);
+  StageWindow.refresh();
+});
+
+// A saved expression changed on an actor (a player's choice, or the GM's): the
+// active GM's screen redraws the viewed stage. Other stages catch up when viewed.
+Hooks.on("updateActor", (actor, changes) => {
+  if (!foundry.utils.hasProperty(changes, `flags.${MODULE}`) || !isStage()) return;
+  const onStage = getCast().some((e) => e.actorUuid === actor.uuid);
+  if (!onStage) return;
+  if (isRelayGM()) layout(canvas.scene);
   StageWindow.refresh();
 });
 

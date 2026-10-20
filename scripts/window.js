@@ -11,6 +11,7 @@ import {
 } from "./groups.js";
 import { safetyBackground } from "./settings.js";
 import { AdjustWindow } from "./adjust.js";
+import { setExpression, resetAllExpressions, currentExpression } from "./expressions.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 
@@ -45,6 +46,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       addMember: StageWindow.#onAddMember,
       removeMember: StageWindow.#onRemoveMember,
       toggleEveryone: StageWindow.#onToggleEveryone,
+      resetExpressions: StageWindow.#onResetExpressions,
     },
   };
 
@@ -97,6 +99,9 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
         fallback: !art,
         flip: !!characterPrefs(e.name).flip,
         inGroup: members.has(e.name),
+        expressions: Object.keys(art?.expressions ?? {}).map((key) => ({
+          key, label: key.charAt(0).toUpperCase() + key.slice(1), selected: key === currentExpression(e),
+        })),
       };
     }));
     const side = (s) => rows.filter((r) => r.side === s).map((r, i, all) => ({ ...r, first: i === 0, last: i === all.length - 1 }));
@@ -142,6 +147,10 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       this.#applyFilter();
     });
     this.#applyFilter();
+
+    for (const select of this.element.querySelectorAll("select[name=expression]")) {
+      select.addEventListener("change", () => setExpression(select.closest("[data-id]").dataset.id, select.value));
+    }
 
     this.element.querySelector("select[name=group]")?.addEventListener("change", async (event) => {
       this.#editing = false;
@@ -298,6 +307,10 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   static async #onRemoveMember(_event, target) {
     const group = getGroup(stageGroup());
     if (group) await removeMember(group.id, target.closest("[data-name]").dataset.name);
+  }
+
+  static async #onResetExpressions() {
+    await resetAllExpressions();
   }
 
   static #onToggleEveryone() {

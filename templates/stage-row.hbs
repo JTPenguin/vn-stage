@@ -2,6 +2,11 @@
   <img src="{{thumb}}" alt="">
   <span class="vn-name">{{name}}{{#if fallback}} <i class="fa-regular fa-image vn-fallback" data-tooltip="No VN portrait yet: showing the actor's image"></i>{{/if}}</span>
   <span class="vn-tools">
+    {{#if expressions.length}}
+    <select name="expression" class="vn-expression-select" aria-label="Expression" data-tooltip="Expression">
+      {{#each expressions}}<option value="{{key}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+    </select>
+    {{/if}}
     <button type="button" class="vn-icon" data-action="forward" data-tooltip="Forward" {{#if first}}disabled{{/if}}><i class="fa-solid fa-chevron-up"></i></button>
     <button type="button" class="vn-icon" data-action="back" data-tooltip="Back" {{#if last}}disabled{{/if}}><i class="fa-solid fa-chevron-down"></i></button>
     <button type="button" class="vn-icon" data-action="adjust" data-tooltip="Adjust size and height"><i class="fa-solid fa-sliders"></i></button>
