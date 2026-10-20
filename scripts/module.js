@@ -4,7 +4,7 @@
  * GM actions write the cast flag and tiles, which Foundry syncs to everyone.
  * Every client fits its view to the stage frame; players' view is locked.
  */
-import { MODULE, FRAME } from "./constants.js";
+import { MODULE } from "./constants.js";
 import { registerSettings } from "./settings.js";
 import { isStage, makeStage, unmakeStage, setBackground, currentBackground } from "./stage.js";
 import { getCast, resolveCast, addToCast, addParty, setCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip } from "./cast.js";
@@ -15,7 +15,7 @@ import { startView, stopView, viewLocked, viewFitted } from "./view.js";
 import { StageWindow } from "./window.js";
 import { listPresets, savePreset, loadPreset, deletePreset } from "./presets.js";
 import { setExpression, resetAllExpressions, currentExpression, preloadStage, isRelayGM } from "./expressions.js";
-import { startClicks, stopClicks } from "./interact.js";
+import { startClicks, stopClicks, dropTarget, setWindowDrag } from "./interact.js";
 
 Hooks.once("init", () => {
   registerSettings();
@@ -99,13 +99,19 @@ Hooks.on("updateSetting", (setting) => {
 });
 
 // GM shortcut: drop an actor on the left or right half of a stage.
-Hooks.on("dropCanvasData", (_canvas, data) => {
-  if (!game.user.isGM || !isStage() || data.type !== "Actor") return;
-  const actor = fromUuidSync(data.uuid);
-  if (!actor) return;
-  const { sceneX = 0 } = canvas.dimensions;
-  const side = data.x - sceneX < FRAME.width / 2 ? "left" : "right";
-  addToCast({ name: actor.name, actorUuid: actor.uuid, side });
+// GM: drop an actor (sidebar), a Cast row or The Party (Stage window) where it should stand.
+Hooks.on("dropCanvasData", (_canvas, data, event) => {
+  if (!game.user.isGM || !isStage() || !["Actor", "VNStageCast", "VNStageParty"].includes(data.type)) return;
+  const target = dropTarget(event.clientX, event.clientY, data.ignore ?? null);
+  setWindowDrag(null);
+  if (!target) return false;
+  const { side, index } = target;
+  if (data.type === "VNStageParty") addParty(side, { index });
+  else if (data.type === "VNStageCast") addToCast({ name: data.name, side, index });
+  else {
+    const actor = fromUuidSync(data.uuid);
+    if (actor) addToCast({ name: actor.name, actorUuid: actor.uuid, side, index });
+  }
   return false; // no token
 });
 

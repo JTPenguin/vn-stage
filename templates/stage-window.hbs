@@ -98,16 +98,17 @@
     </div>
     <ul class="vn-cast-list">
       {{#if party}}
-      <li class="vn-cast-party {{#if party.side}}on-stage{{/if}}" data-search="the party">
+      <li class="vn-cast-party {{#if party.side}}on-stage{{/if}}" data-search="the party" data-party draggable="true">
         <span class="vn-party-icon"><i class="fa-solid fa-users"></i></span>
         <span class="vn-name">{{party.label}}</span>
+        {{#if party.side}}<button type="button" class="vn-icon" data-action="removeParty" data-tooltip="Remove The Party from the stage"><i class="fa-solid fa-xmark"></i></button>{{/if}}
         <button type="button" data-action="addParty" data-side="left">Left</button>
         <button type="button" data-action="addParty" data-side="right">Right</button>
         <button type="button" data-action="addParty" data-side="full" data-tooltip="Whole width">Full</button>
       </li>
       {{/if}}
       {{#each cast}}
-      <li data-name="{{name}}" data-search="{{search}}" class="{{#if onStage}}on-stage{{/if}} {{#if @root.editing}}{{#unless member}}not-member{{/unless}}{{/if}}">
+      <li data-name="{{name}}" data-search="{{search}}" draggable="true" class="{{#if onStage}}on-stage{{/if}} {{#if @root.editing}}{{#unless member}}not-member{{/unless}}{{/if}}">
         <img src="{{thumb}}" alt="" loading="lazy">
         <span class="vn-name">{{name}}</span>
         {{#if @root.editing}}
@@ -117,6 +118,7 @@
           <button type="button" class="vn-icon" data-action="addMember" data-tooltip="Add to this group"><i class="fa-solid fa-user-plus"></i></button>
           {{/if}}
         {{/if}}
+        {{#if onStage}}<button type="button" class="vn-icon" data-action="removeCast" data-tooltip="Remove from the stage"><i class="fa-solid fa-xmark"></i></button>{{/if}}
         <button type="button" data-action="add" data-side="left">Left</button>
         <button type="button" data-action="add" data-side="right">Right</button>
       </li>

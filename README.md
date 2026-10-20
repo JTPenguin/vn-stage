@@ -29,6 +29,14 @@ ln -s "/home/justin/Projects/Wayfinder Chronicles/Module/vn-stage" ~/.local/shar
 - `setBackground(src)`: show an image as the stage background.
 - `status()`: what the module sees on this screen.
 
+## Checks
+
+Before handing a change to Foundry, load every script with stand-ins for Foundry's globals (catches clashing names and broken imports, which a syntax check misses):
+
+```bash
+ELECTRON_RUN_AS_NODE=1 ~/foundryvtt/foundryvtt tools/check-load.mjs
+```
+
 ## Conventions
 
 - **No build step.** Plain ES modules, CSS and Handlebars templates, loaded by Foundry as they are.

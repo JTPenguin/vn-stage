@@ -1,6 +1,7 @@
 import { MODULE } from "./constants.js";
 import { artIndex } from "./art.js";
-import { getCast, resolveCast, addToCast, addParty, hasParty, PARTY_LABEL } from "./cast.js";
+import { getCast, resolveCast, addToCast, addParty, removeFromCast, hasParty, PARTY_LABEL } from "./cast.js";
+import { setWindowDrag } from "./interact.js";
 import { listPresets, savePreset, loadPreset, deletePreset, findPresetByName } from "./presets.js";
 import {
   isStage, makeStage, setBackground, currentBackground, pickBackground, backgroundFolder,
@@ -45,6 +46,8 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       toggleEveryone: StageWindow.#onToggleEveryone,
       resetExpressions: StageWindow.#onResetExpressions,
       addParty: StageWindow.#onAddParty,
+      removeCast: StageWindow.#onRemoveCast,
+      removeParty: StageWindow.#onRemoveParty,
       savePreset: StageWindow.#onSavePreset,
       loadPreset: StageWindow.#onLoadPreset,
       deletePreset: StageWindow.#onDeletePreset,
@@ -141,6 +144,20 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       this.#applyFilter();
     });
     this.#applyFilter();
+
+    // Drag a Cast row (or The Party) onto the stage to put them where they're dropped.
+    for (const li of this.element.querySelectorAll(".vn-cast-list li[draggable]")) {
+      li.addEventListener("dragstart", (event) => {
+        const party = li.hasAttribute("data-party");
+        const entry = getCast().find((e) => (party ? e.party : !e.party && e.name === li.dataset.name));
+        const data = party ? { type: "VNStageParty" } : { type: "VNStageCast", name: li.dataset.name };
+        if (entry) data.ignore = entry.id;
+        event.dataTransfer.setData("text/plain", JSON.stringify(data));
+        event.dataTransfer.effectAllowed = "copyMove";
+        setWindowDrag({ ignore: entry?.id ?? null });
+      });
+      li.addEventListener("dragend", () => setWindowDrag(null));
+    }
 
     this.element.querySelector("select[name=group]")?.addEventListener("change", async (event) => {
       this.#editing = false;
@@ -282,6 +299,18 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async #onResetExpressions() {
     await resetAllExpressions();
+  }
+
+  /** Remove a character standing on the stage (by name; party members leave with The Party). */
+  static async #onRemoveCast(_event, target) {
+    const name = target.closest("[data-name]").dataset.name;
+    const entry = getCast().find((e) => !e.party && e.name === name);
+    if (entry) await removeFromCast(entry.id);
+  }
+
+  static async #onRemoveParty() {
+    const entry = getCast().find((e) => e.party);
+    if (entry) await removeFromCast(entry.id);
   }
 
   static async #onAddParty(_event, target) {

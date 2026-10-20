@@ -60,35 +60,58 @@ function requireGM() {
  * Put a character on the stage. Already there? They move to `side` instead.
  * A world actor with the same name is linked, so its owners control it.
  */
-export async function addToCast({ name, actorUuid = null, side = "left", scene = canvas.scene }) {
+export async function addToCast({ name, actorUuid = null, side = "left", index = null, scene = canvas.scene }) {
   requireGM();
   if (!SIDES.includes(side)) throw new Error(`VN Stage | Unknown side "${side}".`);
   actorUuid ??= game.actors.getName(name)?.uuid ?? null;
   const cast = getCast(scene);
   const existing = cast.find((e) => (actorUuid && e.actorUuid === actorUuid) || e.name === name);
   if (existing) {
-    if (existing.side === side) return;
+    if (existing.side === side && index === null) return;
     cast.splice(cast.indexOf(existing), 1);
-    cast.push({ ...existing, side });
+    insertAt(cast, { ...existing, side }, index);
   } else {
-    cast.push({ id: foundry.utils.randomID(), name, actorUuid, side });
+    insertAt(cast, { id: foundry.utils.randomID(), name, actorUuid, side }, index);
   }
   await noteRecent(name);
   return saveCast(scene, cast);
 }
 
-/** Put The Party on the stage (or move it): left, right or the whole width. */
-export async function addParty(side = "left", { scene = canvas.scene } = {}) {
+/** Put The Party on the stage (or move it): left, right or the whole width; `index` places it within a side. */
+export async function addParty(side = "left", { index = null, scene = canvas.scene } = {}) {
   requireGM();
   if (!PARTY_SIDES.includes(side)) throw new Error(`VN Stage | Unknown side "${side}".`);
   const cast = getCast(scene);
   const existing = cast.find((e) => e.party);
   if (existing) {
-    if (existing.side === side) return;
-    existing.side = side;
+    if (existing.side === side && index === null) return;
+    cast.splice(cast.indexOf(existing), 1);
+    insertAt(cast, { ...existing, side }, index);
   } else {
-    cast.push({ id: foundry.utils.randomID(), party: true, side });
+    insertAt(cast, { id: foundry.utils.randomID(), party: true, side }, index);
   }
+  return saveCast(scene, cast);
+}
+
+/**
+ * Put `entry` into `cast` at standing position `index` on its side (0 is the
+ * outer edge, in front); null or past the end puts it at the back of the side.
+ */
+function insertAt(cast, entry, index) {
+  const side = cast.filter((e) => e.side === entry.side);
+  const before = index === null ? null : side[index];
+  if (before) cast.splice(cast.indexOf(before), 0, entry);
+  else cast.push(entry);
+}
+
+/** Move a cast entry (a character or The Party) to `side`, at standing position `index`. */
+export async function moveEntry(id, side, index, { scene = canvas.scene } = {}) {
+  requireGM();
+  const cast = getCast(scene);
+  const entry = cast.find((e) => e.id === id);
+  if (!entry) return;
+  cast.splice(cast.indexOf(entry), 1);
+  insertAt(cast, { ...entry, side }, index);
   return saveCast(scene, cast);
 }
 

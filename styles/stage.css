@@ -107,3 +107,8 @@
 .vn-character-menu button.vn-menu-action:hover { background: rgba(255, 255, 255, 0.16); }
 .vn-character-menu button.vn-menu-action.active { border-color: #e0a64a; color: #e0a64a; }
 .vn-character-menu .vn-menu-divider { width: 1px; align-self: stretch; margin: 0 0.2rem; background: rgba(255, 255, 255, 0.15); }
+
+/* Dragging on the stage */
+.vn-drag-ghost { position: fixed; z-index: 90; pointer-events: none; padding: 0.2rem 0.5rem; border-radius: 4px; background: rgba(20, 18, 24, 0.9); border: 1px solid #e0a64a; color: #eee; font-size: 12px; white-space: nowrap; }
+.vn-hover-name { position: fixed; z-index: 70; pointer-events: none; transform: translate(-50%, -100%); padding: 0.1rem 0.45rem; border-radius: 3px; background: rgba(20, 18, 24, 0.85); color: #eee; font-size: 12px; white-space: nowrap; }
+.vn-stage .vn-cast-list li[draggable] { cursor: grab; }

@@ -4,6 +4,12 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 
 ## [Unreleased]
 
+### Added
+- Drag a portrait on the stage to move the character within its side or to the other side (a party member moves The Party). A marker shows where it will land; Escape cancels. The press is the module's alone: Foundry no longer starts its own selection box or drag on a portrait.
+- Drag a Cast row, The Party, or an actor from the sidebar onto the stage to put them where they're dropped (the marker shows while dragging).
+- Cast list: a remove button on every character standing on the stage, and on The Party.
+- GM hover: the character's name above their head, and a pointer cursor.
+
 ### Changed
 - Characters are worked on the stage itself: clicking a portrait opens its character menu (`scripts/interact.js`), with the expressions and, for the GM, a row of actions: Flip, Adjust, Add to group (while editing one), Remove; for a party member, The Party's left, right and whole-width sides and Remove The Party. Players still get only the expressions of characters they own.
 - The Stage window's On stage section is gone (its rows, expression menus and buttons); Reset everyone to neutral moves to the Cast heading.
