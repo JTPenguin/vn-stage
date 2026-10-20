@@ -99,7 +99,7 @@ Hooks.on("updateSetting", (setting) => {
 });
 
 // GM shortcut: drop an actor on the left or right half of a stage.
-// GM: drop an actor (sidebar), a Cast row or The Party (Stage window) where it should stand.
+// GM: drop an actor or the party (sidebar), a Cast row or The Party (Stage window) where it should stand.
 Hooks.on("dropCanvasData", (_canvas, data, event) => {
   if (!game.user.isGM || !isStage() || !["Actor", "VNStageCast", "VNStageParty"].includes(data.type)) return;
   const target = dropTarget(event.clientX, event.clientY, data.ignore ?? null);
@@ -110,7 +110,9 @@ Hooks.on("dropCanvasData", (_canvas, data, event) => {
   else if (data.type === "VNStageCast") addToCast({ name: data.name, side, index });
   else {
     const actor = fromUuidSync(data.uuid);
-    if (actor) addToCast({ name: actor.name, actorUuid: actor.uuid, side, index });
+    // The party actor itself (PF2e) puts The Party there, not a token or a character.
+    if (actor?.isOfType?.("party") || actor?.type === "party") addParty(side, { index });
+    else if (actor) addToCast({ name: actor.name, actorUuid: actor.uuid, side, index });
   }
   return false; // no token
 });

@@ -4,6 +4,15 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 
 ## [Unreleased]
 
+### Added
+- Dropping the party actor from the sidebar onto a stage puts The Party where it's dropped, instead of a party token.
+
+### Fixed
+- A party member could stand on the stage twice: once with The Party and once on their own (dropped from the sidebar or added from the Cast list). Adding a party member while The Party is on stage now does nothing (with a notice); adding The Party absorbs members already standing on their own; and drawing the stage never shows anyone twice (also after joining the party while on stage).
+
+### Added
+- Rearrange The Party: drop a party member inside the party's span to move them within it (a blue marker); drop them anywhere else to move the whole party (the gold marker, as before). While dragging, only the member dims until the drop would move the party, then the whole party dims. The order is kept on the party entry (`order`, actor ids), so presets keep it; new members stand at the back, by name.
+
 ### Changed
 - Clusters with room to spare spread out: neighbours stand up to 75% of their average width apart (`LAYOUT.roomyStep`) instead of 55%, so a party alone on the stage isn't bunched. Crowding and zoom still use 55%, so crowded stages are unchanged.
 

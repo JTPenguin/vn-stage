@@ -8,8 +8,9 @@ import { noteRecent } from "./groups.js";
  * by `layout`, so every change here ends with a layout.
  *
  * Entry: { id, name, actorUuid|null, side: "left"|"right" }, or The Party:
- * { id, party: true, side: "left"|"right" }, which stands for the
- * system's party members (PF2e's party actor) whenever the stage is drawn.
+ * { id, party: true, side: "left"|"right", order: [actor ids] }, which stands
+ * for the system's party members (PF2e's party actor) whenever the stage is
+ * drawn, in `order` (members not in it stand at the back, by name).
  */
 
 export const SIDES = ["left", "right"];
@@ -33,13 +34,38 @@ export function hasParty() {
  */
 export function resolveCast(scene = canvas.scene) {
   const out = [];
-  for (const e of getCast(scene)) {
-    if (!e.party) { out.push(e); continue; }
-    for (const actor of partyMembers()) {
+  const cast = getCast(scene);
+  // A party member stands with The Party only, never twice (for example after joining the party while on stage).
+  const inParty = cast.some((e) => e.party) ? new Set(partyMembers().map((a) => a.uuid)) : new Set();
+  for (const e of cast) {
+    if (!e.party) {
+      if (!e.actorUuid || !inParty.has(e.actorUuid)) out.push(e);
+      continue;
+    }
+    for (const actor of orderedMembers(e.order)) {
       out.push({ id: `${e.id}.${actor.id}`, name: actor.name, actorUuid: actor.uuid, side: e.side, partyOf: e.id });
     }
   }
   return out;
+}
+
+/** The party's characters in a party entry's standing order; new members at the back, by name. */
+function orderedMembers(order = []) {
+  const rank = (a) => { const i = order.indexOf(a.id); return i === -1 ? Infinity : i; };
+  return partyMembers()
+    .map((a, i) => ({ a, i }))
+    .sort((x, y) => rank(x.a) - rank(y.a) || x.i - y.i)
+    .map(({ a }) => a);
+}
+
+/** Set the party's standing order on this stage (actor ids, outer edge first). */
+export async function setPartyOrder(actorIds, { scene = canvas.scene } = {}) {
+  requireGM();
+  const cast = getCast(scene);
+  const entry = cast.find((e) => e.party);
+  if (!entry) return;
+  entry.order = actorIds;
+  return saveCast(scene, cast);
 }
 
 export function getCast(scene = canvas.scene) {
@@ -67,6 +93,10 @@ export async function addToCast({ name, actorUuid = null, side = "left", index =
   if (!SIDES.includes(side)) throw new Error(`VN Stage | Unknown side "${side}".`);
   actorUuid ??= game.actors.getName(name)?.uuid ?? null;
   const cast = getCast(scene);
+  if (actorUuid && cast.some((e) => e.party) && partyMembers().some((a) => a.uuid === actorUuid)) {
+    ui.notifications.info(`VN Stage | ${name} is already on stage with ${PARTY_LABEL}.`);
+    return;
+  }
   const existing = cast.find((e) => (actorUuid && e.actorUuid === actorUuid) || e.name === name);
   if (existing) {
     if (existing.side === side && index === null) return;
@@ -83,7 +113,9 @@ export async function addToCast({ name, actorUuid = null, side = "left", index =
 export async function addParty(side = "left", { index = null, scene = canvas.scene } = {}) {
   requireGM();
   if (!SIDES.includes(side)) throw new Error(`VN Stage | Unknown side "${side}".`);
-  const cast = getCast(scene);
+  // Party members standing on their own join The Party instead.
+  const members = new Set(partyMembers().map((a) => a.uuid));
+  const cast = getCast(scene).filter((e) => e.party || !e.actorUuid || !members.has(e.actorUuid));
   const existing = cast.find((e) => e.party);
   if (existing) {
     if (existing.side === side && index === null) return;

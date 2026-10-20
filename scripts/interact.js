@@ -1,6 +1,6 @@
 import { MODULE, PART, FRAME, LAYOUT } from "./constants.js";
 import { characterArt, artIndex } from "./art.js";
-import { getCast, resolveCast, characterPrefs, setFlip, removeFromCast, addParty, moveEntry, PARTY_LABEL } from "./cast.js";
+import { getCast, resolveCast, characterPrefs, setFlip, removeFromCast, addParty, moveEntry, setPartyOrder, PARTY_LABEL } from "./cast.js";
 import { placements } from "./layout.js";
 import { canChange, currentExpression, setExpression } from "./expressions.js";
 import { getGroup, stageGroup, memberNames, addMember } from "./groups.js";
@@ -60,7 +60,7 @@ function onDown(event) {
   if (!entry) return;
   event.stopImmediatePropagation();
   event.preventDefault();
-  press = { x: event.clientX, y: event.clientY, t: performance.now(), entry, tile, dragging: false };
+  press = { x: event.clientX, y: event.clientY, t: performance.now(), entry, tile, dragging: false, wholeParty: false };
 }
 
 function onMove(event) {
@@ -71,7 +71,18 @@ function onMove(event) {
     startDrag();
   }
   moveGhost(event.clientX, event.clientY);
-  showMarker(dropTarget(event.clientX, event.clientY, rawId(press.entry)));
+  const target = targetFor(press.entry, event.clientX, event.clientY);
+  const wholeParty = !!press.entry.partyOf && !target?.within;
+  if (wholeParty !== press.wholeParty) {
+    press.wholeParty = wholeParty;
+    showMoving(wholeParty);
+  }
+  showMarker(target);
+}
+
+/** A party member dropped inside the party reorders it; anywhere else, the whole party (or the character) moves. */
+function targetFor(entry, clientX, clientY) {
+  return (entry.partyOf && partyTarget(entry, clientX, clientY)) || dropTarget(clientX, clientY, rawId(entry));
 }
 
 async function onUp(event) {
@@ -79,9 +90,10 @@ async function onUp(event) {
   press = null;
   if (!p || event.button !== 0) return;
   if (p.dragging) {
-    const target = dropTarget(event.clientX, event.clientY, rawId(p.entry));
+    const target = targetFor(p.entry, event.clientX, event.clientY);
     endDrag(p);
-    if (target) await moveEntry(rawId(p.entry), target.side, target.index);
+    if (target?.order) await setPartyOrder(target.order);
+    else if (target) await moveEntry(rawId(p.entry), target.side, target.index);
     return;
   }
   if (performance.now() - p.t > CLICK_TIME) return;
@@ -114,17 +126,25 @@ function startDrag() {
   press.dragging = true;
   closeMenu();
   clearHover();
-  // Dim the character (or the whole party) on this screen while it's dragged.
-  const id = rawId(press.entry);
-  dimmed = canvas.tiles.placeables.filter((t) => {
-    const castId = t.document.getFlag(MODULE, "castId");
-    return castId === id || castId?.startsWith(`${id}.`);
-  });
-  for (const t of dimmed) if (t.mesh) t.mesh.alpha = 0.35;
   ghost = document.createElement("div");
   ghost.className = "vn-drag-ghost";
-  ghost.textContent = press.entry.partyOf ? PARTY_LABEL : press.entry.name;
   document.body.append(ghost);
+  showMoving(false);
+}
+
+/**
+ * Dim what the drop would move, on this screen: the character, or the whole
+ * party once a party member's drop would move The Party.
+ */
+function showMoving(wholeParty) {
+  for (const t of dimmed) if (!t.destroyed) t.renderFlags.set({ refreshState: true }); // Foundry resets the alpha
+  const id = wholeParty ? press.entry.partyOf : press.entry.id;
+  dimmed = canvas.tiles.placeables.filter((t) => {
+    const castId = t.document.getFlag(MODULE, "castId");
+    return castId === id || (wholeParty && castId?.startsWith(`${id}.`));
+  });
+  for (const t of dimmed) if (t.mesh) t.mesh.alpha = 0.35;
+  ghost.textContent = wholeParty ? PARTY_LABEL : press.entry.name;
 }
 
 function moveGhost(x, y) {
@@ -192,7 +212,36 @@ export function dropTarget(clientX, clientY, ignore = null) {
   return { side, index, x: mx };
 }
 
-/** A vertical line on the GM's screen where a drop would land. */
+/**
+ * Where a party member dropped here would stand within the party: { order, x },
+ * with `order` the party's new standing order (actor ids), or null when the drop
+ * is outside the party's span (then the whole party moves).
+ */
+function partyTarget(member, clientX, clientY) {
+  const point = canvas.canvasCoordinatesFromClient({ x: clientX, y: clientY });
+  const { sceneX = 0, sceneY = 0 } = canvas.dimensions;
+  const x = point.x - sceneX, y = point.y - sceneY;
+  if (x < 0 || y < 0 || x > FRAME.width || y > FRAME.height) return null;
+
+  const members = resolveCast().filter((e) => e.partyOf === member.partyOf).map((e) => ({ e, p: placements.get(e.id) }));
+  if (members.length < 2 || members.some((m) => !m.p)) return null;
+  const others = members.filter((m) => m.e.id !== member.id);
+  const centres = others.map((m) => m.p.box.x + m.p.box.width / 2);
+  const margin = 0.4 * (members.reduce((s, m) => s + m.p.box.width, 0) / members.length);
+  if (x < Math.min(...centres) - margin || x > Math.max(...centres) + margin) return null;
+
+  // Standing order runs from the outer edge: left to right on the left, right to left on the right.
+  const left = member.side === "left";
+  const index = centres.filter((c) => (left ? c < x : c > x)).length;
+  const prev = centres[index - 1], next = centres[index];
+  const step = margin * (left ? 1 : -1);
+  const mx = prev !== undefined && next !== undefined ? (prev + next) / 2 : prev !== undefined ? prev + step : next - step;
+  const ids = others.map((m) => m.e.id.split(".").pop());
+  ids.splice(index, 0, member.id.split(".").pop());
+  return { order: ids, x: mx, within: true };
+}
+
+/** A vertical line on the GM's screen where a drop would land: gold to move, blue to reorder within the party. */
 function showMarker(target) {
   if (!target) return clearMarker();
   if (!marker || marker.destroyed) {
@@ -202,7 +251,7 @@ function showMarker(target) {
   }
   const { sceneX = 0, sceneY = 0 } = canvas.dimensions;
   marker.clear();
-  marker.lineStyle(8, 0xe0a64a, 0.9);
+  marker.lineStyle(8, target.within ? 0x4fb3ff : 0xe0a64a, 0.9);
   marker.moveTo(sceneX + target.x, sceneY + 0.4 * FRAME.height);
   marker.lineTo(sceneX + target.x, sceneY + FRAME.height);
 }
