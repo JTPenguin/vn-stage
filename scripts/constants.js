@@ -27,11 +27,17 @@ export const SIZE = Object.freeze({
 /** The sizes offered in the Adjust window. */
 export const SIZE_CHOICES = Object.freeze({ tiny: "Tiny", sm: "Small", med: "Medium", lg: "Large", huge: "Huge", grg: "Gargantuan" });
 
-/** Where a face of `scale` should start and end, as shares of the frame height. */
-export function faceGuide(scale = 1) {
+/**
+ * Where a face of `scale` should start and end, as shares of the frame height.
+ * A crowded stage zooms out around each face's centre (it stays where it stood
+ * at full size and only shrinks), so a zoomed face keeps its centre.
+ */
+export function faceGuide(scale = 1, zoom = 1) {
   const ground = GUIDE_TOP + HEADS * FACE;
   const top = ground - HEADS * FACE * scale;
-  return { top, bottom: top + FACE * scale };
+  const centre = top + (FACE * scale) / 2;
+  const half = (FACE * scale * zoom) / 2;
+  return { top: centre - half, bottom: centre + half };
 }
 
 /**
@@ -50,7 +56,8 @@ export const LAYOUT = Object.freeze({
   crowdEnd: 1.2,   // ...and reach minBuffer here
   minBuffer: 0.25, // smallest buffers, as a share of their full size
   minZoom: 0.75,   // everyone shrinks together to no less than this; past it, clusters overlap more
+  shadeFade: 0.1,  // zoomed-out portraits rise; a dark band fades in over this share of the height above their cut-off edges
 });
 
 /** Tile flag `part` values. */
-export const PART = Object.freeze({ BACKGROUND: "background", PORTRAIT: "portrait" });
+export const PART = Object.freeze({ BACKGROUND: "background", PORTRAIT: "portrait", SHADE: "shade" });

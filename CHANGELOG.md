@@ -5,6 +5,12 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 ## [Unreleased]
 
 ### Changed
+- Crowded stages zoom out around each face's centre instead of the ground: faces stay where they stood at full size and only shrink, so they don't sink behind bottom HUDs; bodies shrink upward. The face guide follows.
+
+### Added
+- Bottom shade: while any portrait's cut-off bottom edge is in view (zoomed out, or raised with Adjust), a dark band fades in over the 10% above the highest exposed edge and is solid below it. Two locked tiles (`assets/shade-fade.webp`, `assets/shade-solid.webp`); none at full size.
+
+### Changed
 - Crowded stages: one pass of fixed rules driven by crowding (the width the clusters need at full size, with full buffers, over the width available). The two sides always share the width in proportion to what each needs, so spacing matches; the outer pads and centre gap shrink smoothly to a quarter between crowding 1.0 and 1.2; then every portrait zooms out alike, to no less than 75% (the face guide follows); only past that do clusters overlap more. The arithmetic is in `scripts/arrange.js`, free of Foundry calls; tuning values in `LAYOUT`. `VNStage.status()` reports the zoom, crowding and buffers.
 - Layout clusters characters instead of spreading them across half the frame: neighbours overlap by about half a portrait, and a cluster squeezes only when it runs out of room. With both sides in use, each cluster sits at its own outer edge; with one side in use, that side gets the whole width and its cluster is centred. The Party at full width is centred with wider spacing. The right 17% of the frame stays clear for Foundry's sidebar (`LAYOUT` in `constants.js`).
 

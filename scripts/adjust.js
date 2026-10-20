@@ -121,7 +121,7 @@ function drawGuide(castId) {
   guide.removeChildren().forEach((c) => c.destroy());
   const { sceneX = 0, sceneY = 0 } = canvas.dimensions;
   const placed = placements.get(castId);
-  const lines = faceGuide((placed?.size?.scale ?? 1) * (placed?.zoom ?? 1));
+  const lines = faceGuide(placed?.size?.scale ?? 1, placed?.zoom ?? 1);
   const top = sceneY + lines.top * FRAME.height;
   const bottom = sceneY + lines.bottom * FRAME.height;
 

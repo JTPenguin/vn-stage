@@ -63,6 +63,17 @@ async function doLayout(scene) {
   }
   const remove = [...byId.values()].map((t) => t.id);
 
+  // The bottom shade: only while zoomed-out portraits have lifted their cut-off edges into view.
+  const shadeWanted = shadeTiles(placed);
+  for (const tile of scene.tiles.filter((t) => t.getFlag(MODULE, "part") === PART.SHADE)) {
+    const key = tile.getFlag(MODULE, "shade");
+    const data = shadeWanted.get(key);
+    shadeWanted.delete(key);
+    if (!data) remove.push(tile.id);
+    else if (tile.y !== data.y || tile.height !== data.height) update.push({ _id: tile.id, ...data });
+  }
+  create.push(...shadeWanted.values());
+
   if (remove.length) await scene.deleteEmbeddedDocuments("Tile", remove);
   if (update.length) await scene.updateEmbeddedDocuments("Tile", update);
   if (create.length) await scene.createEmbeddedDocuments("Tile", create);
@@ -70,6 +81,33 @@ async function doLayout(scene) {
   Hooks.callAll(`${MODULE}.layout`, scene, placed.map(({ entry, box, fallback }) => ({
     id: entry.id, name: entry.name, actorUuid: entry.actorUuid, side: entry.side, box, fallback,
   })));
+}
+
+/**
+ * The bottom shade as tile data by key ("fade", "solid"): a fade that ends at
+ * the highest cut-off edge in view, and solid shade from there to the bottom.
+ * Empty when no edge shows (a stage at full size).
+ */
+function shadeTiles(placed) {
+  const out = new Map();
+  const cut = Math.min(FRAME.height, ...placed.filter((p) => !p.fallback).map((p) => p.box.y + p.box.height));
+  if (cut >= FRAME.height - 1) return out;
+  const { sceneX = 0, sceneY = 0 } = canvas.dimensions ?? {};
+  const fade = LAYOUT.shadeFade * FRAME.height;
+  const tile = (key, top, bottom) => out.set(key, {
+    name: `VN Stage shade (${key})`,
+    texture: { src: `modules/${MODULE}/assets/shade-${key}.webp`, anchorX: 0.5, anchorY: 0.5, fit: "fill" },
+    x: Math.round(sceneX + FRAME.width / 2),
+    y: Math.round(sceneY + (top + bottom) / 2),
+    width: FRAME.width,
+    height: Math.round(bottom - top),
+    sort: 1000,
+    locked: true,
+    flags: { [MODULE]: { part: PART.SHADE, shade: key } },
+  });
+  tile("fade", cut - fade, cut + 2);
+  if (cut + 2 < FRAME.height) tile("solid", cut + 2, FRAME.height);
+  return out;
 }
 
 /** One character's image and size, before they're placed. */
@@ -98,17 +136,24 @@ async function measure(entry) {
 
 /** Where one character stands: box (frame pixels) and draw order; first-placed in front. */
 function finish({ entry, art, prefs, size, src, width, height, k, fallback }, cx, i, zoom = 1) {
-  // Zoomed out with everyone else when the stage is crowded (arrange.js).
-  width *= zoom;
-  height *= zoom;
-  if (k) k *= zoom;
-  // Start from the head box: the face's top sits on the guide for this size and zoom,
-  // unless that would lift the cut-off bottom edge into view; then (and with no
-  // face measurement) the image stands on the bottom edge.
+  // At full size, start from the head box: the face's top sits on the guide for
+  // this size, unless that would lift the cut-off bottom edge into view; then
+  // (and with no face measurement) the image stands on the bottom edge.
   const standing = FRAME.height - height;
-  const aligned = art?.faceBox && k ? faceGuide(size.scale * zoom).top * FRAME.height - art.faceBox[1] * k : standing;
-  const base = Math.max(aligned, standing);
-  const y = base + (prefs.yOffset ?? 0) * FRAME.height;
+  const fb = art?.faceBox && k ? art.faceBox : null;
+  const aligned = fb ? faceGuide(size.scale).top * FRAME.height - fb[1] * k : standing;
+  let y = Math.max(aligned, standing) + (prefs.yOffset ?? 0) * FRAME.height;
+
+  // Zoomed out with everyone else when the stage is crowded (arrange.js): around
+  // the face's centre, so faces stay where they stood and bodies shrink upward
+  // (the bottom shade hides the edges that rise). No face: stay on the ground.
+  if (zoom !== 1) {
+    const pivot = fb ? y + (fb[1] + fb[3] / 2) * k : y + height;
+    y = pivot - (pivot - y) * zoom;
+    width *= zoom;
+    height *= zoom;
+    k *= zoom;
+  }
   const box = { x: cx - width / 2, y, width, height };
   const flip = !!prefs.flip;
   return { entry, src, box, sort: 100 - i, flip, fallback, size, zoom, face: faceBox(art, box, k, flip) };
