@@ -5,6 +5,7 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 ## [Unreleased]
 
 ### Added
+- Background quick swaps: the Stage window shows a thumbnail strip of every image in the stage's background folder, with the default background pinned first; one click swaps. Browsing to an image sets that folder (remembered per stage), except the default background's own folder. Hover shows the name without its number ("Absalom Docks").
 - Stage window (GM, scene-control button in the token controls): Make stage, the background (current image and a file browser), On stage (left and right columns with forward, back, flip, other side and remove), and the Cast list from the art folder with search and Left / Right buttons.
 - Cast: a scene flag lists who stands where, in order; `layout()` (GM) draws it as locked portrait tiles, creating, updating and deleting tiles to match, one call at a time. A `vn-stage.layout` hook reports each portrait's box for other modules.
 - Art lookup by convention from `<art folder>/<Name>/manifest.json` (portrait, expressions, avatar thumbnail, measured face height, size and adjust).

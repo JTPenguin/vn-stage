@@ -1,7 +1,8 @@
 import { MODULE } from "./constants.js";
 import { artIndex, characterArt } from "./art.js";
 import { getCast, addToCast, removeFromCast, switchSide, moveInSide, characterPrefs, setFlip } from "./cast.js";
-import { isStage, makeStage, setBackground, currentBackground } from "./stage.js";
+import { isStage, makeStage, setBackground, currentBackground, pickBackground, backgroundFolder, folderImages, backgroundLabel } from "./stage.js";
+import { safetyBackground } from "./settings.js";
 import { AdjustWindow } from "./adjust.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -16,6 +17,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     actions: {
       makeStage: StageWindow.#onMakeStage,
       browseBackground: StageWindow.#onBrowseBackground,
+      setBackground: StageWindow.#onSetBackground,
       add: StageWindow.#onAdd,
       remove: StageWindow.#onRemove,
       switchSide: StageWindow.#onSwitchSide,
@@ -67,6 +69,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     return {
       ...context,
       background: currentBackground(scene),
+      backgrounds: await backgroundChoices(scene),
       left: side("left"),
       right: side("right"),
       cast: index.map((a) => ({ name: a.name, thumb: a.thumb, onStage: onStage.has(a.name), search: a.name.toLowerCase() })),
@@ -99,8 +102,12 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     new FilePicker({
       type: "image",
       current: currentBackground() ?? "",
-      callback: (path) => setBackground(path),
+      callback: (path) => pickBackground(path),
     }).render({ force: true });
+  }
+
+  static async #onSetBackground(_event, target) {
+    await setBackground(target.dataset.src);
   }
 
   static async #onAdd(_event, target) {
@@ -136,4 +143,21 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     await artIndex({ refresh: true });
     this.render();
   }
+}
+
+/** The quick-swap strip: the default background pinned first, then the stage's folder. */
+async function backgroundChoices(scene) {
+  const current = currentBackground(scene);
+  const safety = safetyBackground();
+  const folder = backgroundFolder(scene);
+  const images = (await folderImages(folder)).filter((src) => src !== safety);
+  const choices = images.map((src) => ({ src, label: backgroundLabel(src) }));
+  if (safety) choices.unshift({ src: safety, label: "Default background", pinned: true });
+  const same = (a, b) => !!a && !!b && safeDecode(a) === safeDecode(b);
+  for (const c of choices) c.current = same(c.src, current);
+  return { choices, folder };
+}
+
+function safeDecode(path) {
+  try { return decodeURIComponent(path); } catch { return path; }
 }

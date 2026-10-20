@@ -8,9 +8,17 @@
 
   <section class="vn-section vn-background">
     <h3>Background</h3>
+    <div class="vn-bg-strip">
+      {{#each backgrounds.choices}}
+      <button type="button" class="vn-bg-choice {{#if current}}current{{/if}} {{#if pinned}}pinned{{/if}}" data-action="setBackground" data-src="{{src}}" data-tooltip="{{label}}" aria-label="{{label}}">
+        <img src="{{src}}" alt="" loading="lazy">
+        {{#if pinned}}<i class="fa-solid fa-house vn-bg-pin"></i>{{/if}}
+      </button>
+      {{/each}}
+    </div>
     <div class="vn-bg-row">
-      {{#if background}}<img class="vn-bg-thumb" src="{{background}}" alt="">{{/if}}
-      <button type="button" data-action="browseBackground"><i class="fa-solid fa-image"></i> Browse…</button>
+      <button type="button" data-action="browseBackground"><i class="fa-solid fa-folder-open"></i> Browse…</button>
+      <span class="vn-bg-folder">{{#if backgrounds.folder}}{{backgrounds.folder}}{{else}}Browse to a scenario's scene art to swap between its images here.{{/if}}</span>
     </div>
   </section>
 

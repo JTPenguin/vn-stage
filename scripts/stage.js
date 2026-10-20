@@ -85,3 +85,63 @@ export async function setBackground(src, { scene = canvas.scene } = {}) {
   }]);
   return doc;
 }
+
+/* -------------------------------------------- */
+/*  Background folder: quick swaps in a session */
+/* -------------------------------------------- */
+
+const IMAGE = /\.(webp|png|jpe?g|avif|gif)$/i;
+const folderCache = new Map(); // folder → Promise<string[]>
+
+/** Folder part of a path, with its trailing slash. */
+function folderOf(path) {
+  return path.slice(0, path.lastIndexOf("/") + 1);
+}
+
+/** Paths are kept decoded, as Foundry stores them; the file browser hands back encoded ones. */
+function decodePath(path) {
+  try { return decodeURIComponent(path); } catch { return path; }
+}
+
+/** The folder whose images the Stage window offers as quick swaps, or null. */
+export function backgroundFolder(scene = canvas.scene) {
+  return scene?.getFlag(MODULE, "backgroundFolder") ?? null;
+}
+
+/**
+ * Show a background picked in the file browser. Its folder becomes the stage's
+ * quick-swap folder, except the default background's folder (the Lodge's also
+ * holds its old layer images), so the scenario's scenes stay on offer.
+ */
+export async function pickBackground(path, { scene = canvas.scene } = {}) {
+  requireGM();
+  const src = decodePath(path);
+  await setBackground(src, { scene });
+  const folder = folderOf(src);
+  const safety = safetyBackground();
+  if (!folder || folder === (safety && folderOf(safety))) return;
+  folderCache.delete(folder); // re-read: new art may have arrived
+  if (folder !== backgroundFolder(scene)) await scene.setFlag(MODULE, "backgroundFolder", folder);
+}
+
+/** The images in `folder`, sorted by name (GM only: it browses the folder). */
+export function folderImages(folder) {
+  if (!folder) return Promise.resolve([]);
+  if (!folderCache.has(folder)) {
+    const FilePicker = foundry.applications.apps.FilePicker.implementation;
+    folderCache.set(folder, FilePicker.browse("data", folder)
+      .then(({ files }) => files.map(decodePath).filter((f) => IMAGE.test(f)).sort((a, b) => a.localeCompare(b)))
+      .catch((err) => {
+        console.warn(`VN Stage | Can't browse ${folder}`, err);
+        folderCache.delete(folder);
+        return [];
+      }));
+  }
+  return folderCache.get(folder);
+}
+
+/** "…/02 Absalom Docks.webp" → "Absalom Docks". */
+export function backgroundLabel(path) {
+  const file = path.split("/").pop().replace(IMAGE, "");
+  return file.replace(/^\d+[\s._-]+/, "") || file;
+}

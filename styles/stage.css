@@ -13,8 +13,14 @@
 .vn-stage .vn-icon.active { background: var(--color-warm-2, #c9593f); color: #fff; }
 .vn-stage h3 .vn-icon { margin-left: auto; }
 
-.vn-stage .vn-bg-row { display: flex; align-items: center; gap: 0.5rem; }
-.vn-stage .vn-bg-thumb { width: 7rem; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 3px; border: none; }
+.vn-stage .vn-bg-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.4rem; }
+.vn-stage .vn-bg-folder { font-size: var(--font-size-12, 12px); opacity: 0.7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vn-stage .vn-bg-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr)); gap: 0.3rem; }
+.vn-stage .vn-bg-choice { position: relative; width: 100%; height: auto; padding: 0; border: 2px solid transparent; border-radius: 4px; background: none; overflow: hidden; line-height: 0; }
+.vn-stage .vn-bg-choice img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border: none; border-radius: 2px; }
+.vn-stage .vn-bg-choice.current { border-color: var(--color-warm-2, #c9593f); }
+.vn-stage .vn-bg-choice:hover:not(.current) { border-color: var(--color-border-highlight, #ff6400aa); }
+.vn-stage .vn-bg-pin { position: absolute; top: 3px; left: 3px; font-size: 0.7rem; color: #fff; text-shadow: 0 0 3px #000; line-height: 1; }
 
 .vn-stage .vn-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
 .vn-stage .vn-row { display: grid; grid-template-columns: 2.25rem 1fr; grid-template-rows: auto auto; column-gap: 0.4rem; align-items: center; padding: 0.2rem 0; }
