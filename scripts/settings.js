@@ -1,4 +1,5 @@
 import { MODULE } from "./constants.js";
+import { clearArtCache } from "./art.js";
 
 export function registerSettings() {
   game.settings.register(MODULE, "artRoot", {
@@ -9,6 +10,7 @@ export function registerSettings() {
     type: String,
     default: "",
     filePicker: "folder",
+    onChange: () => clearArtCache(),
   });
 
   game.settings.register(MODULE, "safetyBackground", {
@@ -19,6 +21,14 @@ export function registerSettings() {
     type: String,
     default: "",
     filePicker: "image",
+  });
+
+  // Per-character choices that follow them to every stage, by name (e.g. { "Ambrus Valsin": { flip: true } }).
+  game.settings.register(MODULE, "characterPrefs", {
+    scope: "world",
+    config: false,
+    type: Object,
+    default: {},
   });
 }
 

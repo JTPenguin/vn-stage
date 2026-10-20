@@ -1,28 +1,81 @@
 /**
  * VN Stage: visual-novel scenes on a native Foundry scene.
  *
- * GM actions write tiles and flags, which Foundry syncs to everyone.
+ * GM actions write the cast flag and tiles, which Foundry syncs to everyone.
  * Every client fits its view to the stage frame; players' view is locked.
  */
-import { MODULE } from "./constants.js";
+import { MODULE, FRAME } from "./constants.js";
 import { registerSettings } from "./settings.js";
 import { isStage, makeStage, unmakeStage, setBackground, currentBackground } from "./stage.js";
-import { startView, stopView, viewLocked } from "./view.js";
+import { getCast, addToCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip } from "./cast.js";
+import { artIndex, characterArt, clearArtCache } from "./art.js";
+import { layout } from "./layout.js";
+import { startView, stopView, viewLocked, viewFitted } from "./view.js";
+import { StageWindow } from "./window.js";
 
 Hooks.once("init", () => {
   registerSettings();
-  const api = { isStage, makeStage, unmakeStage, setBackground, currentBackground, status };
+  foundry.applications.handlebars.loadTemplates({
+    "vn-stage.row": `modules/${MODULE}/templates/stage-row.hbs`,
+  });
+  const api = {
+    isStage, makeStage, unmakeStage, setBackground, currentBackground,
+    getCast, addToCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip,
+    artIndex, characterArt, clearArtCache, layout,
+    openWindow: () => StageWindow.open(),
+    status,
+  };
   game.modules.get(MODULE).api = api;
   globalThis.VNStage = api;
 });
 
-Hooks.on("canvasReady", () => startView());
+// The Stage window's button, in the token controls (the GM's usual layer).
+Hooks.on("getSceneControlButtons", (controls) => {
+  if (!game.user.isGM || !controls.tokens) return;
+  controls.tokens.tools.vnStage = {
+    name: "vnStage",
+    order: 99,
+    title: "VN Stage",
+    icon: "fa-solid fa-masks-theater",
+    button: true,
+    onChange: () => StageWindow.open(),
+  };
+});
+
+Hooks.on("canvasReady", () => {
+  startView();
+  StageWindow.refresh();
+  // Catch up on anything that changed while this stage wasn't viewed (a flip, new art).
+  if (game.user.isGM && isStage()) layout(canvas.scene);
+});
 Hooks.on("canvasTearDown", () => stopView());
 
-// Stage flag added, changed or removed on the scene being viewed.
+// Stage or cast flags changed on the scene being viewed.
 Hooks.on("updateScene", (scene, changes) => {
   if (scene.id !== canvas.scene?.id) return;
-  if (foundry.utils.hasProperty(changes, `flags.${MODULE}`)) startView();
+  if (!foundry.utils.hasProperty(changes, `flags.${MODULE}`)) return;
+  if (isStage(scene) !== viewFitted()) startView(); // became, or stopped being, a stage
+  StageWindow.refresh();
+});
+
+// The background tile changed, or tiles came and went.
+for (const hook of ["createTile", "updateTile", "deleteTile"]) {
+  Hooks.on(hook, (tile) => { if (tile.parent?.id === canvas.scene?.id) StageWindow.refresh(); });
+}
+
+Hooks.on("updateSetting", (setting) => {
+  if (setting.key === `${MODULE}.characterPrefs`) StageWindow.refresh();
+});
+
+// GM shortcut: drop an actor on the left or right half of a stage.
+Hooks.on("dropCanvasData", (_canvas, data) => {
+  if (!game.user.isGM || !isStage() || data.type !== "Actor") return;
+  const actor = fromUuidSync(data.uuid);
+  if (!actor) return;
+  const { sceneX = 0 } = canvas.dimensions;
+  const side = data.x - sceneX < FRAME.width / 2 ? "left" : "right";
+  addToCast({ name: actor.name, actorUuid: actor.uuid, side });
+  return false; // no token
 });
 
 /** For the console during testing. */
@@ -31,6 +84,7 @@ function status() {
     scene: canvas.scene?.name,
     stage: isStage(),
     background: currentBackground(),
+    cast: getCast(),
     viewLocked: viewLocked(),
     view: { x: canvas.stage.pivot.x, y: canvas.stage.pivot.y, scale: canvas.stage.scale.x },
   };

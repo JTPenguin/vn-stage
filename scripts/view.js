@@ -7,10 +7,17 @@ import { isStage } from "./stage.js";
  * once and stays free to move around and edit.
  */
 let unlockView = null;
+let fitted = false;
+
+/** Is this screen currently fitted to a stage? */
+export function viewFitted() {
+  return fitted;
+}
 
 export function startView() {
   stopView();
   if (!isStage()) return;
+  fitted = true;
   const proto = Object.getPrototypeOf(canvas);
   if (!game.user.isGM) {
     canvas.pan = function () { return proto.pan.call(this, fitView()); };
@@ -22,6 +29,7 @@ export function startView() {
 }
 
 export function stopView() {
+  fitted = false;
   unlockView?.();
   unlockView = null;
   window.removeEventListener("resize", refit);

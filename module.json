@@ -21,5 +21,8 @@
       "name": "English",
       "path": "lang/en.json"
     }
+  ],
+  "styles": [
+    "styles/stage.css"
   ]
 }

@@ -1,0 +1,50 @@
+<div class="vn-stage-body">
+  {{#unless stage}}
+  <section class="vn-section">
+    <p>{{#if sceneName}}<strong>{{sceneName}}</strong> isn't a stage yet.{{else}}No scene is being viewed.{{/if}}</p>
+    {{#if sceneName}}<button type="button" data-action="makeStage"><i class="fa-solid fa-masks-theater"></i> Make stage</button>{{/if}}
+  </section>
+  {{else}}
+
+  <section class="vn-section vn-background">
+    <h3>Background</h3>
+    <div class="vn-bg-row">
+      {{#if background}}<img class="vn-bg-thumb" src="{{background}}" alt="">{{/if}}
+      <button type="button" data-action="browseBackground"><i class="fa-solid fa-image"></i> Browse…</button>
+    </div>
+  </section>
+
+  <section class="vn-section">
+    <h3>On stage</h3>
+    <div class="vn-sides">
+      <div class="vn-side">
+        <h4>Left</h4>
+        {{#each left}}{{> "vn-stage.row"}}{{else}}<p class="vn-empty">Nobody</p>{{/each}}
+      </div>
+      <div class="vn-side">
+        <h4>Right</h4>
+        {{#each right}}{{> "vn-stage.row"}}{{else}}<p class="vn-empty">Nobody</p>{{/each}}
+      </div>
+    </div>
+  </section>
+
+  <section class="vn-section vn-cast">
+    <h3>Cast
+      <button type="button" class="vn-icon" data-action="refreshCast" data-tooltip="Re-read the art folder"><i class="fa-solid fa-rotate"></i></button>
+    </h3>
+    <input type="search" name="filter" value="{{filter}}" placeholder="Search" autocomplete="off">
+    <ul class="vn-cast-list">
+      {{#each cast}}
+      <li data-name="{{name}}" data-search="{{search}}" class="{{#if onStage}}on-stage{{/if}}">
+        <img src="{{thumb}}" alt="" loading="lazy">
+        <span class="vn-name">{{name}}</span>
+        <button type="button" data-action="add" data-side="left">Left</button>
+        <button type="button" data-action="add" data-side="right">Right</button>
+      </li>
+      {{else}}
+      <li class="vn-empty">No characters found. Set the art folder in the module settings.</li>
+      {{/each}}
+    </ul>
+  </section>
+  {{/unless}}
+</div>
