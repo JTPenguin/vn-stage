@@ -1,4 +1,5 @@
 import { MODULE, FRAME, PART, FACE, SIZE, LAYOUT, faceGuide } from "./constants.js";
+import { arrange, clusterCentres } from "./arrange.js";
 import { characterArt } from "./art.js";
 import { resolveCast, characterPrefs } from "./cast.js";
 import { isStage } from "./stage.js";
@@ -15,6 +16,9 @@ let queue = Promise.resolve();
 
 /** The latest placements on the viewed stage, by cast id (for the face guide). */
 export const placements = new Map();
+
+/** The latest zoom, crowding and buffer share on the viewed stage (for the console and the guide). */
+export const lastArrangement = { zoom: 1, crowding: 0, buffers: 1 };
 
 /**
  * Draw the stage's cast as portrait tiles: create, update or delete tiles so
@@ -33,14 +37,18 @@ async function doLayout(scene) {
   for (const side of ["left", "right", "full"]) {
     sides[side] = await Promise.all(cast.filter((e) => e.side === side).map(measure));
   }
+  const widths = Object.fromEntries(Object.entries(sides).map(([k, items]) => [k, items.map((m) => m.width)]));
+  const { zoom, crowding, buffers, regions } = arrange(widths, FRAME.width, LAYOUT);
   const placed = [];
   for (const [side, items] of Object.entries(sides)) {
-    const centres = clusterCentres(side, items, sides);
-    items.forEach((m, i) => placed.push(finish(m, centres[i], i)));
+    const factor = side === "full" ? LAYOUT.fullStep : LAYOUT.step;
+    const centres = clusterCentres(side, items.map((m) => m.width * zoom), regions[side], factor);
+    items.forEach((m, i) => placed.push(finish(m, centres[i], i, zoom)));
   }
   if (scene.id === canvas.scene?.id) {
     placements.clear();
     for (const p of placed) placements.set(p.entry.id, p);
+    Object.assign(lastArrangement, { zoom, crowding, buffers });
   }
 
   const tiles = scene.tiles.filter((t) => t.getFlag(MODULE, "part") === PART.PORTRAIT);
@@ -62,45 +70,6 @@ async function doLayout(scene) {
   Hooks.callAll(`${MODULE}.layout`, scene, placed.map(({ entry, box, fallback }) => ({
     id: entry.id, name: entry.name, actorUuid: entry.actorUuid, side: entry.side, box, fallback,
   })));
-}
-
-/**
- * Centres (frame x) for one side's characters, first-placed first. Each side is a
- * tight cluster: neighbours overlap, and the cluster squeezes only if it runs out
- * of room. With both sides in use, each cluster sits at its own outer edge; with
- * one side in use, that side has the whole width and its cluster is centred.
- * The Party at full width is centred with wider spacing. The right edge stays
- * clear for Foundry's sidebar.
- */
-function clusterCentres(side, items, sides) {
-  if (!items.length) return [];
-  const W = FRAME.width;
-  const start = LAYOUT.pad * W;
-  const end = W * (1 - LAYOUT.sidebar) - LAYOUT.pad * W;
-  const mid = (start + end) / 2;
-  const both = sides.left.length > 0 && sides.right.length > 0;
-
-  let region, anchor;
-  if (side === "full" || !both) [region, anchor] = [[start, end], "centre"];
-  else if (side === "left") [region, anchor] = [[start, mid - (LAYOUT.centreGap * W) / 2], "start"];
-  else [region, anchor] = [[mid + (LAYOUT.centreGap * W) / 2, end], "end"];
-  const room = region[1] - region[0];
-
-  // Offsets of each centre from the cluster's outer edge.
-  const factor = side === "full" ? LAYOUT.fullStep : LAYOUT.step;
-  const steps = items.slice(1).map((m, i) => (factor * (items[i].width + m.width)) / 2);
-  const ends = items[0].width / 2 + items.at(-1).width / 2;
-  const total = steps.reduce((a, b) => a + b, 0);
-  const squeeze = total > 0 && ends + total > room ? Math.max(0, room - ends) / total : 1;
-  const offsets = [items[0].width / 2];
-  for (const s of steps) offsets.push(offsets.at(-1) + s * squeeze);
-  const extent = offsets.at(-1) + items.at(-1).width / 2;
-
-  // The left side (and full width) runs left to right; the right side runs right to left.
-  const inset = anchor === "centre" ? Math.max(0, (room - extent) / 2) : 0;
-  return side === "right"
-    ? offsets.map((o) => region[1] - inset - o)
-    : offsets.map((o) => region[0] + inset + o);
 }
 
 /** One character's image and size, before they're placed. */
@@ -128,17 +97,21 @@ async function measure(entry) {
 }
 
 /** Where one character stands: box (frame pixels) and draw order; first-placed in front. */
-function finish({ entry, art, prefs, size, src, width, height, k, fallback }, cx, i) {
-  // Start from the head box: the face's top sits on the guide for this size,
+function finish({ entry, art, prefs, size, src, width, height, k, fallback }, cx, i, zoom = 1) {
+  // Zoomed out with everyone else when the stage is crowded (arrange.js).
+  width *= zoom;
+  height *= zoom;
+  if (k) k *= zoom;
+  // Start from the head box: the face's top sits on the guide for this size and zoom,
   // unless that would lift the cut-off bottom edge into view; then (and with no
   // face measurement) the image stands on the bottom edge.
   const standing = FRAME.height - height;
-  const aligned = art?.faceBox && k ? faceGuide(size.scale).top * FRAME.height - art.faceBox[1] * k : standing;
+  const aligned = art?.faceBox && k ? faceGuide(size.scale * zoom).top * FRAME.height - art.faceBox[1] * k : standing;
   const base = Math.max(aligned, standing);
   const y = base + (prefs.yOffset ?? 0) * FRAME.height;
   const box = { x: cx - width / 2, y, width, height };
   const flip = !!prefs.flip;
-  return { entry, src, box, sort: 100 - i, flip, fallback, size, face: faceBox(art, box, k, flip) };
+  return { entry, src, box, sort: 100 - i, flip, fallback, size, zoom, face: faceBox(art, box, k, flip) };
 }
 
 /** A character's creature size: the Adjust window's choice, then the sheet, then the manifest. */

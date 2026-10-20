@@ -45,6 +45,11 @@ export const LAYOUT = Object.freeze({
   centreGap: 0.04, // between the two sides' clusters
   step: 0.55,      // a neighbour stands this share of the pair's average width further in
   fullStep: 0.9,   // The Party at full width: wider spacing, for the Landing's lower-thirds
+  // Crowding = width needed at full size (with full buffers) / width available (see arrange.js).
+  crowdStart: 1.0, // buffers start shrinking here...
+  crowdEnd: 1.2,   // ...and reach minBuffer here
+  minBuffer: 0.25, // smallest buffers, as a share of their full size
+  minZoom: 0.75,   // everyone shrinks together to no less than this; past it, clusters overlap more
 });
 
 /** Tile flag `part` values. */

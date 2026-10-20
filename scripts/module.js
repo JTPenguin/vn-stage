@@ -9,7 +9,7 @@ import { registerSettings } from "./settings.js";
 import { isStage, makeStage, unmakeStage, setBackground, currentBackground } from "./stage.js";
 import { getCast, resolveCast, addToCast, addParty, setCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip } from "./cast.js";
 import { artIndex, characterArt, clearArtCache } from "./art.js";
-import { layout } from "./layout.js";
+import { layout, lastArrangement } from "./layout.js";
 import { listGroups, getGroup, memberNames, createGroup, addFolder, addMember, stageGroup, setStageGroup } from "./groups.js";
 import { startView, stopView, viewLocked, viewFitted } from "./view.js";
 import { StageWindow } from "./window.js";
@@ -117,6 +117,7 @@ function status() {
     stage: isStage(),
     background: currentBackground(),
     cast: getCast(),
+    arrangement: { ...lastArrangement },
     viewLocked: viewLocked(),
     view: { x: canvas.stage.pivot.x, y: canvas.stage.pivot.y, scale: canvas.stage.scale.x },
   };
