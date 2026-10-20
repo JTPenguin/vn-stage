@@ -26,10 +26,10 @@ export function clusterWidth(widths, factor) {
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 /**
- * @param {{left: number[], right: number[], full: number[]}} widths  each side's full-size widths, first-placed first
+ * @param {{left: number[], right: number[]}} widths  each side's full-size widths, first-placed first
  * @param {number} frameWidth
  * @param {object} L  the LAYOUT constants
- * @returns {{zoom, crowding, buffers, regions: {left, right, full}}}  regions: { from, to, anchor } or null
+ * @returns {{zoom, crowding, buffers, regions: {left, right}}}  regions: { from, to, anchor } or null
  */
 export function arrange(widths, frameWidth, L) {
   const end = frameWidth * (1 - L.sidebar);
@@ -45,38 +45,34 @@ export function arrange(widths, frameWidth, L) {
   const pad = L.pad * frameWidth * buffers;
   const gap = both ? L.centreGap * frameWidth * buffers : 0;
   const available = end - 2 * pad - gap;
-  let zoom = need > 0 ? clamp(available / need, L.minZoom, 1) : 1;
+  const zoom = need > 0 ? clamp(available / need, L.minZoom, 1) : 1;
 
-  // The Party at full width: its own row, centred.
-  const needF = clusterWidth(widths.full, L.fullStep);
-  const crowdingF = needF > 0 ? (needF + 2 * L.pad * frameWidth) / end : 0;
-  const padF = L.pad * frameWidth * shrink(crowdingF);
-  if (needF > 0) zoom = Math.min(zoom, clamp((end - 2 * padF) / needF, L.minZoom, 1));
-
-  const regions = { left: null, right: null, full: null };
+  const regions = { left: null, right: null };
   if (both) {
     const shareL = (available * needL) / need;
     regions.left = { from: pad, to: pad + shareL, anchor: "start" };
     regions.right = { from: end - pad - (available - shareL), to: end - pad, anchor: "end" };
   } else if (needL > 0) regions.left = { from: pad, to: end - pad, anchor: "centre" };
   else if (needR > 0) regions.right = { from: pad, to: end - pad, anchor: "centre" };
-  if (needF > 0) regions.full = { from: padF, to: end - padF, anchor: "centre" };
 
-  return { zoom, crowding: Math.max(crowding, crowdingF), buffers, regions };
+  return { zoom, crowding, buffers, regions };
 }
 
 /**
  * Centres (frame x) for one side, first-placed first, from its (already zoomed)
- * widths and region. The cluster squeezes only if it still doesn't fit. The left
+ * widths and region. The cluster squeezes only if it still doesn't fit, and
+ * spreads out (to `roomyFactor`) when it has room to spare. The left
  * side and the full row run left to right; the right side runs right to left.
  */
-export function clusterCentres(side, widths, region, factor) {
+export function clusterCentres(side, widths, region, factor, roomyFactor = factor) {
   if (!widths.length || !region) return [];
   const room = region.to - region.from;
   const steps = widths.slice(1).map((w, i) => (factor * (widths[i] + w)) / 2);
   const ends = widths[0] / 2 + widths.at(-1) / 2;
   const total = steps.reduce((a, b) => a + b, 0);
-  const squeeze = total > 0 && ends + total > room ? Math.max(0, room - ends) / total : 1;
+  // Squeeze when it doesn't fit; spread out to `roomyFactor` when there's room to spare.
+  const fit = total > 0 ? Math.max(0, room - ends) / total : 1;
+  const squeeze = Math.min(fit, roomyFactor / factor);
   const offsets = [widths[0] / 2];
   for (const s of steps) offsets.push(offsets.at(-1) + s * squeeze);
   const extent = offsets.at(-1) + widths.at(-1) / 2;

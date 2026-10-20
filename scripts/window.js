@@ -46,8 +46,6 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       toggleEveryone: StageWindow.#onToggleEveryone,
       resetExpressions: StageWindow.#onResetExpressions,
       addParty: StageWindow.#onAddParty,
-      removeCast: StageWindow.#onRemoveCast,
-      removeParty: StageWindow.#onRemoveParty,
       savePreset: StageWindow.#onSavePreset,
       loadPreset: StageWindow.#onLoadPreset,
       deletePreset: StageWindow.#onDeletePreset,
@@ -123,9 +121,14 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       bg: await backgroundStrips(scene, group, collapsed),
       party: hasParty() ? { label: PARTY_LABEL, side: partyEntry?.side ?? null } : null,
       presets: listPresets(group?.id ?? null).map((p) => ({ ...p, groupLabel: group ? null : (p.group ? getGroup(p.group)?.label ?? p.group : null) })),
-      cast: list.map((a) => ({
-        name: a.name, thumb: a.thumb, onStage: onStage.has(a.name), search: a.name.toLowerCase(), member: members.has(a.name),
-      })),
+      cast: list.map((a) => {
+        const side = cast.find((e) => !e.party && e.name === a.name)?.side ?? null;
+        const inParty = !side && resolved.some((e) => e.partyOf && e.name === a.name);
+        return {
+          name: a.name, thumb: a.thumb, onStage: onStage.has(a.name), search: a.name.toLowerCase(), member: members.has(a.name),
+          left: side === "left", right: side === "right", inParty,
+        };
+      }),
       emptyCast: selected === ALL
         ? "No characters found. Set the art folder in the module settings."
         : selected === RECENT ? "Nobody yet: characters you put on a stage appear here."
@@ -191,8 +194,12 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     await setBackground(target.dataset.src);
   }
 
+  /** Left / Right toggles: turn on to put the character there (or move them), turn the lit one off to remove them. */
   static async #onAdd(_event, target) {
-    await addToCast({ name: target.closest("[data-name]").dataset.name, side: target.dataset.side });
+    const name = target.closest("[data-name]").dataset.name;
+    const entry = getCast().find((e) => !e.party && e.name === name);
+    if (entry?.side === target.dataset.side) await removeFromCast(entry.id);
+    else await addToCast({ name, side: target.dataset.side });
   }
 
 
@@ -301,20 +308,11 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     await resetAllExpressions();
   }
 
-  /** Remove a character standing on the stage (by name; party members leave with The Party). */
-  static async #onRemoveCast(_event, target) {
-    const name = target.closest("[data-name]").dataset.name;
-    const entry = getCast().find((e) => !e.party && e.name === name);
-    if (entry) await removeFromCast(entry.id);
-  }
-
-  static async #onRemoveParty() {
-    const entry = getCast().find((e) => e.party);
-    if (entry) await removeFromCast(entry.id);
-  }
-
+  /** The Party's Left / Right toggles, the same way. */
   static async #onAddParty(_event, target) {
-    await addParty(target.dataset.side);
+    const entry = getCast().find((e) => e.party);
+    if (entry?.side === target.dataset.side) await removeFromCast(entry.id);
+    else await addParty(target.dataset.side);
   }
 
 

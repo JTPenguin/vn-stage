@@ -34,15 +34,14 @@ async function doLayout(scene) {
   if (!game.user.isGM || !isStage(scene)) return;
   const cast = resolveCast(scene);
   const sides = {};
-  for (const side of ["left", "right", "full"]) {
+  for (const side of ["left", "right"]) {
     sides[side] = await Promise.all(cast.filter((e) => e.side === side).map(measure));
   }
   const widths = Object.fromEntries(Object.entries(sides).map(([k, items]) => [k, items.map((m) => m.width)]));
   const { zoom, crowding, buffers, regions } = arrange(widths, FRAME.width, LAYOUT);
   const placed = [];
   for (const [side, items] of Object.entries(sides)) {
-    const factor = side === "full" ? LAYOUT.fullStep : LAYOUT.step;
-    const centres = clusterCentres(side, items.map((m) => m.width * zoom), regions[side], factor);
+    const centres = clusterCentres(side, items.map((m) => m.width * zoom), regions[side], LAYOUT.step, LAYOUT.roomyStep);
     items.forEach((m, i) => placed.push(finish(m, centres[i], i, zoom)));
   }
   if (scene.id === canvas.scene?.id) {

@@ -49,8 +49,8 @@ export const LAYOUT = Object.freeze({
   sidebar: 0.17,   // share of the frame width kept clear on the right
   pad: 0.02,       // share of the frame width kept clear at each outer edge
   centreGap: 0.04, // between the two sides' clusters
-  step: 0.55,      // a neighbour stands this share of the pair's average width further in
-  fullStep: 0.9,   // The Party at full width: wider spacing, for the Landing's lower-thirds
+  step: 0.55,      // a neighbour stands this share of the pair's average width further in (used for crowding)
+  roomyStep: 0.75, // ...and up to this share when the cluster has room to spare (a lone side)
   // Crowding = width needed at full size (with full buffers) / width available (see arrange.js).
   crowdStart: 1.0, // buffers start shrinking here...
   crowdEnd: 1.2,   // ...and reach minBuffer here

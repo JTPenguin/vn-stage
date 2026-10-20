@@ -101,10 +101,10 @@
       <li class="vn-cast-party {{#if party.side}}on-stage{{/if}}" data-search="the party" data-party draggable="true">
         <span class="vn-party-icon"><i class="fa-solid fa-users"></i></span>
         <span class="vn-name">{{party.label}}</span>
-        {{#if party.side}}<button type="button" class="vn-icon" data-action="removeParty" data-tooltip="Remove The Party from the stage"><i class="fa-solid fa-xmark"></i></button>{{/if}}
-        <button type="button" data-action="addParty" data-side="left">Left</button>
-        <button type="button" data-action="addParty" data-side="right">Right</button>
-        <button type="button" data-action="addParty" data-side="full" data-tooltip="Whole width">Full</button>
+        <span class="vn-toggles">
+          <button type="button" class="vn-toggle {{#if (eq party.side 'left')}}active{{/if}}" data-action="addParty" data-side="left" aria-pressed="{{eq party.side 'left'}}">Left</button>
+          <button type="button" class="vn-toggle {{#if (eq party.side 'right')}}active{{/if}}" data-action="addParty" data-side="right" aria-pressed="{{eq party.side 'right'}}">Right</button>
+        </span>
       </li>
       {{/if}}
       {{#each cast}}
@@ -118,9 +118,10 @@
           <button type="button" class="vn-icon" data-action="addMember" data-tooltip="Add to this group"><i class="fa-solid fa-user-plus"></i></button>
           {{/if}}
         {{/if}}
-        {{#if onStage}}<button type="button" class="vn-icon" data-action="removeCast" data-tooltip="Remove from the stage"><i class="fa-solid fa-xmark"></i></button>{{/if}}
-        <button type="button" data-action="add" data-side="left">Left</button>
-        <button type="button" data-action="add" data-side="right">Right</button>
+        <span class="vn-toggles" {{#if inParty}}data-tooltip="On stage with The Party"{{/if}}>
+          <button type="button" class="vn-toggle {{#if left}}active{{/if}}" data-action="add" data-side="left" aria-pressed="{{left}}" {{#if inParty}}disabled{{/if}}>Left</button>
+          <button type="button" class="vn-toggle {{#if right}}active{{/if}}" data-action="add" data-side="right" aria-pressed="{{right}}" {{#if inParty}}disabled{{/if}}>Right</button>
+        </span>
       </li>
       {{else}}
       <li class="vn-empty">{{emptyCast}}</li>

@@ -4,6 +4,16 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 
 ## [Unreleased]
 
+### Changed
+- Clusters with room to spare spread out: neighbours stand up to 75% of their average width apart (`LAYOUT.roomyStep`) instead of 55%, so a party alone on the stage isn't bunched. Crowding and zoom still use 55%, so crowded stages are unchanged.
+
+### Removed
+- The Party's whole-width side (Full): in the Cast list, the character menu and the layout (`LAYOUT.fullStep`). A side alone on the stage is already centred. Stages and presets saved with it read as Left.
+
+### Changed
+- Cast list: Left and Right are lit toggles, one at a time. Turn one on to place the character or move them; turn the lit one off to remove them. The separate remove buttons are gone. A party member's toggles are disabled ("On stage with The Party").
+- Cast list: the whole row of anyone on the stage lights up.
+
 ### Added
 - Drag a portrait on the stage to move the character within its side or to the other side (a party member moves The Party). A marker shows where it will land; Escape cancels. The press is the module's alone: Foundry no longer starts its own selection box or drag on a portrait.
 - Drag a Cast row, The Party, or an actor from the sidebar onto the stage to put them where they're dropped (the marker shows while dragging).

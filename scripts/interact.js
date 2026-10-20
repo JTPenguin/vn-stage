@@ -166,7 +166,7 @@ export function dropTarget(clientX, clientY, ignore = null) {
   const centres = new Map();
   for (const p of placements.values()) {
     const id = p.entry.partyOf ?? p.entry.id;
-    if (id === ignore || p.entry.side === "full") continue;
+    if (id === ignore) continue;
     const c = centres.get(id) ?? { side: p.entry.side, sum: 0, n: 0 };
     c.sum += p.box.x + p.box.width / 2;
     c.n += 1;
@@ -338,7 +338,6 @@ async function gmActions(entry) {
     actions.push("|",
       { label: "The Party: left", icon: "fa-solid fa-arrow-left", active: side === "left", run: () => addParty("left") },
       { label: "The Party: right", icon: "fa-solid fa-arrow-right", active: side === "right", run: () => addParty("right") },
-      { label: "The Party: whole width", icon: "fa-solid fa-arrows-left-right-to-line", active: side === "full", run: () => addParty("full") },
       { label: "Remove The Party", icon: "fa-solid fa-users-slash", run: () => removeFromCast(entry.partyOf) });
   } else {
     actions.push("|", { label: "Remove from the stage", icon: "fa-solid fa-xmark", run: () => removeFromCast(entry.id) });

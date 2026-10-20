@@ -8,12 +8,11 @@ import { noteRecent } from "./groups.js";
  * by `layout`, so every change here ends with a layout.
  *
  * Entry: { id, name, actorUuid|null, side: "left"|"right" }, or The Party:
- * { id, party: true, side: "left"|"right"|"full" }, which stands for the
+ * { id, party: true, side: "left"|"right" }, which stands for the
  * system's party members (PF2e's party actor) whenever the stage is drawn.
  */
 
 export const SIDES = ["left", "right"];
-export const PARTY_SIDES = ["left", "right", "full"];
 export const PARTY_LABEL = "The Party";
 
 /** The party's characters, if the system has a party (PF2e). */
@@ -44,7 +43,10 @@ export function resolveCast(scene = canvas.scene) {
 }
 
 export function getCast(scene = canvas.scene) {
-  return foundry.utils.deepClone(scene?.getFlag(MODULE, "cast") ?? []);
+  const cast = foundry.utils.deepClone(scene?.getFlag(MODULE, "cast") ?? []);
+  // The Party's old "whole width" side (removed 2026-10-20) reads as the left: alone, a side is centred anyway.
+  for (const e of cast) if (!SIDES.includes(e.side)) e.side = "left";
+  return cast;
 }
 
 async function saveCast(scene, cast) {
@@ -77,10 +79,10 @@ export async function addToCast({ name, actorUuid = null, side = "left", index =
   return saveCast(scene, cast);
 }
 
-/** Put The Party on the stage (or move it): left, right or the whole width; `index` places it within a side. */
+/** Put The Party on the stage (or move it): left or right; `index` places it within a side. */
 export async function addParty(side = "left", { index = null, scene = canvas.scene } = {}) {
   requireGM();
-  if (!PARTY_SIDES.includes(side)) throw new Error(`VN Stage | Unknown side "${side}".`);
+  if (!SIDES.includes(side)) throw new Error(`VN Stage | Unknown side "${side}".`);
   const cast = getCast(scene);
   const existing = cast.find((e) => e.party);
   if (existing) {
@@ -134,7 +136,7 @@ export async function switchSide(id, { scene = canvas.scene } = {}) {
   const entry = cast.find((e) => e.id === id);
   if (!entry) return;
   cast.splice(cast.indexOf(entry), 1);
-  cast.push({ ...entry, side: entry.side === "left" ? "right" : "left" }); // Full width goes to the left
+  cast.push({ ...entry, side: entry.side === "left" ? "right" : "left" });
   return saveCast(scene, cast);
 }
 
