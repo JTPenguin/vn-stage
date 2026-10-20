@@ -1,0 +1,14 @@
+{
+  "VNSTAGE": {
+    "Settings": {
+      "ArtRoot": {
+        "Name": "Art folder",
+        "Hint": "Folder holding one subfolder per character (portrait.webp, expressions/ and manifest.json). Wayfinder Chronicles: wayfinder-environment/portraits/"
+      },
+      "SafetyBackground": {
+        "Name": "Safety-net background",
+        "Hint": "Set once as the scene's own background when a scene becomes a stage, and used as its first background. Players still see it if the module fails."
+      }
+    }
+  }
+}

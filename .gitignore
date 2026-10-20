@@ -1,0 +1,15 @@
+# OS and editor clutter
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.vscode/
+.idea/
+
+# Dependencies and build output, if tooling is ever added
+node_modules/
+dist/
+
+# Logs and scratch
+*.log
+tmp/

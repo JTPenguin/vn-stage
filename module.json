@@ -1,0 +1,25 @@
+{
+  "id": "vn-stage",
+  "title": "VN Stage",
+  "description": "Visual-novel scenes on a native Foundry scene: portraits on the left and right, expressions players can change, and swappable backgrounds. Private; not for distribution.",
+  "version": "0.0.1",
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14"
+  },
+  "authors": [
+    {
+      "name": "Justin"
+    }
+  ],
+  "esmodules": [
+    "scripts/module.js"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ]
+}
