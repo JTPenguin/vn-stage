@@ -34,5 +34,18 @@ export function faceGuide(scale = 1) {
   return { top, bottom: top + FACE * scale };
 }
 
+/**
+ * Clustering. Portraits are shared tiles, so the layout is the same on every
+ * screen: it keeps the right side clear for Foundry's sidebar (300 px plus its
+ * tabs, about 17% of the frame on a 1920 px screen).
+ */
+export const LAYOUT = Object.freeze({
+  sidebar: 0.17,   // share of the frame width kept clear on the right
+  pad: 0.02,       // share of the frame width kept clear at each outer edge
+  centreGap: 0.04, // between the two sides' clusters
+  step: 0.55,      // a neighbour stands this share of the pair's average width further in
+  fullStep: 0.9,   // The Party at full width: wider spacing, for the Landing's lower-thirds
+});
+
 /** Tile flag `part` values. */
 export const PART = Object.freeze({ BACKGROUND: "background", PORTRAIT: "portrait" });

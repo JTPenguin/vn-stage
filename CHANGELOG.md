@@ -4,6 +4,9 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 
 ## [Unreleased]
 
+### Changed
+- Layout clusters characters instead of spreading them across half the frame: neighbours overlap by about half a portrait, and a cluster squeezes only when it runs out of room. With both sides in use, each cluster sits at its own outer edge; with one side in use, that side gets the whole width and its cluster is centred. The Party at full width is centred with wider spacing. The right 17% of the frame stays clear for Foundry's sidebar (`LAYOUT` in `constants.js`).
+
 ### Added
 - The Party: a cast entry that stands for the PF2e party's characters whenever the stage is drawn. Put it on the left, the right or the whole width (spread evenly) from the top of the Cast list; On stage shows it as one row (forward, back, side, remove) with its members beneath (expression, adjust, flip). A change to the party's membership redraws the stage (the active GM's screen).
 - Presets: save the stage's background and cast (sides and order; The Party as an entry) under a name, and load it in one click from the new Presets section. A preset saved with a group selected belongs to that group, is listed with it, and selects it again when loaded. Saving over a name asks first; deleting asks first.

@@ -1,4 +1,4 @@
-import { MODULE, FRAME, PART, FACE, SIZE, faceGuide } from "./constants.js";
+import { MODULE, FRAME, PART, FACE, SIZE, LAYOUT, faceGuide } from "./constants.js";
 import { characterArt } from "./art.js";
 import { resolveCast, characterPrefs } from "./cast.js";
 import { isStage } from "./stage.js";
@@ -29,12 +29,14 @@ export function layout(scene = canvas.scene) {
 async function doLayout(scene) {
   if (!game.user.isGM || !isStage(scene)) return;
   const cast = resolveCast(scene);
-  const placed = [];
+  const sides = {};
   for (const side of ["left", "right", "full"]) {
-    const members = cast.filter((e) => e.side === side);
-    for (const [i, entry] of members.entries()) {
-      placed.push(await place(entry, i, members.length));
-    }
+    sides[side] = await Promise.all(cast.filter((e) => e.side === side).map(measure));
+  }
+  const placed = [];
+  for (const [side, items] of Object.entries(sides)) {
+    const centres = clusterCentres(side, items, sides);
+    items.forEach((m, i) => placed.push(finish(m, centres[i], i)));
   }
   if (scene.id === canvas.scene?.id) {
     placements.clear();
@@ -62,8 +64,47 @@ async function doLayout(scene) {
   })));
 }
 
-/** Where one character stands: their image, box (frame pixels) and draw order. */
-async function place(entry, i, n) {
+/**
+ * Centres (frame x) for one side's characters, first-placed first. Each side is a
+ * tight cluster: neighbours overlap, and the cluster squeezes only if it runs out
+ * of room. With both sides in use, each cluster sits at its own outer edge; with
+ * one side in use, that side has the whole width and its cluster is centred.
+ * The Party at full width is centred with wider spacing. The right edge stays
+ * clear for Foundry's sidebar.
+ */
+function clusterCentres(side, items, sides) {
+  if (!items.length) return [];
+  const W = FRAME.width;
+  const start = LAYOUT.pad * W;
+  const end = W * (1 - LAYOUT.sidebar) - LAYOUT.pad * W;
+  const mid = (start + end) / 2;
+  const both = sides.left.length > 0 && sides.right.length > 0;
+
+  let region, anchor;
+  if (side === "full" || !both) [region, anchor] = [[start, end], "centre"];
+  else if (side === "left") [region, anchor] = [[start, mid - (LAYOUT.centreGap * W) / 2], "start"];
+  else [region, anchor] = [[mid + (LAYOUT.centreGap * W) / 2, end], "end"];
+  const room = region[1] - region[0];
+
+  // Offsets of each centre from the cluster's outer edge.
+  const factor = side === "full" ? LAYOUT.fullStep : LAYOUT.step;
+  const steps = items.slice(1).map((m, i) => (factor * (items[i].width + m.width)) / 2);
+  const ends = items[0].width / 2 + items.at(-1).width / 2;
+  const total = steps.reduce((a, b) => a + b, 0);
+  const squeeze = total > 0 && ends + total > room ? Math.max(0, room - ends) / total : 1;
+  const offsets = [items[0].width / 2];
+  for (const s of steps) offsets.push(offsets.at(-1) + s * squeeze);
+  const extent = offsets.at(-1) + items.at(-1).width / 2;
+
+  // The left side (and full width) runs left to right; the right side runs right to left.
+  const inset = anchor === "centre" ? Math.max(0, (room - extent) / 2) : 0;
+  return side === "right"
+    ? offsets.map((o) => region[1] - inset - o)
+    : offsets.map((o) => region[0] + inset + o);
+}
+
+/** One character's image and size, before they're placed. */
+async function measure(entry) {
   const actor = entry.actorUuid ? fromUuidSync(entry.actorUuid) : null;
   const art = await characterArt(entry.name);
   const prefs = characterPrefs(entry.name);
@@ -83,14 +124,11 @@ async function place(entry, i, n) {
     width = tex?.width ? (height * tex.width) / tex.height : height * (2 / 3);
   }
 
-  // Spread across the side's half, first-placed at the outside edge and in front;
-  // The Party at full width spreads evenly across the whole frame.
-  let cx;
-  if (entry.side === "full") cx = (FRAME.width * (i + 0.5)) / n;
-  else {
-    const fromEdge = (FRAME.width / 2 * (i + 0.5)) / n;
-    cx = entry.side === "left" ? fromEdge : FRAME.width - fromEdge;
-  }
+  return { entry, art, prefs, size, src, width, height, k, fallback };
+}
+
+/** Where one character stands: box (frame pixels) and draw order; first-placed in front. */
+function finish({ entry, art, prefs, size, src, width, height, k, fallback }, cx, i) {
   // Start from the head box: the face's top sits on the guide for this size,
   // unless that would lift the cut-off bottom edge into view; then (and with no
   // face measurement) the image stands on the bottom edge.
