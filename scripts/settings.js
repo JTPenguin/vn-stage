@@ -23,6 +23,14 @@ export function registerSettings() {
     filePicker: "image",
   });
 
+  // Which Stage window sections this GM has collapsed (this machine only).
+  game.settings.register(MODULE, "collapsed", {
+    scope: "client",
+    config: false,
+    type: Object,
+    default: {},
+  });
+
   // Per-character choices that follow them to every stage, by name (e.g. { "Ambrus Valsin": { flip: true } }).
   game.settings.register(MODULE, "characterPrefs", {
     scope: "world",

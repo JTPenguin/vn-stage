@@ -12,6 +12,12 @@
 .vn-stage .vn-icon { padding: 0 0.35rem; min-width: 1.75rem; height: 1.6rem; line-height: 1; }
 .vn-stage .vn-icon.active { background: var(--color-warm-2, #c9593f); color: #fff; }
 .vn-stage h3 .vn-icon { margin-left: auto; }
+.vn-stage .vn-section h3[data-action=toggleSection] { cursor: pointer; user-select: none; }
+.vn-stage .vn-chevron { font-size: 0.75em; width: 0.9em; transition: transform 0.15s ease; }
+.vn-stage .vn-section.collapsed .vn-chevron { transform: rotate(-90deg); }
+.vn-stage .vn-section.collapsed > :not(h3) { display: none; }
+.vn-stage .vn-section.collapsed h3 { margin-bottom: 0; }
+.vn-stage .vn-cast.collapsed { flex: none; }
 
 .vn-stage .vn-bg-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.4rem; }
 .vn-stage .vn-bg-folder { font-size: var(--font-size-12, 12px); opacity: 0.7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -6,8 +6,8 @@
   </section>
   {{else}}
 
-  <section class="vn-section vn-background">
-    <h3>Background</h3>
+  <section class="vn-section vn-background {{#if collapsed.background}}collapsed{{/if}}" data-section="background">
+    <h3 data-action="toggleSection"><i class="fa-solid fa-chevron-down vn-chevron"></i> Background</h3>
     <div class="vn-bg-strip">
       {{#each backgrounds.choices}}
       <button type="button" class="vn-bg-choice {{#if current}}current{{/if}} {{#if pinned}}pinned{{/if}}" data-action="setBackground" data-src="{{src}}" data-tooltip="{{label}}" aria-label="{{label}}">
@@ -22,8 +22,8 @@
     </div>
   </section>
 
-  <section class="vn-section">
-    <h3>On stage</h3>
+  <section class="vn-section {{#if collapsed.onStage}}collapsed{{/if}}" data-section="onStage">
+    <h3 data-action="toggleSection"><i class="fa-solid fa-chevron-down vn-chevron"></i> On stage</h3>
     <div class="vn-sides">
       <div class="vn-side">
         <h4>Left</h4>
@@ -36,8 +36,8 @@
     </div>
   </section>
 
-  <section class="vn-section vn-cast">
-    <h3>Cast
+  <section class="vn-section vn-cast {{#if collapsed.cast}}collapsed{{/if}}" data-section="cast">
+    <h3 data-action="toggleSection"><i class="fa-solid fa-chevron-down vn-chevron"></i> Cast
       <button type="button" class="vn-icon" data-action="refreshCast" data-tooltip="Re-read the art folder"><i class="fa-solid fa-rotate"></i></button>
     </h3>
     <input type="search" name="filter" value="{{filter}}" placeholder="Search" autocomplete="off">

@@ -26,6 +26,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       flip: StageWindow.#onFlip,
       adjust: StageWindow.#onAdjust,
       refreshCast: StageWindow.#onRefreshCast,
+      toggleSection: StageWindow.#onToggleSection,
     },
   };
 
@@ -48,7 +49,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   async _prepareContext() {
     const scene = canvas.scene;
     const stage = isStage(scene);
-    const context = { sceneName: scene?.name ?? "", stage, filter: this.#filter };
+    const context = { sceneName: scene?.name ?? "", stage, filter: this.#filter, collapsed: game.settings.get(MODULE, "collapsed") };
     if (!stage) return context;
 
     const cast = getCast(scene);
@@ -137,6 +138,14 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static #onAdjust(_event, target) {
     AdjustWindow.open(target.closest("[data-id]").dataset.id);
+  }
+
+  /** Collapse or expand a section, remembered on this machine. Toggled in place, without a re-render. */
+  static async #onToggleSection(_event, target) {
+    const section = target.closest("[data-section]");
+    const collapsed = section.classList.toggle("collapsed");
+    const all = { ...game.settings.get(MODULE, "collapsed"), [section.dataset.section]: collapsed };
+    await game.settings.set(MODULE, "collapsed", all);
   }
 
   static async #onRefreshCast() {
