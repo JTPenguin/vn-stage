@@ -159,16 +159,61 @@ export async function artKeyFromPath(path) {
 }
 
 /**
- * The art key for a cast entry. Art-only entries carry it as their name. An
- * actor's comes from, in order: the link set with VN art… (an actor flag), a
- * folder named like the actor, the actor's own images (portrait, token, ring
- * subject) when they live in the art folder. Null when nothing matches.
+ * The art key a cast entry shows: its base art (`baseArtKeyOf`), or the form
+ * chosen for it (`chosenForm`) when that's another form of the same character
+ * with a VN portrait.
  */
 export async function artKeyOf(entry) {
+  const base = await baseArtKeyOf(entry);
+  const form = chosenForm(entry);
+  if (!base || !form || form === base || familyOf(form) !== familyOf(base)) return base;
+  return (await characterArt(form)) ? form : base;
+}
+
+/**
+ * The art key a cast entry has before any form is chosen. Art-only entries
+ * carry it as their name. An actor's comes from, in order: the link set with
+ * VN art… (an actor flag), a folder named like the actor, the actor's own
+ * images (portrait, token, ring subject) when they live in the art folder.
+ * Null when nothing matches.
+ */
+export async function baseArtKeyOf(entry) {
   if (!entry.actorUuid) return entry.name;
   const actor = fromUuidSync(entry.actorUuid);
   if (!actor) return entry.name;
   return (await actorArt(actor)).key;
+}
+
+/**
+ * The form chosen for a cast entry (an art key), or null for its base art. An
+ * actor keeps it on the actor (a flag), so it follows them to every stage and
+ * its owners can change it; art alone keeps it on its cast entry.
+ */
+export function chosenForm(entry) {
+  const actor = entry.actorUuid ? fromUuidSync(entry.actorUuid) : null;
+  return (actor ? actor.getFlag(MODULE, "form") : entry.form) ?? null;
+}
+
+/** The character a key belongs to: "Rahadin/forms/corrupted" → "Rahadin". */
+export function familyOf(key) {
+  const i = key.indexOf("/forms/");
+  return i === -1 ? key : key.slice(0, i);
+}
+
+/**
+ * Every form of `key`'s character that has a VN portrait, the character itself
+ * first (labelled "Base"): [{ key, label, thumb }]. A combat-only form has no VN
+ * portrait, so it isn't offered.
+ */
+export async function formsFor(key) {
+  const root = familyOf(key);
+  const keys = [root, ...formsOf(await readManifest(root)).map((f) => `${root}/${f.folder}`)];
+  const out = [];
+  for (const k of keys) {
+    const art = await characterArt(k).catch(() => null);
+    if (art) out.push({ key: k, label: k === root ? "Base" : (art.label.split(" · ").pop() ?? art.label), thumb: art.thumb, portrait: art.portrait });
+  }
+  return out;
 }
 
 /** An actor's art key and where it came from: "linked", "name", "images", or null with no art. */

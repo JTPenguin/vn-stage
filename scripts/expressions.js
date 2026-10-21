@@ -1,5 +1,5 @@
 import { MODULE } from "./constants.js";
-import { characterArt, artKeyOf } from "./art.js";
+import { characterArt, artKeyOf, baseArtKeyOf, formsFor } from "./art.js";
 import { getCast, resolveCast } from "./cast.js";
 import { layout } from "./layout.js";
 import { isStage } from "./stage.js";
@@ -45,6 +45,29 @@ export async function setExpression(castId, key, { scene = canvas.scene } = {}) 
   return layout(scene);
 }
 
+/**
+ * Switch a cast entry to one of its character's forms (an art key), the same
+ * way as expressions: on the actor when there is one (its owners may), else on
+ * the cast entry (GM). Choosing the entry's base art clears the choice. The
+ * expression carries over when the form has it, otherwise it shows neutral.
+ */
+export async function setForm(castId, key, { scene = canvas.scene } = {}) {
+  const entry = resolveCast(scene).find((e) => e.id === castId);
+  if (!entry || !canChange(entry)) return;
+  const base = (await baseArtKeyOf(entry)) ?? entry.name;
+  const value = key === base ? null : key;
+  const actor = entry.actorUuid ? fromUuidSync(entry.actorUuid) : null;
+  if (actor) return value ? actor.setFlag(MODULE, "form", value) : actor.unsetFlag(MODULE, "form");
+  if (!game.user.isGM) return;
+  const cast = getCast(scene);
+  const raw = cast.find((e) => e.id === castId);
+  if (!raw) return;
+  if (value) raw.form = value;
+  else delete raw.form;
+  await scene.setFlag(MODULE, "cast", cast);
+  return layout(scene);
+}
+
 /** Everyone back to neutral: every actor's saved expression and every stage's cast entries. GM only. */
 export async function resetAllExpressions() {
   if (!game.user.isGM) return;
@@ -72,8 +95,11 @@ export async function preloadStage(scene = canvas.scene) {
   if (!isStage(scene)) return;
   const srcs = [];
   for (const e of resolveCast(scene)) {
-    const art = await characterArt((await artKeyOf(e)) ?? e.name);
+    const key = (await artKeyOf(e)) ?? e.name;
+    const art = await characterArt(key);
     if (art) srcs.push(...Object.values(art.expressions));
+    // Each other form's portrait too, so switching form shows at once.
+    for (const f of await formsFor(key)) if (f.key !== key) srcs.push(f.portrait);
   }
   await Promise.all(srcs.map((src) => foundry.canvas.loadTexture(src).catch(() => null)));
 }

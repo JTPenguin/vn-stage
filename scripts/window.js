@@ -321,8 +321,9 @@ function partyOnStage(scene) {
 /**
  * Everyone the Cast list can offer: one row per world actor with VN art (so it
  * goes on stage linked, and its owners control its expression; several actors
- * can share one character's art), and one per piece of art no actor uses (or
- * that stands on stage without an actor). Each knows its cast entry on stage.
+ * can share one character's art), and one per character no actor uses (or that
+ * stands on stage without an actor); forms have no rows of their own. Each row
+ * knows its cast entry on stage.
  */
 async function castRows(index, resolved) {
   const byKey = new Map(index.map((a) => [a.key, a]));
@@ -340,6 +341,8 @@ async function castRows(index, resolved) {
   const artOnlyOnStage = new Set(resolved.filter((e) => !e.actorUuid).map((e) => e.name));
   for (const art of index) {
     if (usedKeys.has(art.key) && !artOnlyOnStage.has(art.key)) continue;
+    // Forms are switched from the character menu, so they get no row of their own (unless one stands on stage as art alone).
+    if (art.key.includes("/forms/") && !artOnlyOnStage.has(art.key)) continue;
     rows.push({ row: `art:${art.key}`, key: art.key, name: art.key, actorUuid: null, label: art.label, note: usedKeys.has(art.key) ? "art only" : null, thumb: art.thumb });
   }
   for (const r of rows) {

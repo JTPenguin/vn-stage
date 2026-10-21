@@ -3,7 +3,8 @@ import { MODULE, PART } from "./constants.js";
 /**
  * Fades, drawn by every screen for itself; no document changes. A portrait (or
  * the bottom shade) fades in when its tile is created and out when it's
- * deleted; a new background crossfades over the old one. Moves and expression
+ * deleted; a new background crossfades over the old one, and so does a
+ * portrait switching form (its tile's `key` flag changes). Moves and expression
  * changes stay instant. Loading a preset replaces the whole cast, so it
  * crossfades too. Off for viewers who ask their system for reduced motion.
  *
@@ -59,17 +60,20 @@ export function registerFades() {
     fadeOut(ghostOf(mesh), PORTRAIT_MS);
   });
 
-  // A background change: the old image stays on top until the new one is drawn, then fades away.
+  // A background change, or a portrait's new form: the old image stays on top until the new one is drawn, then fades away.
   Hooks.on("updateTile", (doc, changes) => {
-    if (part(doc) !== PART.BACKGROUND || !foundry.utils.hasProperty(changes, "texture.src") || reduced()) return;
+    if (!foundry.utils.hasProperty(changes, "texture.src") || reduced()) return;
+    const background = part(doc) === PART.BACKGROUND;
+    const newForm = part(doc) === PART.PORTRAIT && foundry.utils.hasProperty(changes, `flags.${MODULE}.key`);
+    if (!background && !newForm) return;
     const mesh = doc.object?.mesh;
     if (!mesh?.texture || mesh.texture === PIXI.Texture.EMPTY) return;
-    const ghost = ghostOf(mesh, 1);
+    const ghost = ghostOf(mesh, background ? 1 : 0.5);
     const ready = new Promise((resolve) => {
       drawn.set(doc.id, resolve);
       setTimeout(resolve, 5000); // never leave the old image up if the new one fails to load
     });
-    ready.then(() => fadeOut(ghost, BACKGROUND_MS));
+    ready.then(() => fadeOut(ghost, background ? BACKGROUND_MS : PORTRAIT_MS));
   });
 
   Hooks.on("canvasTearDown", () => {

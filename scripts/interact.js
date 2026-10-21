@@ -1,9 +1,9 @@
 import { MODULE, PART, FRAME, LAYOUT } from "./constants.js";
-import { characterArt, artKeyOf } from "./art.js";
+import { characterArt, artKeyOf, baseArtKeyOf, formsFor } from "./art.js";
 import { ArtPicker } from "./art-picker.js";
 import { getCast, resolveCast, characterPrefs, setFlip, removeFromCast, moveEntry, displayName } from "./cast.js";
 import { placements } from "./layout.js";
-import { canChange, currentExpression, setExpression } from "./expressions.js";
+import { canChange, currentExpression, setExpression, setForm } from "./expressions.js";
 import { isStage } from "./stage.js";
 import { AdjustWindow } from "./adjust.js";
 import { chooseCharacterGroups } from "./groups-window.js";
@@ -11,8 +11,8 @@ import { chooseCharacterGroups } from "./groups-window.js";
 /**
  * Working on the stage itself. Dragging a portrait moves the character within
  * its side or to the other one. Clicking a portrait opens its character menu:
- * the expressions, and for the GM a row of actions (Flip, Adjust, VN art…,
- * Groups…, Remove).
+ * the character's forms (when it has more than one), the expressions, and for
+ * the GM a row of actions (Flip, Adjust, VN art…, Groups…, Remove).
  * Players get the expressions of characters they own, nothing else. The GM gets
  * the same menu by right-clicking a Cast row in the Stage window (`openCastMenu`).
  */
@@ -265,21 +265,40 @@ export function openCastMenu(key, entry, clientX, clientY) {
   return openMenu(entry, clientX, clientY, key);
 }
 
-/** `entry` is the cast entry on stage, or null for a character who isn't (then `key` names them). */
-async function openMenu(entry, clientX, clientY, key = null) {
+/**
+ * `entry` is the cast entry on stage, or null for a character who isn't (then
+ * `rowKey` names them). On stage, the menu works on the form shown (its
+ * expressions, Flip, Adjust); Groups… always works on the character.
+ */
+async function openMenu(entry, clientX, clientY, rowKey = null) {
   closeMenu();
-  key ??= (await artKeyOf(entry)) ?? entry.name;
+  const key = entry ? (await artKeyOf(entry)) ?? entry.name : rowKey;
+  const groupKey = entry ? (await baseArtKeyOf(entry)) ?? entry.name : rowKey;
   const art = await characterArt(key);
   const expressions = entry ? Object.entries(art?.expressions ?? {}) : [];
+  const forms = entry ? await formsFor(key) : [];
   const name = entry ? displayName(entry) : art?.label ?? key;
-  const actions = game.user.isGM ? await gmActions(entry, key, name) : [];
-  if (expressions.length < 2 && !actions.length) return;
+  const actions = game.user.isGM ? await gmActions(entry, key, name, groupKey) : [];
+  if (expressions.length < 2 && forms.length < 2 && !actions.length) return;
   const current = entry ? currentExpression(entry) : null;
 
   const el = document.createElement("div");
   el.className = "vn-character-menu";
   el.setAttribute("role", "menu");
   el.innerHTML = `<div class="vn-menu-name">${esc(name)}</div>`;
+
+  if (forms.length >= 2) {
+    const list = document.createElement("div");
+    list.className = "vn-form-list";
+    for (const f of forms) {
+      const button = menuButton(`vn-form${f.key === key ? " current" : ""}`,
+        `<img src="${esc(encodeURI(f.thumb))}" alt=""><span class="vn-form-label">${esc(f.label)}</span>`,
+        () => setForm(entry.id, f.key));
+      button.dataset.tooltip = f.label;
+      list.append(button);
+    }
+    el.append(list);
+  }
 
   if (expressions.length >= 2) {
     const list = document.createElement("div");
@@ -324,14 +343,14 @@ async function openMenu(entry, clientX, clientY, key = null) {
 }
 
 /** The GM's row: what this character (or party member) can have done to them. Off stage (no `entry`), only Flip and Groups…. */
-async function gmActions(entry, key, name) {
+async function gmActions(entry, key, name, groupKey = key) {
   const flip = !!characterPrefs(key).flip;
   const actions = [{ label: "Flip", icon: "fa-solid fa-left-right", active: flip, run: () => setFlip(key, !flip) }];
   if (entry) actions.push({ label: "Adjust size and height", icon: "fa-solid fa-sliders", run: () => AdjustWindow.open(entry.id) });
   if (entry?.actorUuid) {
     actions.push({ label: "VN art…: which character's art this actor uses", icon: "fa-solid fa-image-portrait", run: () => ArtPicker.open(entry.actorUuid) });
   }
-  actions.push({ label: "Groups…", icon: "fa-solid fa-layer-group", run: () => chooseCharacterGroups(key, name) });
+  actions.push({ label: "Groups…", icon: "fa-solid fa-layer-group", run: () => chooseCharacterGroups(groupKey, name) });
   if (!entry) return actions;
   actions.push("|", { label: "Remove from the stage", icon: "fa-solid fa-xmark", run: () => removeFromCast(entry.id) });
   return actions;

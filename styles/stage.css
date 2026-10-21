@@ -176,3 +176,14 @@
 .vn-stage .vn-cast-divider[hidden] { display: none; }
 .vn-stage .vn-cast-list li .vn-note { max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vn-stage .vn-cast-list li.partly-on-stage { background: color-mix(in srgb, var(--color-warm-2, #c9593f) 10%, transparent); box-shadow: inset 3px 0 0 color-mix(in srgb, var(--color-warm-2, #c9593f) 50%, transparent); }
+
+/* Character menu: forms */
+.vn-character-menu .vn-form-list { display: flex; flex-wrap: wrap; gap: 0.3rem; max-width: calc(4 * 64px + 3 * 0.35rem); margin-bottom: 0.4rem; padding-bottom: 0.35rem; border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
+.vn-character-menu button.vn-form {
+  display: inline-flex; align-items: center; gap: 0.3rem; width: auto; height: 1.9rem; min-height: 0; max-height: none; margin: 0; padding: 0 0.45rem 0 0.15rem;
+  border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 1rem; background: rgba(255, 255, 255, 0.06); box-shadow: none; color: inherit; cursor: pointer; font-size: 11px; line-height: 1;
+}
+.vn-character-menu button.vn-form img { width: 1.55rem; height: 1.55rem; object-fit: cover; object-position: top; border-radius: 50%; border: none; flex: none; }
+.vn-character-menu button.vn-form:hover { background: rgba(255, 255, 255, 0.16); }
+.vn-character-menu button.vn-form.current { border-color: #e0a64a; color: #e0a64a; }
+.vn-character-menu .vn-form-label { max-width: 7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

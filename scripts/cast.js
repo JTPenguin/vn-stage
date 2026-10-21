@@ -1,7 +1,7 @@
 import { MODULE } from "./constants.js";
 import { layout } from "./layout.js";
 import { noteRecent } from "./groups.js";
-import { artKeyOf } from "./art.js";
+import { baseArtKeyOf } from "./art.js";
 
 /**
  * The cast is the source of truth for who stands on a stage: a scene flag
@@ -120,7 +120,7 @@ export async function addToCast({ name, actorUuid = null, side = "left", index =
   } else {
     insertAt(cast, { id: foundry.utils.randomID(), name, actorUuid, side }, index);
   }
-  await noteRecent((await artKeyOf({ name, actorUuid })) ?? name);
+  await noteRecent((await baseArtKeyOf({ name, actorUuid })) ?? name);
   return saveCast(scene, cast);
 }
 
@@ -147,7 +147,7 @@ export async function addParty(side = "left", { index = null, scene = canvas.sce
     insertAt(rest, e, at);
     if (at !== null) at++;
   }
-  for (const a of moving) await noteRecent((await artKeyOf({ name: a.name, actorUuid: a.uuid })) ?? a.name);
+  for (const a of moving) await noteRecent((await baseArtKeyOf({ name: a.name, actorUuid: a.uuid })) ?? a.name);
   return saveCast(scene, rest);
 }
 

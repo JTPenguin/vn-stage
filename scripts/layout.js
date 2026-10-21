@@ -177,7 +177,7 @@ function faceBox(art, box, k, flip) {
   return { x, y: box.y + fy * k, width: fw * k, height: fh * k };
 }
 
-function tileData({ entry, src, box, sort, flip, fallback }) {
+function tileData({ entry, key, src, box, sort, flip, fallback }) {
   const { sceneX = 0, sceneY = 0 } = canvas.dimensions ?? {};
   // In v14 a tile's x and y are its anchor point, the centre here.
   return {
@@ -189,7 +189,7 @@ function tileData({ entry, src, box, sort, flip, fallback }) {
     height: Math.round(box.height),
     sort,
     locked: true,
-    flags: { [MODULE]: { part: PART.PORTRAIT, castId: entry.id, name: entry.name, fallback } },
+    flags: { [MODULE]: { part: PART.PORTRAIT, castId: entry.id, name: entry.name, key, fallback } },
   };
 }
 
@@ -197,5 +197,6 @@ function changed(tile, data) {
   const t = tile.texture;
   return t.src !== data.texture.src || t.scaleX !== data.texture.scaleX
     || tile.x !== data.x || tile.y !== data.y || tile.width !== data.width || tile.height !== data.height
-    || tile.sort !== data.sort || tile.getFlag(MODULE, "fallback") !== data.flags[MODULE].fallback;
+    || tile.sort !== data.sort || tile.getFlag(MODULE, "fallback") !== data.flags[MODULE].fallback
+    || tile.getFlag(MODULE, "key") !== data.flags[MODULE].key;
 }

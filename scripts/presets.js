@@ -9,7 +9,8 @@ import { getGroup, stageGroup, setStageGroup } from "./groups.js";
  * preset fits whoever is in the party when it loads: members still in it stand
  * where they were saved, new members join next to them, and members who've left
  * stay off. (Older presets hold one entry for the whole party, filled in with
- * every member where it stood.) A preset can belong to any
+ * every member where it stood.) Each character's form is saved too (`form`,
+ * null for their base art) and put back on load. A preset can belong to any
  * number of groups; one saved while a group is selected starts in that group.
  * Each stage remembers the preset last loaded or saved on it (a scene flag), so
  * the Stage window can light it and offer Update once the stage has changed.
@@ -54,13 +55,33 @@ export function findPresetByName(name, groupId) {
     && (groupId ? p.groups.includes(groupId) : !p.groups.length)) ?? null;
 }
 
-/** What a preset keeps of a stage: its background, and its cast without ids or expressions, party members marked. */
+/** What a preset keeps of a stage: its background, and its cast without ids or expressions, party members marked, with their forms. */
 function snapshot(scene) {
   const members = new Set(partyMembers().map((a) => a.uuid));
   return {
     background: currentBackground(scene),
-    cast: getCast(scene).map(({ id: _id, expression: _x, ...rest }) => (members.has(rest.actorUuid) ? { ...rest, partyMember: true } : rest)),
+    cast: getCast(scene).map(({ id: _id, expression: _x, ...rest }) => {
+      const out = members.has(rest.actorUuid) ? { ...rest, partyMember: true } : { ...rest };
+      if (rest.actorUuid) out.form = fromUuidSync(rest.actorUuid)?.getFlag(MODULE, "form") ?? null;
+      return out;
+    }),
   };
+}
+
+/**
+ * Put back the forms a preset saved for characters with actors (they live on
+ * the actor), and leave them off the cast entries. Presets saved before forms
+ * existed have no `form`, so those actors keep theirs.
+ */
+async function applyForms(cast) {
+  for (const e of cast) {
+    if (!e.actorUuid || !("form" in e)) continue;
+    const actor = fromUuidSync(e.actorUuid);
+    const now = actor?.getFlag(MODULE, "form") ?? null;
+    if (actor && now !== e.form) await (e.form ? actor.setFlag(MODULE, "form", e.form) : actor.unsetFlag(MODULE, "form"));
+    delete e.form;
+  }
+  return cast;
 }
 
 /**
@@ -169,7 +190,7 @@ export async function loadPreset(id, { scene = canvas.scene } = {}) {
   const groups = preset.groups.filter((g) => getGroup(g));
   if (groups.length && !groups.includes(stageGroup(scene))) await setStageGroup(groups[0], scene);
   if (preset.background) await setBackground(preset.background, { scene });
-  await setCast(fitParty(preset.cast ?? [], scene), { scene });
+  await setCast(await applyForms(fitParty(preset.cast ?? [], scene)), { scene });
   await scene.setFlag(MODULE, "preset", id);
 }
 

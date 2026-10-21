@@ -4,6 +4,12 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 
 ## [Unreleased]
 
+### Added
+- Forms: a character with more than one form that has a VN portrait gets a Forms row at the top of its character menu ("Base", then each form). Clicking one switches the portrait with a crossfade; the expression carries over when the form has it, otherwise neutral, and each form keeps its own Adjust settings. A character with an actor keeps its form on the actor (flag `vn-stage.form`), so it follows them to every stage and players can switch their own character's form; art alone keeps it on its cast entry. Presets save each character's form and put it back on load. Combat-only forms aren't offered.
+
+### Changed
+- Forms no longer get their own rows in the Cast list; they're switched from the character menu. An actor linked to a form with VN art… still has its row.
+
 ### Fixed
 - The Stage window wouldn't open when a manifest wrote `forms` as an object keyed by form (with `dir`) instead of a list (with `folder`): "forms is not iterable". Both shapes are read now, and a form with no manifest of its own uses its entry in the parent's manifest (files relative to the parent, the parent's VN sizing). One unreadable manifest now leaves out only that character, never the whole Cast list.
 
