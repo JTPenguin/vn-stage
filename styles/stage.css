@@ -62,19 +62,12 @@
 /* Groups */
 .vn-stage .vn-groupbar { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--color-border, #0003); }
 .vn-stage .vn-groupbar select { flex: 1; }
-.vn-stage .vn-editbar { display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.75rem; background: color-mix(in srgb, var(--color-warm-2, #c9593f) 22%, transparent); border-bottom: 1px solid var(--color-warm-2, #c9593f); }
-.vn-stage .vn-editbar span { flex: 1; }
-.vn-stage .vn-folder-chips { list-style: none; margin: 0 0 0.4rem; padding: 0; display: flex; flex-wrap: wrap; gap: 0.3rem; }
-.vn-stage .vn-folder-chips li { display: flex; align-items: center; gap: 0.2rem; padding: 0 0 0 0.4rem; border: 1px solid var(--color-border, #0003); border-radius: 3px; font-size: var(--font-size-12, 12px); }
-.vn-stage .vn-folder-chips li:last-child { border: none; padding: 0; }
 .vn-stage .vn-bg-folder-group { margin-top: 0.4rem; }
 .vn-stage .vn-bg-folder-group h4 { cursor: pointer; user-select: none; text-transform: none; }
 .vn-stage .vn-bg-folder-group.collapsed .vn-chevron { transform: rotate(-90deg); }
 .vn-stage .vn-bg-folder-group.collapsed .vn-bg-strip { display: none; }
 .vn-stage .vn-cast-tools { display: flex; gap: 0.4rem; margin-bottom: 0.4rem; }
 .vn-stage .vn-cast-tools input[type=search] { flex: 1; margin-bottom: 0; }
-.vn-stage .vn-cast-tools button.active { background: var(--color-warm-2, #c9593f); color: #fff; }
-.vn-stage .vn-cast-list li.not-member { opacity: 0.6; }
 
 
 /* Character menu (clicking a portrait on the stage) */
@@ -103,9 +96,14 @@
 .vn-stage .vn-preset-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.2rem; }
 .vn-stage .vn-preset-list li { display: flex; align-items: center; gap: 0.4rem; }
 .vn-stage .vn-preset-load { flex: 1; justify-content: flex-start; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.vn-stage .vn-preset-group { font-size: var(--font-size-12, 12px); opacity: 0.65; }
-.vn-stage .vn-preset-delete { opacity: 0.55; }
-.vn-stage .vn-preset-delete:hover { opacity: 1; }
+.vn-stage .vn-preset-group { font-size: var(--font-size-12, 12px); opacity: 0.65; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40%; }
+.vn-stage .vn-preset-list li.current .vn-preset-load { border-color: var(--color-warm-2, #c9593f); background: color-mix(in srgb, var(--color-warm-2, #c9593f) 24%, transparent); font-weight: bold; }
+.vn-stage .vn-preset-load .vn-name { overflow: hidden; text-overflow: ellipsis; }
+.vn-stage .vn-changed { flex: none; width: 0.5rem; height: 0.5rem; margin-left: 0.3rem; border-radius: 50%; background: #e0a64a; }
+.vn-stage .vn-preset-update { padding: 0 0.5rem; height: 1.6rem; }
+.vn-stage .vn-preset-more { opacity: 0.7; }
+.vn-stage .vn-preset-more:hover { opacity: 1; }
+.vn-stage .vn-section-foot { display: flex; gap: 0.5rem; margin-top: 0.4rem; }
 
 .vn-character-menu .vn-menu-actions { display: flex; align-items: center; gap: 0.25rem; margin-top: 0.4rem; padding-top: 0.35rem; border-top: 1px solid rgba(255, 255, 255, 0.12); }
 .vn-character-menu .vn-expression-list + .vn-menu-actions { margin-top: 0.4rem; }
@@ -135,3 +133,46 @@
 .vn-art-picker button.vn-art-choice { display: flex; align-items: center; gap: 0.5rem; width: 100%; height: auto; padding: 0.15rem 0.3rem; justify-content: flex-start; text-align: left; border: 1px solid transparent; }
 .vn-art-picker button.vn-art-choice.current { border-color: var(--color-warm-2, #c9593f); background: color-mix(in srgb, var(--color-warm-2, #c9593f) 20%, transparent); }
 .vn-art-picker button.vn-art-choice img { width: 2.25rem; height: 2.25rem; object-fit: cover; object-position: top; border-radius: 3px; border: none; flex: none; }
+
+/* Shared: notes beside a name, and list icons */
+.vn-stage .vn-note { flex: none; font-size: 11px; padding: 0 0.3rem; border-radius: 3px; border: 1px solid var(--color-border, #0003); opacity: 0.75; }
+.vn-stage .vn-pick-icon { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: 3px; background: color-mix(in srgb, var(--color-warm-2, #c9593f) 18%, transparent); }
+
+/* Groups window */
+.vn-groups-body { display: flex; height: 100%; min-height: 0; }
+.vn-groups .vn-groups-nav { display: flex; flex-direction: column; gap: 0.4rem; width: 12rem; flex: none; padding: 0.5rem; border-right: 1px solid var(--color-border, #0003); }
+.vn-groups .vn-groups-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 0.15rem; }
+.vn-groups button.vn-groups-pick { width: 100%; justify-content: flex-start; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 1px solid transparent; background: none; }
+.vn-groups button.vn-groups-pick:hover { background: color-mix(in srgb, var(--color-warm-2, #c9593f) 12%, transparent); }
+.vn-groups button.vn-groups-pick.current { border-color: var(--color-warm-2, #c9593f); background: color-mix(in srgb, var(--color-warm-2, #c9593f) 24%, transparent); font-weight: bold; }
+.vn-groups .vn-groups-detail { flex: 1; min-width: 0; overflow-y: auto; padding: 0.5rem 0.75rem; }
+.vn-groups .vn-groups-head { display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.3rem; }
+.vn-groups .vn-groups-head h2 { flex: 1; margin: 0; border: none; font-size: var(--font-size-18, 18px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vn-groups .vn-groups-section { padding: 0.4rem 0 0.6rem; border-bottom: 1px solid var(--color-border, #0003); }
+.vn-groups .vn-groups-section:last-child { border-bottom: none; }
+.vn-groups .vn-groups-section h3 { margin: 0 0 0.3rem; font-size: var(--font-size-14, 14px); border: none; }
+.vn-groups .vn-groups-items { list-style: none; margin: 0 0 0.3rem; padding: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+.vn-groups .vn-groups-items li { display: flex; align-items: center; gap: 0.4rem; padding: 0.1rem 0.2rem; border-radius: 4px; }
+.vn-groups .vn-groups-items li:hover { background: color-mix(in srgb, var(--color-warm-2, #c9593f) 10%, transparent); }
+.vn-groups .vn-groups-items li img { width: 2rem; height: 2rem; object-fit: cover; object-position: top; border-radius: 3px; border: none; flex: none; }
+.vn-groups .vn-groups-items .vn-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vn-groups .vn-remove { opacity: 0.55; }
+.vn-groups .vn-remove:hover { opacity: 1; }
+
+/* Checklist picker (Add characters…, Add presets…, Groups…) */
+.vn-pick .vn-pick-body { padding: 0.5rem 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; max-height: 70vh; }
+.vn-pick .hint { margin: 0; font-size: var(--font-size-12, 12px); opacity: 0.85; }
+.vn-pick .vn-pick-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; min-height: 0; max-height: 26rem; display: flex; flex-direction: column; gap: 0.1rem; }
+.vn-pick .vn-pick-list li[hidden] { display: none; }
+.vn-pick .vn-pick-list label { display: flex; align-items: center; gap: 0.45rem; padding: 0.1rem 0.2rem; border-radius: 4px; cursor: pointer; }
+.vn-pick .vn-pick-list label:hover { background: color-mix(in srgb, var(--color-warm-2, #c9593f) 10%, transparent); }
+.vn-pick .vn-pick-list input[type=checkbox] { flex: none; margin: 0; }
+.vn-pick .vn-pick-list img { width: 2rem; height: 2rem; object-fit: cover; object-position: top; border-radius: 3px; border: none; flex: none; }
+.vn-pick .vn-pick-list .vn-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vn-pick .vn-pick-buttons { display: flex; gap: 0.4rem; }
+.vn-pick .vn-spacer { flex: 1; }
+.vn-groups .vn-groups-items li img.vn-wide { width: 3.5rem; height: 2rem; object-fit: cover; object-position: center; }
+.vn-stage .vn-bg-choice.elsewhere { border-style: dashed; }
+.vn-stage .vn-cast-divider { margin: 0.4rem 0 0.15rem; padding: 0.15rem 0.2rem 0; border-top: 1px solid var(--color-border, #0003); font-size: var(--font-size-12, 12px); text-transform: uppercase; opacity: 0.7; }
+.vn-stage .vn-cast-divider[hidden] { display: none; }
+.vn-stage .vn-cast-list li .vn-note { max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

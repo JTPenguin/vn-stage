@@ -1,0 +1,81 @@
+<div class="vn-groups-body">
+  <nav class="vn-groups-nav">
+    <ul class="vn-groups-list">
+      {{#each groups}}
+      <li><button type="button" class="vn-groups-pick {{#if selected}}current{{/if}}" data-action="selectGroup" data-group="{{id}}">{{label}}</button></li>
+      {{else}}
+      <li class="vn-empty">No groups yet.</li>
+      {{/each}}
+    </ul>
+    <button type="button" data-action="newGroup"><i class="fa-solid fa-plus"></i> New group</button>
+  </nav>
+
+  <div class="vn-groups-detail">
+    {{#if group}}
+    <header class="vn-groups-head">
+      <h2>{{group.label}}</h2>
+      <button type="button" class="vn-icon" data-action="renameGroup" data-tooltip="Rename group"><i class="fa-solid fa-pen"></i></button>
+      <button type="button" class="vn-icon" data-action="deleteGroup" data-tooltip="Delete group"><i class="fa-solid fa-trash"></i></button>
+    </header>
+
+    <section class="vn-groups-section">
+      <h3>Characters</h3>
+      <ul class="vn-groups-items">
+        {{#each members}}
+        <li data-name="{{name}}">
+          <img src="{{thumb}}" alt="" loading="lazy">
+          <span class="vn-name">{{label}}</span>
+          {{#if tagged}}<span class="vn-note" data-tooltip="Tagged in the art pipeline. Removing hides them from this group only.">tag</span>{{/if}}
+          <button type="button" class="vn-icon vn-remove" data-action="removeMember" data-tooltip="Remove from this group"><i class="fa-solid fa-xmark"></i></button>
+        </li>
+        {{else}}
+        <li class="vn-empty">No characters yet.</li>
+        {{/each}}
+      </ul>
+      <button type="button" class="vn-add" data-action="addMembers"><i class="fa-solid fa-plus"></i> Add characters…</button>
+    </section>
+
+    <section class="vn-groups-section">
+      <h3>Backgrounds</h3>
+      <ul class="vn-groups-items">
+        {{#each folders}}
+        <li data-folder="{{folder}}">
+          <span class="vn-pick-icon"><i class="fa-solid fa-folder"></i></span>
+          <span class="vn-name" data-tooltip="{{folder}}">{{label}}</span>
+          {{#if auto}}<span class="vn-note" data-tooltip="Found by itself: the Group background folders setting, or another module">auto</span>{{/if}}
+          <button type="button" class="vn-icon vn-remove" data-action="removeFolder" data-tooltip="Remove from this group"><i class="fa-solid fa-xmark"></i></button>
+        </li>
+        {{/each}}
+        {{#each images}}
+        <li data-src="{{src}}">
+          {{#if video}}<span class="vn-pick-icon"><i class="fa-solid fa-film"></i></span>{{else}}<img class="vn-wide" src="{{src}}" alt="" loading="lazy">{{/if}}
+          <span class="vn-name" data-tooltip="{{src}}">{{label}}</span>
+          <button type="button" class="vn-icon vn-remove" data-action="removeImage" data-tooltip="Remove from this group"><i class="fa-solid fa-xmark"></i></button>
+        </li>
+        {{/each}}
+        {{#unless folders.length}}{{#unless images.length}}<li class="vn-empty">No backgrounds yet.</li>{{/unless}}{{/unless}}
+      </ul>
+      <button type="button" class="vn-add" data-action="addFolder"><i class="fa-solid fa-plus"></i> Add folder…</button>
+      <button type="button" class="vn-add" data-action="addImage"><i class="fa-solid fa-plus"></i> Add background…</button>
+    </section>
+
+    <section class="vn-groups-section">
+      <h3>Presets</h3>
+      <ul class="vn-groups-items">
+        {{#each presets}}
+        <li data-preset="{{id}}">
+          <span class="vn-pick-icon"><i class="fa-solid fa-play"></i></span>
+          <span class="vn-name">{{name}}</span>
+          <button type="button" class="vn-icon vn-remove" data-action="removePreset" data-tooltip="Remove from this group (the preset stays)"><i class="fa-solid fa-xmark"></i></button>
+        </li>
+        {{else}}
+        <li class="vn-empty">No presets yet.</li>
+        {{/each}}
+      </ul>
+      <button type="button" class="vn-add" data-action="addPresets"><i class="fa-solid fa-plus"></i> Add presets…</button>
+    </section>
+    {{else}}
+    <p class="vn-empty">Make a group with New group, or tag characters in the art pipeline.</p>
+    {{/if}}
+  </div>
+</div>

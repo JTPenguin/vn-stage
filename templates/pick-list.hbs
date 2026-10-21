@@ -1,0 +1,24 @@
+<div class="vn-pick-body">
+  {{#if hint}}<p class="hint">{{hint}}</p>{{/if}}
+  {{#if search}}<input type="search" name="filter" placeholder="Search" autocomplete="off">{{/if}}
+  <ul class="vn-pick-list">
+    {{#each items}}
+    <li data-search="{{search}}">
+      <label>
+        <input type="checkbox" name="pick" value="{{id}}" {{#if checked}}checked{{/if}}>
+        {{#if thumb}}<img src="{{thumb}}" alt="" loading="lazy">{{else if icon}}<span class="vn-pick-icon"><i class="{{icon}}"></i></span>{{/if}}
+        <span class="vn-name">{{label}}</span>
+        {{#if note}}<span class="vn-note">{{note}}</span>{{/if}}
+      </label>
+    </li>
+    {{else}}
+    <li class="vn-empty">{{empty}}</li>
+    {{/each}}
+  </ul>
+  <div class="vn-pick-buttons">
+    {{#if extra}}<button type="button" data-action="extra"><i class="{{extra.icon}}"></i> {{extra.label}}</button>{{/if}}
+    <span class="vn-spacer"></span>
+    <button type="button" data-action="cancel">Cancel</button>
+    <button type="button" class="vn-done" data-action="ok"><i class="fa-solid fa-check"></i> {{ok}}</button>
+  </div>
+</div>

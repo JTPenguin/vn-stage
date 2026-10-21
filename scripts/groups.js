@@ -1,11 +1,15 @@
 import { MODULE } from "./constants.js";
+import { folderExists } from "./stage.js";
 
 /**
  * Groups: everything needed to run one scenario, location or arc. A group has a
- * label, any number of background folders, and its characters. Members are the
- * characters whose manifest `groups` tags name it, plus ones added by hand,
- * minus ones removed by hand (a removal wins over a tag). Stored in a world
- * setting; each stage remembers its group in a scene flag.
+ * label, any number of background folders and single backgrounds, its characters and its presets
+ * (presets name their groups; see presets.js). Members are the characters whose
+ * manifest `groups` tags name it, plus ones added by hand, minus ones removed by
+ * hand (a removal wins over a tag). Folders are the ones added by hand plus its
+ * automatic folders (the "Group background folders" pattern, and any a module
+ * adds with the `vn-stage.groupFolders` hook) that exist, minus ones removed by
+ * hand. Stored in a world setting; each stage remembers its group in a scene flag.
  *
  * The menu always offers two built-ins, which aren't stored groups:
  * ALL (everyone, the stage's own background folder) and RECENT.
@@ -28,7 +32,7 @@ function requireGM() {
 }
 
 function blank() {
-  return { label: null, folders: [], add: [], remove: [] };
+  return { label: null, folders: [], images: [], add: [], remove: [], hideAuto: [] };
 }
 
 /** Every group, from the settings and the art's tags, sorted by label. `index` is the art index. */
@@ -90,18 +94,76 @@ export async function deleteGroup(id) {
   await save(all);
 }
 
-export function addFolder(id, folder) {
-  return change(id, (g) => { if (!g.folders.includes(folder)) g.folders.push(folder); });
+/** Folders a group finds by itself, whether or not they exist: the setting's pattern, then any a module adds. */
+export function autoFolderCandidates(id) {
+  const out = [];
+  const pattern = game.settings.get(MODULE, "groupFolders").trim();
+  if (pattern) out.push(pattern.replaceAll("{group}", id));
+  // Another module can add folders for a group: Hooks.on("vn-stage.groupFolders", (group, folders) => folders.push(…)).
+  Hooks.callAll("vn-stage.groupFolders", { id, label: getGroup(id)?.label ?? id }, out);
+  return [...new Set(out.map((f) => (f.endsWith("/") ? f : `${f}/`)))];
 }
 
+/**
+ * A group's background folders, in order: its automatic folders that exist and
+ * weren't removed, then the ones added by hand. `auto` marks the first kind.
+ */
+export async function groupFolders(id) {
+  const g = getGroup(id);
+  if (!g) return [];
+  const auto = [];
+  for (const folder of autoFolderCandidates(id)) {
+    if (!g.hideAuto.includes(folder) && !g.folders.includes(folder) && (await folderExists(folder))) auto.push({ folder, auto: true });
+  }
+  return [...auto, ...g.folders.map((folder) => ({ folder, auto: false }))];
+}
+
+export function addFolder(id, folder) {
+  return change(id, (g) => {
+    g.hideAuto = g.hideAuto.filter((f) => f !== folder);
+    if (!g.folders.includes(folder) && !autoFolderCandidates(id).includes(folder)) g.folders.push(folder);
+  });
+}
+
+/** Remove a folder from a group. An automatic folder stays hidden until it's added again. */
 export function removeFolder(id, folder) {
-  return change(id, (g) => { g.folders = g.folders.filter((f) => f !== folder); });
+  return change(id, (g) => {
+    g.folders = g.folders.filter((f) => f !== folder);
+    if (autoFolderCandidates(id).includes(folder) && !g.hideAuto.includes(folder)) g.hideAuto.push(folder);
+  });
+}
+
+/** Single backgrounds (images or videos) a group holds besides its folders. */
+export function addImage(id, src) {
+  return change(id, (g) => { if (!g.images.includes(src)) g.images.push(src); });
+}
+
+export function removeImage(id, src) {
+  return change(id, (g) => { g.images = g.images.filter((i) => i !== src); });
+}
+
+/** Put one single background in exactly these groups (a background's Groups… list). */
+export async function setImageGroups(src, ids, index) {
+  requireGM();
+  const all = stored();
+  for (const g of listGroups(index)) {
+    const e = (all[g.id] = { ...blank(), ...all[g.id] });
+    delete e.deleted;
+    const has = e.images.includes(src);
+    if (ids.includes(g.id) && !has) e.images.push(src);
+    else if (!ids.includes(g.id) && has) e.images = e.images.filter((i) => i !== src);
+  }
+  await save(all);
 }
 
 export function addMember(id, name) {
+  return addMembers(id, [name]);
+}
+
+export function addMembers(id, names) {
   return change(id, (g) => {
-    g.remove = g.remove.filter((n) => n !== name);
-    if (!g.add.includes(name)) g.add.push(name);
+    g.remove = g.remove.filter((n) => !names.includes(n));
+    for (const name of names) if (!g.add.includes(name)) g.add.push(name);
   });
 }
 
@@ -110,6 +172,31 @@ export function removeMember(id, name) {
     g.add = g.add.filter((n) => n !== name);
     if (!g.remove.includes(name)) g.remove.push(name);
   });
+}
+
+/** Is `name` a member because of its art's tags (so removing it only hides it here)? */
+export function isTagged(id, name, index) {
+  return !!index.find((a) => a.name === name)?.groups.includes(id);
+}
+
+/** Put one character in exactly these groups (the character's Groups… list). */
+export async function setCharacterGroups(name, ids, index) {
+  requireGM();
+  const all = stored();
+  for (const g of listGroups(index)) {
+    const want = ids.includes(g.id);
+    if (want === memberNames(g.id, index).includes(name)) continue;
+    const e = (all[g.id] = { ...blank(), ...all[g.id] });
+    delete e.deleted;
+    if (want) {
+      e.remove = e.remove.filter((n) => n !== name);
+      if (!e.add.includes(name)) e.add.push(name);
+    } else {
+      e.add = e.add.filter((n) => n !== name);
+      if (!e.remove.includes(name)) e.remove.push(name);
+    }
+  }
+  await save(all);
 }
 
 /** The stage's group (ALL when it has none, or its group was deleted). */

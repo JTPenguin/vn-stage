@@ -145,3 +145,19 @@ export async function automaticArt(actor) {
   }
   return { key: null, source: null };
 }
+
+/**
+ * `actorArt`'s key without asking the server about names that have no art:
+ * `keys` is the set of art index keys. For listing every world actor (GM).
+ */
+export async function indexedActorKey(actor, keys) {
+  const linked = actor.getFlag(MODULE, "art");
+  if (linked) return keys.has(linked) ? linked : null;
+  if (keys.has(actor.name)) return actor.name;
+  const token = actor.prototypeToken;
+  for (const src of [actor.img, token?.texture?.src, token?.ring?.subject?.texture]) {
+    const key = await artKeyFromPath(src);
+    if (key) return key;
+  }
+  return null;
+}

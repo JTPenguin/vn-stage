@@ -7,7 +7,7 @@
   {{else}}
 
   <section class="vn-groupbar">
-    <i class="fa-solid fa-layer-group" data-tooltip="Group: sets the Cast list and the Background strip"></i>
+    <i class="fa-solid fa-layer-group" data-tooltip="Group: sets the Presets, the Background strip and the Cast list"></i>
     <select name="group" aria-label="Group">
       <option value="" {{#if allSelected}}selected{{/if}}>All characters</option>
       <option value="__recent" {{#if recentSelected}}selected{{/if}}>Recent</option>
@@ -17,49 +17,33 @@
       </optgroup>
       {{/if}}
     </select>
-    {{#if group}}{{#unless editing}}
-    <button type="button" class="vn-icon" data-action="editGroup" data-tooltip="Edit group"><i class="fa-solid fa-pen"></i></button>
-    {{/unless}}{{/if}}
-    <button type="button" class="vn-icon" data-action="newGroup" data-tooltip="New group"><i class="fa-solid fa-plus"></i></button>
+    <button type="button" class="vn-icon" data-action="manageGroups" data-tooltip="Manage groups"><i class="fa-solid fa-gear"></i></button>
   </section>
 
-  {{#if editing}}
-  <div class="vn-editbar">
-    <span>Editing <strong>{{group.label}}</strong></span>
-    <button type="button" data-action="renameGroup">Rename</button>
-    <button type="button" data-action="deleteGroup">Delete</button>
-    <button type="button" class="vn-done" data-action="doneEditing"><i class="fa-solid fa-check"></i> Done</button>
-  </div>
-  {{/if}}
-
   <section class="vn-section vn-presets {{#if collapsed.presets}}collapsed{{/if}}" data-section="presets">
-    <h3 data-action="toggleSection"><i class="fa-solid fa-chevron-down vn-chevron"></i> Presets
-      <button type="button" class="vn-icon" data-action="savePreset" data-tooltip="Save what's on stage as a preset{{#if group}} in {{group.label}}{{/if}}"><i class="fa-solid fa-floppy-disk"></i></button>
-    </h3>
+    <h3 data-action="toggleSection"><i class="fa-solid fa-chevron-down vn-chevron"></i> Presets</h3>
     <ul class="vn-preset-list">
       {{#each presets}}
-      <li data-preset="{{id}}" data-name="{{name}}">
-        <button type="button" class="vn-preset-load" data-action="loadPreset" data-tooltip="Load: background and cast"><i class="fa-solid fa-play"></i> {{name}}</button>
+      <li data-preset="{{id}}" data-name="{{name}}" class="{{#if current}}current{{/if}}">
+        <button type="button" class="vn-preset-load" data-action="loadPreset" data-tooltip="Load: background and cast">
+          <i class="fa-solid fa-play"></i> <span class="vn-name">{{name}}</span>
+          {{#if changed}}<span class="vn-changed" data-tooltip="The stage has changed since this preset was loaded"></span>{{/if}}
+        </button>
         {{#if groupLabel}}<span class="vn-preset-group">{{groupLabel}}</span>{{/if}}
-        <button type="button" class="vn-icon vn-preset-delete" data-action="deletePreset" data-tooltip="Delete preset"><i class="fa-solid fa-trash"></i></button>
+        {{#if changed}}<button type="button" class="vn-preset-update" data-action="updatePreset" data-tooltip="Save what's on stage now over this preset"><i class="fa-solid fa-floppy-disk"></i> Update</button>{{/if}}
+        <button type="button" class="vn-icon vn-preset-more" data-tooltip="Update, rename, groups, delete" aria-label="More"><i class="fa-solid fa-ellipsis-vertical"></i></button>
       </li>
       {{else}}
-      <li class="vn-empty">No presets{{#if group}} in this group{{/if}} yet. Set up the stage, then save it with the disk button.</li>
+      <li class="vn-empty">No presets{{#if group}} in this group{{/if}} yet.</li>
       {{/each}}
     </ul>
+    <div class="vn-section-foot">
+      <button type="button" data-action="savePreset"><i class="fa-solid fa-plus"></i> Save stage as preset…</button>
+    </div>
   </section>
 
   <section class="vn-section vn-background {{#if collapsed.background}}collapsed{{/if}}" data-section="background">
     <h3 data-action="toggleSection"><i class="fa-solid fa-chevron-down vn-chevron"></i> Background</h3>
-
-    {{#if editing}}
-    <ul class="vn-folder-chips">
-      {{#each group.folders}}
-      <li data-folder="{{this}}"><span>{{this}}</span><button type="button" class="vn-icon" data-action="removeFolder" data-tooltip="Remove this folder from the group"><i class="fa-solid fa-xmark"></i></button></li>
-      {{/each}}
-      <li><button type="button" data-action="addFolder"><i class="fa-solid fa-folder-plus"></i> Add folder…</button></li>
-    </ul>
-    {{/if}}
 
     <div class="vn-bg-scroll">
       {{#if bg.strips.[0].showHeading}}
@@ -81,7 +65,7 @@
     <div class="vn-bg-row">
       <button type="button" data-action="browseBackground"><i class="fa-solid fa-folder-open"></i> Browse…</button>
       <span class="vn-bg-folder">
-        {{#if bg.grouped}}{{#unless group.folders.length}}This group has no background folders yet. Add them with Edit group.{{/unless}}
+        {{#if bg.grouped}}{{#unless bg.strips.length}}This group has no backgrounds yet. Add them in Manage groups.{{/unless}}
         {{else}}{{#if bg.folder}}{{bg.folder}}{{else}}Browse to a scenario's scene art to swap between its images here.{{/if}}{{/if}}
       </span>
     </div>
@@ -93,10 +77,7 @@
       <button type="button" class="vn-icon vn-icon-tight" data-action="refreshCast" data-tooltip="Re-read the art folder"><i class="fa-solid fa-rotate"></i></button>
     </h3>
     <div class="vn-cast-tools">
-      <input type="search" name="filter" value="{{filter}}" placeholder="Search" autocomplete="off">
-      {{#if editing}}
-      <button type="button" class="{{#if showEveryone}}active{{/if}}" data-action="toggleEveryone"><i class="fa-solid fa-users"></i> Show everyone</button>
-      {{/if}}
+      <input type="search" name="filter" value="{{filter}}" placeholder="{{#if allSelected}}Search{{else}}Search (finds everyone){{/if}}" autocomplete="off">
     </div>
     <ul class="vn-cast-list">
       {{#if party}}
@@ -109,25 +90,13 @@
         </span>
       </li>
       {{/if}}
-      {{#each cast}}
-      <li data-name="{{name}}" data-search="{{search}}" draggable="true" class="{{#if onStage}}on-stage{{/if}} {{#if @root.editing}}{{#unless member}}not-member{{/unless}}{{/if}}">
-        <img src="{{thumb}}" alt="" loading="lazy">
-        <span class="vn-name">{{label}}</span>
-        {{#if @root.editing}}
-          {{#if member}}
-          <button type="button" class="vn-icon" data-action="removeMember" data-tooltip="Remove from this group"><i class="fa-solid fa-user-minus"></i></button>
-          {{else}}
-          <button type="button" class="vn-icon" data-action="addMember" data-tooltip="Add to this group"><i class="fa-solid fa-user-plus"></i></button>
-          {{/if}}
-        {{/if}}
-        <span class="vn-toggles" {{#if inParty}}data-tooltip="On stage with The Party"{{/if}}>
-          <button type="button" class="vn-toggle {{#if left}}active{{/if}}" data-action="add" data-side="left" aria-pressed="{{left}}" {{#if inParty}}disabled{{/if}}>Left</button>
-          <button type="button" class="vn-toggle {{#if right}}active{{/if}}" data-action="add" data-side="right" aria-pressed="{{right}}" {{#if inParty}}disabled{{/if}}>Right</button>
-        </span>
-      </li>
-      {{else}}
+      {{#each cast}}{{> "vn-stage.cast-row"}}{{else}}
       <li class="vn-empty">{{emptyCast}}</li>
       {{/each}}
+      {{#if others.length}}
+      <li class="vn-cast-divider" hidden>Not in this group</li>
+      {{#each others}}{{> "vn-stage.cast-row" outside=true}}{{/each}}
+      {{/if}}
     </ul>
   </section>
   {{/unless}}

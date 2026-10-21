@@ -1,20 +1,20 @@
 import { MODULE, PART, FRAME, LAYOUT } from "./constants.js";
-import { characterArt, artIndex, artKeyOf } from "./art.js";
+import { characterArt, artKeyOf } from "./art.js";
 import { ArtPicker } from "./art-picker.js";
 import { getCast, resolveCast, characterPrefs, setFlip, removeFromCast, addParty, moveEntry, setPartyOrder, displayName, PARTY_LABEL } from "./cast.js";
 import { placements } from "./layout.js";
 import { canChange, currentExpression, setExpression } from "./expressions.js";
-import { getGroup, stageGroup, memberNames, addMember } from "./groups.js";
 import { isStage } from "./stage.js";
 import { AdjustWindow } from "./adjust.js";
-import { StageWindow } from "./window.js";
+import { chooseCharacterGroups } from "./groups-window.js";
 
 /**
  * Working on the stage itself. Dragging a portrait moves the character (or The
  * Party) within its side or to the other one. Clicking a portrait opens its character menu:
- * the expressions, and for the GM a row of actions (Flip, Adjust, Remove, Add to
- * group while editing one; for a party member, The Party's sides and Remove
- * party). Players get the expressions of characters they own, nothing else.
+ * the expressions, and for the GM a row of actions (Flip, Adjust, VN art…,
+ * Groups…, Remove; for a party member, The Party's sides and Remove party).
+ * Players get the expressions of characters they own, nothing else. The GM gets
+ * the same menu by right-clicking a Cast row in the Stage window (`openCastMenu`).
  */
 
 const CLICK_MOVE = 6;   // pixels: more than this is a drag, not a click
@@ -314,19 +314,29 @@ function clearHover() {
 /*  The character menu                          */
 /* -------------------------------------------- */
 
-async function openMenu(entry, clientX, clientY) {
+/**
+ * The character menu for a Cast row (GM): the full menu when the character is on
+ * stage (`entry`), otherwise what applies off stage (Flip, Groups…).
+ */
+export function openCastMenu(key, entry, clientX, clientY) {
+  return openMenu(entry, clientX, clientY, key);
+}
+
+/** `entry` is the cast entry on stage, or null for a character who isn't (then `key` names them). */
+async function openMenu(entry, clientX, clientY, key = null) {
   closeMenu();
-  const key = (await artKeyOf(entry)) ?? entry.name;
+  key ??= (await artKeyOf(entry)) ?? entry.name;
   const art = await characterArt(key);
-  const expressions = Object.entries(art?.expressions ?? {});
-  const actions = game.user.isGM ? await gmActions(entry, key) : [];
+  const expressions = entry ? Object.entries(art?.expressions ?? {}) : [];
+  const name = entry ? displayName(entry) : art?.label ?? key;
+  const actions = game.user.isGM ? await gmActions(entry, key, name) : [];
   if (expressions.length < 2 && !actions.length) return;
-  const current = currentExpression(entry);
+  const current = entry ? currentExpression(entry) : null;
 
   const el = document.createElement("div");
   el.className = "vn-character-menu";
   el.setAttribute("role", "menu");
-  el.innerHTML = `<div class="vn-menu-name">${esc(displayName(entry))}</div>`;
+  el.innerHTML = `<div class="vn-menu-name">${esc(name)}</div>`;
 
   if (expressions.length >= 2) {
     const list = document.createElement("div");
@@ -370,23 +380,16 @@ async function openMenu(entry, clientX, clientY) {
   });
 }
 
-/** The GM's row: what this character (or party member) can have done to them. */
-async function gmActions(entry, key) {
+/** The GM's row: what this character (or party member) can have done to them. Off stage (no `entry`), only Flip and Groups…. */
+async function gmActions(entry, key, name) {
   const flip = !!characterPrefs(key).flip;
-  const actions = [
-    { label: "Flip", icon: "fa-solid fa-left-right", active: flip, run: () => setFlip(key, !flip) },
-    { label: "Adjust size and height", icon: "fa-solid fa-sliders", run: () => AdjustWindow.open(entry.id) },
-  ];
-  if (entry.actorUuid) {
+  const actions = [{ label: "Flip", icon: "fa-solid fa-left-right", active: flip, run: () => setFlip(key, !flip) }];
+  if (entry) actions.push({ label: "Adjust size and height", icon: "fa-solid fa-sliders", run: () => AdjustWindow.open(entry.id) });
+  if (entry?.actorUuid) {
     actions.push({ label: "VN art…: which character's art this actor uses", icon: "fa-solid fa-image-portrait", run: () => ArtPicker.open(entry.actorUuid) });
   }
-  const groupId = StageWindow.editingGroup;
-  if (groupId && getGroup(groupId)) {
-    const members = memberNames(groupId, await artIndex());
-    if (!members.includes(key)) {
-      actions.push({ label: `Add to ${getGroup(groupId).label}`, icon: "fa-solid fa-user-plus", run: () => addMember(groupId, key) });
-    }
-  }
+  actions.push({ label: "Groups…", icon: "fa-solid fa-layer-group", run: () => chooseCharacterGroups(key, name) });
+  if (!entry) return actions;
   if (entry.partyOf) {
     const side = resolveCast().find((e) => e.id === entry.id)?.side;
     actions.push("|",

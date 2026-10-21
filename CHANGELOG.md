@@ -5,6 +5,23 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 ## [Unreleased]
 
 ### Added
+- The Groups window (the gear button next to the Group menu): every group on the left; the selected group's Characters, Background folders and Presets on the right, all managed the same way (× takes one out, + Add… opens a checklist to bring more in). Tagged characters and automatic folders are marked. Rename and Delete sit by the group's name. Replaces Edit group mode.
+- Automatic group folders: the "Group background folders" setting (a folder pattern with `{group}`), and the `vn-stage.groupFolders` hook for other modules (`Hooks.on("vn-stage.groupFolders", (group, folders) => folders.push(…))`). A folder is used only when it exists; removing one hides it from that group.
+- Presets can belong to several groups. Loading one keeps the stage's group when the preset is in it, otherwise selects its first group.
+- The preset last loaded or saved on a stage is lit; once the stage changes it shows a dot and an Update button. Each preset's ⋯ menu (or right-click): Update from stage, Rename…, Groups…, Delete. "Save stage as preset…" sits under the list.
+- Groups… in the character menu (always, not just while editing a group) and in a preset's menu: tick the groups it belongs to, with New group….
+- Single backgrounds in groups: the Groups window's Backgrounds section takes folders (Add folder…) and single images or videos (Add background…). In the Stage window they get their own strip, "Single backgrounds". Right-click any background thumbnail for Groups…; a background shown from Browse… that's in no strip appears after the default one (dashed), so it can be added.
+- Searching the Cast list finds everyone: the group's matches first, then matches from outside the group under "Not in this group", with the same Left/Right toggles. With the search empty, only the group shows.
+- Right-clicking a Cast row opens the character menu: the full menu when they're on stage; Flip and Groups… when they aren't.
+
+### Changed
+- Cast rows are actors: one row per world actor with VN art, linked to it, so its owners control its expression even when it found its art by VN art… or its images. Several actors sharing one character's art each get a row (with the art's name beside theirs). Art no actor uses stays as an art-only row.
+- The Stage window only runs the scene: Edit group mode, New group, the folder chips and Show everyone are gone (all in the Groups window now). Refresh also re-reads the background folders.
+
+### Removed
+- `StageWindow.editingGroup`.
+
+### Added
 - Video backgrounds: `.webm` (and `.mp4`, `.m4v`, `.ogv`) files can be chosen with Browse… and appear in the Background strip, marked with a film icon; their thumbnails play while hovered. On the stage they loop silently on every screen (the background tile's video settings).
 
 ### Fixed

@@ -100,7 +100,7 @@ const VIDEO = /\.(webm|mp4|m4v|ogv)$/i;
 export function isVideo(path) {
   return VIDEO.test(path ?? "");
 }
-const folderCache = new Map(); // folder → Promise<string[]>
+const folderCache = new Map(); // folder → Promise<string[]|null>
 
 /** Folder part of a path, with its trailing slash. */
 export function folderOf(path) {
@@ -134,20 +134,33 @@ export async function pickBackground(path, { scene = canvas.scene, keepFolder = 
   if (folder !== backgroundFolder(scene)) await scene.setFlag(MODULE, "backgroundFolder", folder);
 }
 
-/** The images and videos in `folder`, sorted by name (GM only: it browses the folder). */
-export function folderImages(folder) {
-  if (!folder) return Promise.resolve([]);
+/** Browse `folder` once (GM only): its files, or null when it can't be read (it doesn't exist). */
+function browse(folder) {
   if (!folderCache.has(folder)) {
     const FilePicker = foundry.applications.apps.FilePicker.implementation;
     folderCache.set(folder, FilePicker.browse("data", folder)
-      .then(({ files }) => files.map(decodePath).filter((f) => IMAGE.test(f)).sort((a, b) => a.localeCompare(b)))
-      .catch((err) => {
-        console.warn(`VN Stage | Can't browse ${folder}`, err);
-        folderCache.delete(folder);
-        return [];
-      }));
+      .then(({ files }) => files.map(decodePath))
+      .catch(() => null)); // kept, so a missing folder isn't asked for again until Refresh
   }
   return folderCache.get(folder);
+}
+
+/** Does `folder` exist? (An automatic group folder is only offered when it does.) */
+export async function folderExists(folder) {
+  return !!folder && (await browse(folder)) !== null;
+}
+
+/** The images and videos in `folder`, sorted by name (GM only: it browses the folder). */
+export async function folderImages(folder) {
+  if (!folder) return [];
+  const files = await browse(folder);
+  if (files === null) console.warn(`VN Stage | Can't browse ${folder}`);
+  return (files ?? []).filter((f) => IMAGE.test(f)).sort((a, b) => a.localeCompare(b));
+}
+
+/** Forget what was read from the folders (new art may have arrived). */
+export function clearFolderCache() {
+  folderCache.clear();
 }
 
 /** "…/02 Absalom Docks.webp" → "Absalom Docks". */

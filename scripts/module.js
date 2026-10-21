@@ -10,10 +10,11 @@ import { isStage, makeStage, unmakeStage, setBackground, currentBackground } fro
 import { getCast, resolveCast, addToCast, addParty, setCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip } from "./cast.js";
 import { artIndex, characterArt, clearArtCache } from "./art.js";
 import { layout, lastArrangement } from "./layout.js";
-import { listGroups, getGroup, memberNames, createGroup, addFolder, addMember, stageGroup, setStageGroup } from "./groups.js";
+import { listGroups, getGroup, memberNames, createGroup, addFolder, addMember, groupFolders, stageGroup, setStageGroup } from "./groups.js";
 import { startView, stopView, viewLocked, viewFitted } from "./view.js";
 import { StageWindow } from "./window.js";
-import { listPresets, savePreset, loadPreset, deletePreset } from "./presets.js";
+import { GroupsWindow } from "./groups-window.js";
+import { listPresets, savePreset, loadPreset, deletePreset, updatePreset, renamePreset, setPresetGroups } from "./presets.js";
 import { setExpression, resetAllExpressions, currentExpression, preloadStage, isRelayGM } from "./expressions.js";
 import { startClicks, stopClicks, dropTarget, setWindowDrag } from "./interact.js";
 
@@ -21,15 +22,17 @@ Hooks.once("init", () => {
   registerSettings();
   foundry.applications.handlebars.loadTemplates({
     "vn-stage.bg": `modules/${MODULE}/templates/stage-bg.hbs`,
+    "vn-stage.cast-row": `modules/${MODULE}/templates/cast-row.hbs`,
   });
   const api = {
     isStage, makeStage, unmakeStage, setBackground, currentBackground,
     getCast, resolveCast, addToCast, addParty, setCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip,
     artIndex, characterArt, clearArtCache, layout,
     setExpression, resetAllExpressions, currentExpression,
-    listPresets, savePreset, loadPreset, deletePreset,
-    listGroups, getGroup, memberNames, createGroup, addFolder, addMember, stageGroup, setStageGroup,
+    listPresets, savePreset, loadPreset, deletePreset, updatePreset, renamePreset, setPresetGroups,
+    listGroups, getGroup, memberNames, createGroup, addFolder, addMember, groupFolders, stageGroup, setStageGroup,
     openWindow: () => StageWindow.open(),
+    openGroups: (groupId) => GroupsWindow.open(groupId),
     status,
   };
   game.modules.get(MODULE).api = api;
@@ -94,8 +97,10 @@ for (const hook of ["createTile", "updateTile", "deleteTile"]) {
 }
 
 Hooks.on("updateSetting", (setting) => {
-  const keys = ["characterPrefs", "groups", "recent", "presets"].map((k) => `${MODULE}.${k}`);
-  if (keys.includes(setting.key)) StageWindow.refresh();
+  const keys = ["characterPrefs", "groups", "recent", "presets", "groupFolders"].map((k) => `${MODULE}.${k}`);
+  if (!keys.includes(setting.key)) return;
+  StageWindow.refresh();
+  GroupsWindow.refresh();
 });
 
 // GM shortcut: drop an actor on the left or right half of a stage.

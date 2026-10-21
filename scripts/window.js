@@ -1,24 +1,26 @@
 import { MODULE } from "./constants.js";
-import { artIndex, artKeyOf } from "./art.js";
+import { artIndex, indexedActorKey } from "./art.js";
 import { getCast, resolveCast, addToCast, addParty, removeFromCast, hasParty, PARTY_LABEL } from "./cast.js";
-import { setWindowDrag } from "./interact.js";
-import { listPresets, savePreset, loadPreset, deletePreset, findPresetByName } from "./presets.js";
+import { setWindowDrag, openCastMenu } from "./interact.js";
+import {
+  listPresets, getPreset, savePreset, loadPreset, deletePreset, findPresetByName, updatePreset, renamePreset, stagePreset,
+} from "./presets.js";
 import {
   isStage, makeStage, setBackground, currentBackground, pickBackground, backgroundFolder,
-  folderImages, backgroundLabel, decodePath, isVideo,
+  folderImages, backgroundLabel, decodePath, isVideo, clearFolderCache,
 } from "./stage.js";
-import {
-  ALL, RECENT, listGroups, getGroup, memberNames, createGroup, renameGroup, deleteGroup,
-  addFolder, removeFolder, addMember, removeMember, stageGroup, setStageGroup,
-} from "./groups.js";
+import { ALL, RECENT, listGroups, getGroup, groupFolders, memberNames, stageGroup, setStageGroup } from "./groups.js";
+import { GroupsWindow, folderLabel, choosePresetGroups, chooseImageGroups } from "./groups-window.js";
+import { askName, confirm, esc } from "./dialogs.js";
 import { safetyBackground } from "./settings.js";
 import { resetAllExpressions } from "./expressions.js";
 
-const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 /**
- * The Stage window: the GM's controls for the stage being viewed (group, presets,
- * background, cast). Characters on stage are worked on the stage itself (interact.js).
+ * The Stage window: the GM's controls for running the stage being viewed (group,
+ * presets, background, cast). What a group holds is managed in the Groups window
+ * (groups-window.js); characters on stage are worked on the stage itself (interact.js).
  */
 export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = {
@@ -34,33 +36,18 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       refreshCast: StageWindow.#onRefreshCast,
       toggleSection: StageWindow.#onToggleSection,
       toggleFolder: StageWindow.#onToggleFolder,
-      newGroup: StageWindow.#onNewGroup,
-      editGroup: StageWindow.#onEditGroup,
-      doneEditing: StageWindow.#onDoneEditing,
-      renameGroup: StageWindow.#onRenameGroup,
-      deleteGroup: StageWindow.#onDeleteGroup,
-      addFolder: StageWindow.#onAddFolder,
-      removeFolder: StageWindow.#onRemoveFolder,
-      addMember: StageWindow.#onAddMember,
-      removeMember: StageWindow.#onRemoveMember,
-      toggleEveryone: StageWindow.#onToggleEveryone,
+      manageGroups: StageWindow.#onManageGroups,
       resetExpressions: StageWindow.#onResetExpressions,
       addParty: StageWindow.#onAddParty,
       savePreset: StageWindow.#onSavePreset,
       loadPreset: StageWindow.#onLoadPreset,
-      deletePreset: StageWindow.#onDeletePreset,
+      updatePreset: StageWindow.#onUpdatePreset,
     },
   };
 
   static PARTS = { main: { template: `modules/${MODULE}/templates/stage-window.hbs`, scrollable: [".vn-cast-list", ".vn-bg-scroll"] } };
 
   static #instance = null;
-
-  /** The group being edited in the window (Edit group mode), or null. The character menu offers "Add to group" then. */
-  static get editingGroup() {
-    const app = this.#instance;
-    return app?.rendered && app.#editing ? stageGroup() : null;
-  }
 
   static open() {
     this.#instance ??= new StageWindow();
@@ -73,10 +60,8 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   #filter = "";
-  #editing = false;      // Edit group mode: the rarely used group controls
-  #showEveryone = false; // in Edit group mode, list everyone, not just members
   #groupLabel = null;
-  #entryByKey = new Map(); // art key → the cast entry standing on stage with it (from the last render)
+  #rows = new Map(); // Cast row id → its row (from the last render): who it adds, and their entry on stage
 
   get title() {
     return this.#groupLabel ? `VN Stage · ${this.#groupLabel}` : "VN Stage";
@@ -93,52 +78,37 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     const index = await artIndex();
     const selected = stageGroup(scene);
     const group = getGroup(selected);
-    if (!group) this.#editing = false;
-    const editing = this.#editing;
     this.#groupLabel = group?.label ?? (selected === RECENT ? "Recent" : null);
 
-    const members = new Set(group ? memberNames(group.id, index) : []);
-    const cast = getCast(scene);
-    const resolved = resolveCast(scene);
-    // Who stands on stage, by art key (an actor may use art under another name).
-    const keyed = await Promise.all(resolved.map(async (e) => ({ e, key: (await artKeyOf(e)) ?? e.name })));
-    const onStage = new Set(keyed.map((k) => k.key));
-    this.#entryByKey = new Map(keyed.filter((k) => !k.e.partyOf).map((k) => [k.key, k.e]));
-    const partyEntry = cast.find((e) => e.party);
+    const partyEntry = getCast(scene).find((e) => e.party);
 
-    // The Cast list: the group's members, Recent in its order, or everyone.
-    const byName = new Map(index.map((a) => [a.name, a]));
-    let names;
-    if (editing && this.#showEveryone) names = index.map((a) => a.name);
-    else names = memberNames(selected, index);
-    let list = names.map((n) => byName.get(n)).filter(Boolean);
-    if (selected !== RECENT) list.sort((a, b) => a.label.localeCompare(b.label));
+    // The Cast list: the group's members (Recent in its order, or everyone);
+    // everyone else is listed after them, shown only while searching.
+    const rows = await castRows(index, resolveCast(scene));
+    this.#rows = new Map(rows.map((r) => [r.row, r]));
+    const members = memberNames(selected, index);
+    const inGroup = new Set(members);
+    const byLabel = (a, b) => a.label.localeCompare(b.label);
+    const mine = rows.filter((r) => inGroup.has(r.key));
+    if (selected === RECENT) mine.sort((a, b) => members.indexOf(a.key) - members.indexOf(b.key) || byLabel(a, b));
+    else mine.sort(byLabel);
+    const others = selected === ALL ? [] : rows.filter((r) => !inGroup.has(r.key)).sort(byLabel);
 
     return {
       ...context,
-      editing,
-      showEveryone: this.#showEveryone,
       groups: listGroups(index).map((g) => ({ ...g, selected: g.id === selected })),
       allSelected: selected === ALL,
       recentSelected: selected === RECENT,
       group,
       bg: await backgroundStrips(scene, group, collapsed),
       party: hasParty() ? { label: PARTY_LABEL, side: partyEntry?.side ?? null } : null,
-      presets: listPresets(group?.id ?? null).map((p) => ({ ...p, groupLabel: group ? null : (p.group ? getGroup(p.group)?.label ?? p.group : null) })),
-      cast: list.map((a) => {
-        const here = keyed.filter((k) => k.key === a.key);
-        const side = here.find((k) => !k.e.partyOf)?.e.side ?? null;
-        const inParty = !side && here.some((k) => k.e.partyOf);
-        return {
-          name: a.key, label: a.label, thumb: a.thumb, onStage: onStage.has(a.key),
-          search: `${a.label} ${a.key}`.toLowerCase(), member: members.has(a.key),
-          left: side === "left", right: side === "right", inParty,
-        };
-      }),
+      presets: presetRows(scene, group),
+      cast: mine.map(rowContext),
+      others: others.map(rowContext),
       emptyCast: selected === ALL
         ? "No characters found. Set the art folder in the module settings."
         : selected === RECENT ? "Nobody yet: characters you put on a stage appear here."
-          : "Nobody in this group yet. Use Edit group to add characters, or tag them in the art pipeline.",
+          : "Nobody in this group yet. Add characters in Manage groups, or tag them in the art pipeline.",
     };
   }
 
@@ -161,32 +131,67 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       button.addEventListener("mouseleave", () => { video.pause(); video.currentTime = 0; });
     }
 
+    // Right-click a background: Groups… (which groups offer it).
+    for (const button of this.element.querySelectorAll(".vn-bg-choice")) {
+      button.addEventListener("contextmenu", (event) => {
+        event.preventDefault();
+        chooseImageGroups(button.dataset.src);
+      });
+    }
+
     // Drag a Cast row (or The Party) onto the stage to put them where they're dropped.
     for (const li of this.element.querySelectorAll(".vn-cast-list li[draggable]")) {
       li.addEventListener("dragstart", (event) => {
         const party = li.hasAttribute("data-party");
-        const entry = party ? getCast().find((e) => e.party) : this.#entryByKey.get(li.dataset.name);
-        const data = party ? { type: "VNStageParty" } : { type: "VNStageCast", name: entry?.name ?? li.dataset.name, actorUuid: entry?.actorUuid ?? null };
+        const row = this.#rows.get(li.dataset.row);
+        const entry = party ? getCast().find((e) => e.party) : row?.entry;
+        const data = party ? { type: "VNStageParty" } : { type: "VNStageCast", name: row?.name, actorUuid: row?.actorUuid ?? null };
         if (entry) data.ignore = entry.id;
         event.dataTransfer.setData("text/plain", JSON.stringify(data));
         event.dataTransfer.effectAllowed = "copyMove";
         setWindowDrag({ ignore: entry?.id ?? null });
       });
       li.addEventListener("dragend", () => setWindowDrag(null));
+      // Right-click a character's row: the same character menu as on the stage.
+      if (!li.hasAttribute("data-party")) {
+        li.addEventListener("contextmenu", (event) => {
+          event.preventDefault();
+          const row = this.#rows.get(li.dataset.row);
+          if (row) openCastMenu(row.key, row.entry, event.clientX, event.clientY);
+        });
+      }
     }
 
-    this.element.querySelector("select[name=group]")?.addEventListener("change", async (event) => {
-      this.#editing = false;
-      this.#showEveryone = false;
-      await setStageGroup(event.target.value);
-    });
+    this.element.querySelector("select[name=group]")?.addEventListener("change", (event) => setStageGroup(event.target.value));
   }
 
+  /** The preset menu: the ⋯ button, or right-clicking a preset. Made once; the window's element outlives its renders. */
+  _onFirstRender(context, options) {
+    super._onFirstRender(context, options);
+    const ContextMenu = foundry.applications.ux.ContextMenu.implementation;
+    const row = (target) => target.closest("[data-preset]");
+    const items = [
+      { label: "Update from stage", icon: "fa-solid fa-floppy-disk", onClick: (_e, t) => StageWindow.#updatePreset(row(t).dataset.preset) },
+      { label: "Rename…", icon: "fa-solid fa-pen", onClick: (_e, t) => StageWindow.#renamePreset(row(t).dataset.preset) },
+      { label: "Groups…", icon: "fa-solid fa-layer-group", onClick: (_e, t) => choosePresetGroups(row(t).dataset.preset) },
+      { label: "Delete", icon: "fa-solid fa-trash", onClick: (_e, t) => StageWindow.#deletePreset(row(t).dataset.preset) },
+    ];
+    new ContextMenu(this.element, ".vn-preset-more", items, { jQuery: false, eventName: "click", fixed: true, relative: "target" });
+    new ContextMenu(this.element, ".vn-preset-list li[data-preset]", items, { jQuery: false, fixed: true });
+  }
+
+  /** Searching filters the group's rows and brings in matching rows from outside it, under a divider. */
   #applyFilter() {
     const q = this.#filter.trim().toLowerCase();
+    let outside = 0;
     for (const li of this.element.querySelectorAll(".vn-cast-list [data-search]")) {
-      li.hidden = !!q && !li.dataset.search.includes(q);
+      const match = !q || li.dataset.search.includes(q);
+      const other = li.classList.contains("outside");
+      li.hidden = other ? !q || !match : !match;
+      if (other && !li.hidden) outside++;
     }
+    const divider = this.element.querySelector(".vn-cast-divider");
+    if (divider) divider.hidden = !outside;
   }
 
   static async #onMakeStage() {
@@ -209,18 +214,13 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** Left / Right toggles: turn on to put the character there (or move them), turn the lit one off to remove them. */
   static async #onAdd(_event, target) {
-    const name = target.closest("[data-name]").dataset.name;
-    const entry = await castEntryFor(name);
-    if (entry?.side === target.dataset.side) await removeFromCast(entry.id);
-    else if (entry) await addToCast({ name: entry.name, actorUuid: entry.actorUuid, side: target.dataset.side });
-    else await addToCast({ name, side: target.dataset.side });
+    const row = this.#rows.get(target.closest("[data-row]").dataset.row);
+    if (!row) return;
+    const side = target.dataset.side;
+    const entry = castEntryFor(row);
+    if (entry?.side === side) await removeFromCast(entry.id);
+    else await addToCast({ name: entry?.name ?? row.name, actorUuid: row.actorUuid, side });
   }
-
-
-
-
-
-
 
   /** Collapse or expand a section, remembered on this machine. Toggled in place, without a re-render. */
   static async #onToggleSection(_event, target) {
@@ -239,83 +239,14 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async #onRefreshCast() {
+    clearFolderCache();
     await artIndex({ refresh: true });
     this.render();
+    GroupsWindow.refresh();
   }
 
-  /* ---------------------------------------- */
-  /*  Groups                                  */
-  /* ---------------------------------------- */
-
-  static async #onNewGroup() {
-    const name = await askName("New group", "");
-    if (!name) return;
-    const id = await createGroup(name);
-    this.#editing = true;
-    this.#showEveryone = false;
-    await setStageGroup(id);
-  }
-
-  static #onEditGroup() {
-    this.#editing = true;
-    this.render();
-  }
-
-  static #onDoneEditing() {
-    this.#editing = false;
-    this.#showEveryone = false;
-    this.render();
-  }
-
-  static async #onRenameGroup() {
-    const group = getGroup(stageGroup());
-    if (!group) return;
-    const label = await askName("Rename group", group.label);
-    if (label) await renameGroup(group.id, label);
-  }
-
-  static async #onDeleteGroup() {
-    const group = getGroup(stageGroup());
-    if (!group) return;
-    const ok = await DialogV2.confirm({
-      window: { title: "Delete group" },
-      rejectClose: false,
-      content: `<p>Delete the group <strong>${foundry.utils.escapeHTML(group.label)}</strong>? Its characters and folders stay; only the group goes.</p>`,
-    });
-    if (!ok) return;
-    this.#editing = false;
-    await deleteGroup(group.id);
-    await setStageGroup(ALL);
-  }
-
-  static async #onAddFolder() {
-    const group = getGroup(stageGroup());
-    if (!group) return;
-    const FilePicker = foundry.applications.apps.FilePicker.implementation;
-    new FilePicker({
-      type: "folder",
-      current: group.folders.at(-1) ?? backgroundFolder() ?? "",
-      callback: (path) => {
-        let folder = decodePath(path);
-        if (!folder.endsWith("/")) folder += "/";
-        return addFolder(group.id, folder);
-      },
-    }).render({ force: true });
-  }
-
-  static async #onRemoveFolder(_event, target) {
-    const group = getGroup(stageGroup());
-    if (group) await removeFolder(group.id, target.closest("[data-folder]").dataset.folder);
-  }
-
-  static async #onAddMember(_event, target) {
-    const group = getGroup(stageGroup());
-    if (group) await addMember(group.id, target.closest("[data-name]").dataset.name);
-  }
-
-  static async #onRemoveMember(_event, target) {
-    const group = getGroup(stageGroup());
-    if (group) await removeMember(group.id, target.closest("[data-name]").dataset.name);
+  static #onManageGroups() {
+    GroupsWindow.open(stageGroup());
   }
 
   static async #onResetExpressions() {
@@ -329,17 +260,12 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     else await addParty(target.dataset.side);
   }
 
-
   static async #onSavePreset() {
     const group = getGroup(stageGroup());
     const name = await askName(group ? `Save preset in ${group.label}` : "Save preset", "");
     if (!name) return;
     if (findPresetByName(name, group?.id ?? null)) {
-      const ok = await DialogV2.confirm({
-        window: { title: "Replace preset" },
-        content: `<p>Replace the preset <strong>${foundry.utils.escapeHTML(name)}</strong> with what's on stage now?</p>`,
-        rejectClose: false,
-      });
+      const ok = await confirm("Replace preset", `Replace the preset <strong>${esc(name)}</strong> with what's on stage now?`);
       if (!ok) return;
     }
     await savePreset(name);
@@ -350,45 +276,101 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     await loadPreset(target.closest("[data-preset]").dataset.preset);
   }
 
-  static async #onDeletePreset(_event, target) {
-    const row = target.closest("[data-preset]");
-    const ok = await DialogV2.confirm({
-      window: { title: "Delete preset" },
-      content: `<p>Delete the preset <strong>${foundry.utils.escapeHTML(row.dataset.name)}</strong>?</p>`,
-      rejectClose: false,
-    });
-    if (ok) await deletePreset(row.dataset.preset);
+  static async #onUpdatePreset(_event, target) {
+    await StageWindow.#updatePreset(target.closest("[data-preset]").dataset.preset);
   }
 
-  static #onToggleEveryone() {
-    this.#showEveryone = !this.#showEveryone;
-    this.render();
+  static async #updatePreset(id) {
+    const preset = getPreset(id);
+    if (!preset) return;
+    await updatePreset(id);
+    ui.notifications.info(`VN Stage | Updated preset "${preset.name}".`);
+  }
+
+  static async #renamePreset(id) {
+    const preset = getPreset(id);
+    if (!preset) return;
+    const name = await askName("Rename preset", preset.name);
+    if (name) await renamePreset(id, name);
+  }
+
+  static async #deletePreset(id) {
+    const preset = getPreset(id);
+    if (!preset) return;
+    const ok = await confirm("Delete preset", `Delete the preset <strong>${esc(preset.name)}</strong>? It leaves every group.`);
+    if (ok) await deletePreset(id);
   }
 }
 
-/** The cast entry (not The Party) standing on the stage with this art key, or null. */
-async function castEntryFor(key) {
-  for (const e of getCast()) {
-    if (!e.party && ((await artKeyOf(e)) ?? e.name) === key) return e;
-  }
-  return null;
-}
-
-/** A one-field name dialog; resolves to the trimmed name, or null. */
-async function askName(title, value) {
-  const name = await DialogV2.prompt({
-    window: { title },
-    content: `<input type="text" name="name" value="${foundry.utils.escapeHTML(value ?? "")}" autofocus>`,
-    ok: { label: "Save", callback: (_event, button) => button.form.elements.name.value },
-    rejectClose: false,
-  });
-  return name?.trim() || null;
+/** The cast entry (not The Party) a row's toggles work on: its actor's, or for art alone, the art-only entry. */
+function castEntryFor(row) {
+  return getCast().find((e) => !e.party && (row.actorUuid ? e.actorUuid === row.actorUuid : !e.actorUuid && e.name === row.key)) ?? null;
 }
 
 /**
- * The Background strips: the default background pinned first, then each of the
- * group's folders (with a heading when there's more than one, or while editing),
- * or the stage's own last-browsed folder when there's no group.
+ * Everyone the Cast list can offer: one row per world actor with VN art (so it
+ * goes on stage linked, and its owners control its expression; several actors
+ * can share one character's art), and one per piece of art no actor uses (or
+ * that stands on stage without an actor). Each knows its cast entry on stage.
+ */
+async function castRows(index, resolved) {
+  const byKey = new Map(index.map((a) => [a.key, a]));
+  const keys = new Set(byKey.keys());
+  const rows = [];
+  const usedKeys = new Set();
+  for (const actor of game.actors) {
+    if (actor.type === "party") continue;
+    const key = await indexedActorKey(actor, keys);
+    const art = key && byKey.get(key);
+    if (!art) continue;
+    usedKeys.add(key);
+    rows.push({ row: actor.uuid, key, name: actor.name, actorUuid: actor.uuid, label: actor.name, note: art.label !== actor.name ? art.label : null, thumb: art.thumb });
+  }
+  const artOnlyOnStage = new Set(resolved.filter((e) => !e.actorUuid).map((e) => e.name));
+  for (const art of index) {
+    if (usedKeys.has(art.key) && !artOnlyOnStage.has(art.key)) continue;
+    rows.push({ row: `art:${art.key}`, key: art.key, name: art.key, actorUuid: null, label: art.label, note: usedKeys.has(art.key) ? "art only" : null, thumb: art.thumb });
+  }
+  for (const r of rows) {
+    const mine = resolved.filter((e) => (r.actorUuid ? e.actorUuid === r.actorUuid : !e.actorUuid && e.name === r.key));
+    r.entry = mine.find((e) => !e.partyOf) ?? null;
+    r.side = r.entry?.side ?? null;
+    r.inParty = !r.entry && mine.some((e) => e.partyOf);
+  }
+  return rows;
+}
+
+function rowContext(r) {
+  return {
+    row: r.row, label: r.label, note: r.note, thumb: r.thumb,
+    onStage: !!r.entry || r.inParty,
+    search: `${r.label} ${r.note ?? ""} ${r.key}`.toLowerCase(),
+    left: r.side === "left", right: r.side === "right", inParty: r.inParty,
+  };
+}
+
+/**
+ * The Presets list: the group's presets (every preset under All characters and
+ * Recent, labelled with their groups). The one last loaded or saved on this stage
+ * is lit, and marked changed once the stage differs from it.
+ */
+function presetRows(scene, group) {
+  const lit = stagePreset(scene);
+  const label = (id) => getGroup(id)?.label ?? id;
+  return listPresets(group?.id ?? null).map((p) => ({
+    id: p.id,
+    name: p.name,
+    groupLabel: group ? null : p.groups.map(label).join(", ") || null,
+    current: lit?.id === p.id,
+    changed: lit?.id === p.id && lit.changed,
+  }));
+}
+
+/**
+ * The Background strips: the default background pinned first (and the one shown
+ * now, when it's in no strip, so it can be added to a group), then the group's
+ * single backgrounds and each of its folders, with a heading each when there's
+ * more than one strip; or the stage's own last-browsed folder when there's no group.
  */
 async function backgroundStrips(scene, group, collapsed) {
   const current = currentBackground(scene);
@@ -396,20 +378,25 @@ async function backgroundStrips(scene, group, collapsed) {
   const same = (a, b) => !!a && !!b && decodePath(a) === decodePath(b);
   const choice = (src, label, pinned = false) => ({ src, label, pinned, video: isVideo(src), current: same(src, current) });
 
-  const folders = group ? group.folders : [backgroundFolder(scene)].filter(Boolean);
+  const folders = group ? (await groupFolders(group.id)).map((f) => f.folder) : [backgroundFolder(scene)].filter(Boolean);
   const strips = await Promise.all(folders.map(async (folder) => ({
     folder,
     heading: group ? folderLabel(folder) : null,
     collapsed: !!collapsed[`folder:${folder}`],
     choices: (await folderImages(folder)).filter((src) => !same(src, safety)).map((src) => choice(src, backgroundLabel(src))),
   })));
+  if (group?.images.length) {
+    strips.unshift({
+      folder: `images:${group.id}`,
+      heading: "Single backgrounds",
+      collapsed: !!collapsed[`folder:images:${group.id}`],
+      choices: group.images.filter((src) => !same(src, safety)).map((src) => choice(src, backgroundLabel(src))),
+    });
+  }
   const pinned = safety ? [choice(safety, "Default background", true)] : [];
+  const offered = strips.some((s) => s.choices.some((c) => c.current)) || same(current, safety);
+  if (current && !offered) pinned.push({ ...choice(current, `${backgroundLabel(current)} (shown now; right-click to add it to a group)`), elsewhere: true });
   const showHeadings = !!group && strips.length > 1;
   for (const s of strips) s.showHeading = showHeadings;
   return { pinned, strips, folder: group ? null : folders[0] ?? null, grouped: !!group };
-}
-
-/** ".../scenarios/99-1/scenes/" → "99-1/scenes". */
-function folderLabel(folder) {
-  return folder.replace(/\/$/, "").split("/").slice(-2).join("/");
 }

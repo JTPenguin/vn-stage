@@ -23,7 +23,17 @@ export function registerSettings() {
     filePicker: "image",
   });
 
-  // Groups: { [id]: { label, folders: [], add: [], remove: [], deleted } }. Members also come from manifest tags.
+  // A folder each group finds its backgrounds in by itself; {group} is the group's name.
+  game.settings.register(MODULE, "groupFolders", {
+    name: "VNSTAGE.Settings.GroupFolders.Name",
+    hint: "VNSTAGE.Settings.GroupFolders.Hint",
+    scope: "world",
+    config: true,
+    type: String,
+    default: "",
+  });
+
+  // Groups: { [id]: { label, folders: [], images: [], add: [], remove: [], hideAuto: [], deleted } }. Members also come from manifest tags.
   game.settings.register(MODULE, "groups", {
     scope: "world",
     config: false,
@@ -39,7 +49,7 @@ export function registerSettings() {
     default: { names: [] },
   });
 
-  // Presets: { [id]: { name, group, background, cast, saved } }.
+  // Presets: { [id]: { name, groups: [], background, cast, saved } } (older ones have `group`, one id or null).
   game.settings.register(MODULE, "presets", {
     scope: "world",
     config: false,
