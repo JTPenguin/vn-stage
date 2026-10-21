@@ -17,11 +17,13 @@ import { artKeyOf } from "./art.js";
 export const SIDES = ["left", "right"];
 export const PARTY_LABEL = "The Party";
 
-/** The party's characters, if the system has a party (PF2e). */
+/** Party member types shown on the stage: PCs and NPCs travelling with them (familiars stay off). */
+const PARTY_TYPES = ["character", "npc"];
+
+/** The party's characters and NPCs, if the system has a party (PF2e). */
 export function partyMembers() {
-  const party = game.actors.party;
-  const members = party?.members ?? [];
-  return members.filter((a) => a && (a.isOfType?.("character") ?? a.type === "character"));
+  const members = game.actors.party?.members ?? [];
+  return members.filter((a) => a && PARTY_TYPES.includes(a.type));
 }
 
 export function hasParty() {

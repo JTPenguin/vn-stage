@@ -61,20 +61,22 @@
     </ul>
     {{/if}}
 
-    {{#if bg.strips.[0].showHeading}}
-    <div class="vn-bg-strip">{{#each bg.pinned}}{{> "vn-stage.bg"}}{{/each}}</div>
-    {{#each bg.strips}}
-    <div class="vn-bg-folder-group {{#if collapsed}}collapsed{{/if}}" data-folder="{{folder}}">
-      <h4 data-action="toggleFolder"><i class="fa-solid fa-chevron-down vn-chevron"></i> {{heading}}</h4>
-      <div class="vn-bg-strip">{{#each choices}}{{> "vn-stage.bg"}}{{else}}<p class="vn-empty">No images</p>{{/each}}</div>
+    <div class="vn-bg-scroll">
+      {{#if bg.strips.[0].showHeading}}
+      <div class="vn-bg-strip">{{#each bg.pinned}}{{> "vn-stage.bg"}}{{/each}}</div>
+      {{#each bg.strips}}
+      <div class="vn-bg-folder-group {{#if collapsed}}collapsed{{/if}}" data-folder="{{folder}}">
+        <h4 data-action="toggleFolder"><i class="fa-solid fa-chevron-down vn-chevron"></i> {{heading}}</h4>
+        <div class="vn-bg-strip">{{#each choices}}{{> "vn-stage.bg"}}{{else}}<p class="vn-empty">No images</p>{{/each}}</div>
+      </div>
+      {{/each}}
+      {{else}}
+      <div class="vn-bg-strip">
+        {{#each bg.pinned}}{{> "vn-stage.bg"}}{{/each}}
+        {{#each bg.strips}}{{#each choices}}{{> "vn-stage.bg"}}{{/each}}{{/each}}
+      </div>
+      {{/if}}
     </div>
-    {{/each}}
-    {{else}}
-    <div class="vn-bg-strip">
-      {{#each bg.pinned}}{{> "vn-stage.bg"}}{{/each}}
-      {{#each bg.strips}}{{#each choices}}{{> "vn-stage.bg"}}{{/each}}{{/each}}
-    </div>
-    {{/if}}
 
     <div class="vn-bg-row">
       <button type="button" data-action="browseBackground"><i class="fa-solid fa-folder-open"></i> Browse…</button>

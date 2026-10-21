@@ -4,6 +4,10 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 
 ## [Unreleased]
 
+### Fixed
+- The Background section scrolls when it holds many images (up to about four rows show; Browse and the folder stay below), and keeps its scroll position when the window refreshes.
+- The Party showed only the party's PCs; NPCs in the party (companions in Curse of Strahd) now stand with it too. Familiars stay off the stage.
+
 ### Added
 - Art keys: a character's art is a folder under the art root, a character ("Rahadin") or a form with its own VN portrait ("Rahadin/forms/corrupted"). Forms appear in the Cast list as "Rahadin · the Corrupted". Saved choices (flip, scale, height, size) and group membership belong to the key.
 - An actor finds its art by, in order: its VN art… link (an actor flag), a folder named like it, its own images (portrait, token, ring subject) when they live in the art folder, walking up to the nearest folder with a VN portrait (a combat-only form uses its character's art). Several actors can share one character, and renaming an actor loses nothing.

@@ -52,7 +52,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     },
   };
 
-  static PARTS = { main: { template: `modules/${MODULE}/templates/stage-window.hbs`, scrollable: [".vn-cast-list"] } };
+  static PARTS = { main: { template: `modules/${MODULE}/templates/stage-window.hbs`, scrollable: [".vn-cast-list", ".vn-bg-scroll"] } };
 
   static #instance = null;
 
