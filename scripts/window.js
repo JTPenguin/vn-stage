@@ -5,7 +5,7 @@ import { setWindowDrag } from "./interact.js";
 import { listPresets, savePreset, loadPreset, deletePreset, findPresetByName } from "./presets.js";
 import {
   isStage, makeStage, setBackground, currentBackground, pickBackground, backgroundFolder,
-  folderImages, backgroundLabel, decodePath,
+  folderImages, backgroundLabel, decodePath, isVideo,
 } from "./stage.js";
 import {
   ALL, RECENT, listGroups, getGroup, memberNames, createGroup, renameGroup, deleteGroup,
@@ -154,6 +154,13 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     });
     this.#applyFilter();
 
+    // Video backgrounds: the thumbnail plays while hovered, then rewinds to its first frame.
+    for (const video of this.element.querySelectorAll(".vn-bg-choice video")) {
+      const button = video.closest(".vn-bg-choice");
+      button.addEventListener("mouseenter", () => video.play().catch(() => {}));
+      button.addEventListener("mouseleave", () => { video.pause(); video.currentTime = 0; });
+    }
+
     // Drag a Cast row (or The Party) onto the stage to put them where they're dropped.
     for (const li of this.element.querySelectorAll(".vn-cast-list li[draggable]")) {
       li.addEventListener("dragstart", (event) => {
@@ -190,7 +197,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     const FilePicker = foundry.applications.apps.FilePicker.implementation;
     const grouped = !!getGroup(stageGroup());
     new FilePicker({
-      type: "image",
+      type: "imagevideo",
       current: currentBackground() ?? "",
       callback: (path) => pickBackground(path, { keepFolder: grouped }),
     }).render({ force: true });
@@ -387,7 +394,7 @@ async function backgroundStrips(scene, group, collapsed) {
   const current = currentBackground(scene);
   const safety = safetyBackground();
   const same = (a, b) => !!a && !!b && decodePath(a) === decodePath(b);
-  const choice = (src, label, pinned = false) => ({ src, label, pinned, current: same(src, current) });
+  const choice = (src, label, pinned = false) => ({ src, label, pinned, video: isVideo(src), current: same(src, current) });
 
   const folders = group ? group.folders : [backgroundFolder(scene)].filter(Boolean);
   const strips = await Promise.all(folders.map(async (folder) => ({

@@ -1,4 +1,9 @@
 <button type="button" class="vn-bg-choice {{#if current}}current{{/if}} {{#if pinned}}pinned{{/if}}" data-action="setBackground" data-src="{{src}}" data-tooltip="{{label}}" aria-label="{{label}}">
+  {{#if video}}
+  <video src="{{src}}" muted loop playsinline preload="metadata"></video>
+  <i class="fa-solid fa-film vn-bg-video"></i>
+  {{else}}
   <img src="{{src}}" alt="" loading="lazy">
+  {{/if}}
   {{#if pinned}}<i class="fa-solid fa-house vn-bg-pin"></i>{{/if}}
 </button>

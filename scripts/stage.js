@@ -68,7 +68,9 @@ export async function setBackground(src, { scene = canvas.scene } = {}) {
   requireGM();
   if (!isStage(scene)) throw new Error("VN Stage | Not a stage. Make it a stage first.");
   const tile = backgroundTile(scene);
-  if (tile) return tile.update({ "texture.src": src });
+  // A video background loops silently on every screen (Foundry's tile video settings).
+  const video = { loop: true, autoplay: true, volume: 0 };
+  if (tile) return tile.update({ "texture.src": src, video });
 
   // In v14 a tile's x and y are its anchor point, the centre by default.
   const { sceneX = 0, sceneY = 0 } = scene.dimensions ?? {};
@@ -81,6 +83,7 @@ export async function setBackground(src, { scene = canvas.scene } = {}) {
     height: FRAME.height,
     sort: -1000,
     locked: true,
+    video,
     flags: { [MODULE]: { part: PART.BACKGROUND } },
   }]);
   return doc;
@@ -90,7 +93,13 @@ export async function setBackground(src, { scene = canvas.scene } = {}) {
 /*  Background folder: quick swaps in a session */
 /* -------------------------------------------- */
 
-const IMAGE = /\.(webp|png|jpe?g|avif|gif)$/i;
+const IMAGE = /\.(webp|png|jpe?g|avif|gif|webm|mp4|m4v|ogv)$/i;
+const VIDEO = /\.(webm|mp4|m4v|ogv)$/i;
+
+/** Is this background a video (it loops, silent)? */
+export function isVideo(path) {
+  return VIDEO.test(path ?? "");
+}
 const folderCache = new Map(); // folder → Promise<string[]>
 
 /** Folder part of a path, with its trailing slash. */
@@ -125,7 +134,7 @@ export async function pickBackground(path, { scene = canvas.scene, keepFolder = 
   if (folder !== backgroundFolder(scene)) await scene.setFlag(MODULE, "backgroundFolder", folder);
 }
 
-/** The images in `folder`, sorted by name (GM only: it browses the folder). */
+/** The images and videos in `folder`, sorted by name (GM only: it browses the folder). */
 export function folderImages(folder) {
   if (!folder) return Promise.resolve([]);
   if (!folderCache.has(folder)) {

@@ -4,6 +4,9 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 
 ## [Unreleased]
 
+### Added
+- Video backgrounds: `.webm` (and `.mp4`, `.m4v`, `.ogv`) files can be chosen with Browse… and appear in the Background strip, marked with a film icon; their thumbnails play while hovered. On the stage they loop silently on every screen (the background tile's video settings).
+
 ### Fixed
 - The Background section scrolls when it holds many images (up to about four rows show; Browse and the folder stay below), and keeps its scroll position when the window refreshes.
 - The Party showed only the party's PCs; NPCs in the party (companions in Curse of Strahd) now stand with it too. Familiars stay off the stage.
