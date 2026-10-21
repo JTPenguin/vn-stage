@@ -2,6 +2,7 @@ import { MODULE } from "./constants.js";
 import { layout } from "./layout.js";
 import { noteRecent } from "./groups.js";
 import { baseArtKeyOf } from "./art.js";
+import { takePending } from "./pending.js";
 
 /**
  * The cast is the source of truth for who stands on a stage: a scene flag
@@ -118,7 +119,9 @@ export async function addToCast({ name, actorUuid = null, side = "left", index =
     cast.splice(cast.indexOf(existing), 1);
     insertAt(cast, { ...existing, side }, index);
   } else {
-    insertAt(cast, { id: foundry.utils.randomID(), name, actorUuid, side }, index);
+    // Art alone arrives with any form or expression chosen for it off stage.
+    const chosen = actorUuid ? {} : takePending(name);
+    insertAt(cast, { id: foundry.utils.randomID(), name, actorUuid, side, ...chosen }, index);
   }
   await noteRecent((await baseArtKeyOf({ name, actorUuid })) ?? name);
   return saveCast(scene, cast);

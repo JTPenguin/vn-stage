@@ -159,7 +159,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
         li.addEventListener("contextmenu", (event) => {
           event.preventDefault();
           const row = this.#rows.get(li.dataset.row);
-          if (row) openCastMenu(row.key, row.entry, event.clientX, event.clientY);
+          if (row) openCastMenu(row, event.clientX, event.clientY);
         });
       }
     }

@@ -5,6 +5,12 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 ## [Unreleased]
 
 ### Added
+- Set a character's form and expression before adding them: right-clicking an off-stage Cast row opens the character menu with its Forms and Expressions rows ("arrives like this"). For a character with an actor the choice is saved on the actor, as on stage; for art alone it's remembered on this screen until they're next added (`scripts/pending.js`), and a reload forgets it.
+
+### Fixed
+- Right-clicking a Cast row opened the character menu behind the Stage window. The menu now opens above every window.
+
+### Added
 - Forms: a character with more than one form that has a VN portrait gets a Forms row at the top of its character menu ("Base", then each form). Clicking one switches the portrait with a crossfade; the expression carries over when the form has it, otherwise neutral, and each form keeps its own Adjust settings. A character with an actor keeps its form on the actor (flag `vn-stage.form`), so it follows them to every stage and players can switch their own character's form; art alone keeps it on its cast entry. Presets save each character's form and put it back on load. Combat-only forms aren't offered.
 
 ### Changed

@@ -3,7 +3,7 @@ import { characterArt, artKeyOf, baseArtKeyOf, formsFor } from "./art.js";
 import { ArtPicker } from "./art-picker.js";
 import { getCast, resolveCast, characterPrefs, setFlip, removeFromCast, moveEntry, displayName } from "./cast.js";
 import { placements } from "./layout.js";
-import { canChange, currentExpression, setExpression, setForm } from "./expressions.js";
+import { canChange, currentExpression, chooseExpression, chooseForm, offstageEntry } from "./expressions.js";
 import { isStage } from "./stage.js";
 import { AdjustWindow } from "./adjust.js";
 import { chooseCharacterGroups } from "./groups-window.js";
@@ -258,34 +258,36 @@ function clearHover() {
 /* -------------------------------------------- */
 
 /**
- * The character menu for a Cast row (GM): the full menu when the character is on
- * stage (`entry`), otherwise what applies off stage (Flip, Groups…).
+ * The character menu for a Cast row (GM). On stage, the same menu as clicking
+ * the portrait. Off stage, the forms and expressions they'll arrive with, plus
+ * Flip and Groups….
  */
-export function openCastMenu(key, entry, clientX, clientY) {
-  return openMenu(entry, clientX, clientY, key);
+export function openCastMenu(row, clientX, clientY) {
+  return openMenu(row.entry ?? offstageEntry(row.name, row.actorUuid), clientX, clientY);
 }
 
 /**
- * `entry` is the cast entry on stage, or null for a character who isn't (then
- * `rowKey` names them). On stage, the menu works on the form shown (its
- * expressions, Flip, Adjust); Groups… always works on the character.
+ * `entry` is the cast entry on stage, or a stand-in for a character who isn't
+ * (`offstage`). The menu works on the form shown (its expressions, Flip,
+ * Adjust); Groups… always works on the character.
  */
-async function openMenu(entry, clientX, clientY, rowKey = null) {
+async function openMenu(entry, clientX, clientY) {
   closeMenu();
-  const key = entry ? (await artKeyOf(entry)) ?? entry.name : rowKey;
-  const groupKey = entry ? (await baseArtKeyOf(entry)) ?? entry.name : rowKey;
+  const onStage = !entry.offstage;
+  const key = (await artKeyOf(entry)) ?? entry.name;
+  const groupKey = (await baseArtKeyOf(entry)) ?? entry.name;
   const art = await characterArt(key);
-  const expressions = entry ? Object.entries(art?.expressions ?? {}) : [];
-  const forms = entry ? await formsFor(key) : [];
-  const name = entry ? displayName(entry) : art?.label ?? key;
-  const actions = game.user.isGM ? await gmActions(entry, key, name, groupKey) : [];
+  const expressions = Object.entries(art?.expressions ?? {});
+  const forms = await formsFor(key);
+  const name = entry.actorUuid ? displayName(entry) : (await characterArt(groupKey))?.label ?? entry.name;
+  const actions = game.user.isGM ? await gmActions(onStage ? entry : null, key, name, groupKey) : [];
   if (expressions.length < 2 && forms.length < 2 && !actions.length) return;
-  const current = entry ? currentExpression(entry) : null;
+  const current = currentExpression(entry);
 
   const el = document.createElement("div");
   el.className = "vn-character-menu";
   el.setAttribute("role", "menu");
-  el.innerHTML = `<div class="vn-menu-name">${esc(name)}</div>`;
+  el.innerHTML = `<div class="vn-menu-name">${esc(name)}${onStage ? "" : ' <span class="vn-menu-note">· arrives like this</span>'}</div>`;
 
   if (forms.length >= 2) {
     const list = document.createElement("div");
@@ -293,7 +295,7 @@ async function openMenu(entry, clientX, clientY, rowKey = null) {
     for (const f of forms) {
       const button = menuButton(`vn-form${f.key === key ? " current" : ""}`,
         `<img src="${esc(encodeURI(f.thumb))}" alt=""><span class="vn-form-label">${esc(f.label)}</span>`,
-        () => setForm(entry.id, f.key));
+        () => chooseForm(entry, f.key));
       button.dataset.tooltip = f.label;
       list.append(button);
     }
@@ -306,7 +308,7 @@ async function openMenu(entry, clientX, clientY, rowKey = null) {
     for (const [key, src] of expressions) {
       const button = menuButton(`vn-expression${key === current ? " current" : ""}`,
         `<span class="vn-expression-face"></span><span class="vn-expression-label">${esc(label(key))}</span>`,
-        () => setExpression(entry.id, key));
+        () => chooseExpression(entry, key));
       faceThumb(button.querySelector(".vn-expression-face"), src, art);
       list.append(button);
     }
@@ -329,6 +331,8 @@ async function openMenu(entry, clientX, clientY, rowKey = null) {
     el.append(row);
   }
 
+  // Above every window (the Stage window's Cast rows open it too); Foundry raises each window it opens past the last.
+  el.style.zIndex = String((foundry.applications.api.ApplicationV2._maxZ ?? 100) + 1);
   document.body.append(el);
   // Beside the pointer, kept on screen.
   const { width, height } = el.getBoundingClientRect();

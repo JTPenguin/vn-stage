@@ -3,6 +3,7 @@ import { characterArt, artKeyOf, baseArtKeyOf, formsFor } from "./art.js";
 import { getCast, resolveCast } from "./cast.js";
 import { layout } from "./layout.js";
 import { isStage } from "./stage.js";
+import { pendingFor, setPending } from "./pending.js";
 
 /**
  * Expressions. A character linked to an actor keeps theirs on the actor (a flag),
@@ -66,6 +67,36 @@ export async function setForm(castId, key, { scene = canvas.scene } = {}) {
   else delete raw.form;
   await scene.setFlag(MODULE, "cast", cast);
   return layout(scene);
+}
+
+/**
+ * A stand-in cast entry for a character who isn't on the stage (the Cast list's
+ * menu), so the menu reads their form and expression the same way: from their
+ * actor, or for art alone from what was chosen off stage.
+ */
+export function offstageEntry(name, actorUuid = null) {
+  return { id: null, name, actorUuid, offstage: true, ...(actorUuid ? {} : pendingFor(name)) };
+}
+
+/** The menu's form choice, on stage or off. Off stage: on the actor, or remembered for art alone. GM. */
+export async function chooseForm(entry, key) {
+  if (!entry.offstage) return setForm(entry.id, key);
+  if (!game.user.isGM) return;
+  const base = (await baseArtKeyOf(entry)) ?? entry.name;
+  const value = key === base ? null : key;
+  const actor = entry.actorUuid ? fromUuidSync(entry.actorUuid) : null;
+  if (actor) return value ? actor.setFlag(MODULE, "form", value) : actor.unsetFlag(MODULE, "form");
+  setPending(entry.name, { form: value });
+}
+
+/** The menu's expression choice, on stage or off. */
+export async function chooseExpression(entry, key) {
+  if (!entry.offstage) return setExpression(entry.id, key);
+  if (!game.user.isGM) return;
+  const actor = entry.actorUuid ? fromUuidSync(entry.actorUuid) : null;
+  const value = key === NEUTRAL ? null : key;
+  if (actor) return value ? actor.setFlag(MODULE, "expression", value) : actor.unsetFlag(MODULE, "expression");
+  setPending(entry.name, { expression: value });
 }
 
 /** Everyone back to neutral: every actor's saved expression and every stage's cast entries. GM only. */
