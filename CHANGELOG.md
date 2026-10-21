@@ -4,6 +4,9 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 
 ## [Unreleased]
 
+### Fixed
+- Removing a hand-added folder that is also one of the group's automatic folders hid the automatic one too. Now only the hand-added entry goes, and the automatic folder shows in its place.
+
 ### Changed
 - Presets are compact chips that wrap several to a row (the section scrolls past about three rows). Click to load; right-click for Update from stage, Rename…, Groups…, Delete. The lit preset's chip is highlighted, with a dot once the stage changes. Update (when the lit preset has changed) and + (save the stage as a preset) sit in the section header. Group names moved into each chip's tooltip.
 - The Background strip shows three rows of thumbnails before it scrolls (was about five), so the Cast list gets more room. Thumbnails stay a fixed size (5.5rem wide) instead of stretching with the window; a wider window fits more per row.

@@ -125,11 +125,15 @@ export function addFolder(id, folder) {
   });
 }
 
-/** Remove a folder from a group. An automatic folder stays hidden until it's added again. */
+/**
+ * Remove a folder from a group. A folder added by hand just goes (if it's also
+ * an automatic folder, that one shows again); an automatic folder stays hidden
+ * until it's added again.
+ */
 export function removeFolder(id, folder) {
   return change(id, (g) => {
-    g.folders = g.folders.filter((f) => f !== folder);
-    if (autoFolderCandidates(id).includes(folder) && !g.hideAuto.includes(folder)) g.hideAuto.push(folder);
+    if (g.folders.includes(folder)) g.folders = g.folders.filter((f) => f !== folder);
+    else if (autoFolderCandidates(id).includes(folder) && !g.hideAuto.includes(folder)) g.hideAuto.push(folder);
   });
 }
 
