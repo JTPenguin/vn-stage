@@ -61,6 +61,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
 
   #filter = "";
   #groupLabel = null;
+  #bgFit = null; // keeps the Background strip at three rows of thumbnails as the window resizes
   #rows = new Map(); // Cast row id → its row (from the last render): who it adds, and their entry on stage
 
   get title() {
@@ -81,6 +82,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     this.#groupLabel = group?.label ?? (selected === RECENT ? "Recent" : null);
 
     const partyEntry = getCast(scene).find((e) => e.party);
+    const presets = presetRows(scene, group);
 
     // The Cast list: the group's members (Recent in its order, or everyone);
     // everyone else is listed after them, shown only while searching.
@@ -102,7 +104,8 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       group,
       bg: await backgroundStrips(scene, group, collapsed),
       party: hasParty() ? { label: PARTY_LABEL, side: partyEntry?.side ?? null } : null,
-      presets: presetRows(scene, group),
+      presets,
+      changedPreset: presets.find((p) => p.changed) ?? null,
       cast: mine.map(rowContext),
       others: others.map(rowContext),
       emptyCast: selected === ALL
@@ -123,6 +126,21 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       this.#applyFilter();
     });
     this.#applyFilter();
+
+    // The Background strip shows three rows of thumbnails, then scrolls (thumbnails grow with the window).
+    this.#bgFit?.disconnect();
+    const scroll = this.element.querySelector(".vn-bg-scroll");
+    if (scroll) {
+      const fit = () => {
+        const thumb = scroll.querySelector(".vn-bg-choice");
+        if (!thumb?.offsetHeight) return;
+        const gap = parseFloat(getComputedStyle(thumb.parentElement).rowGap) || 0;
+        scroll.style.maxHeight = `${3 * thumb.offsetHeight + 2 * gap + 2}px`;
+      };
+      this.#bgFit = new ResizeObserver(fit);
+      this.#bgFit.observe(scroll);
+      fit();
+    }
 
     // Video backgrounds: the thumbnail plays while hovered, then rewinds to its first frame.
     for (const video of this.element.querySelectorAll(".vn-bg-choice video")) {
@@ -165,7 +183,13 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     this.element.querySelector("select[name=group]")?.addEventListener("change", (event) => setStageGroup(event.target.value));
   }
 
-  /** The preset menu: the ⋯ button, or right-clicking a preset. Made once; the window's element outlives its renders. */
+  _onClose(options) {
+    super._onClose(options);
+    this.#bgFit?.disconnect();
+    this.#bgFit = null;
+  }
+
+  /** The preset menu: right-click a preset chip. Made once; the window's element outlives its renders. */
   _onFirstRender(context, options) {
     super._onFirstRender(context, options);
     const ContextMenu = foundry.applications.ux.ContextMenu.implementation;
@@ -176,7 +200,6 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       { label: "Groups…", icon: "fa-solid fa-layer-group", onClick: (_e, t) => choosePresetGroups(row(t).dataset.preset) },
       { label: "Delete", icon: "fa-solid fa-trash", onClick: (_e, t) => StageWindow.#deletePreset(row(t).dataset.preset) },
     ];
-    new ContextMenu(this.element, ".vn-preset-more", items, { jQuery: false, eventName: "click", fixed: true, relative: "target" });
     new ContextMenu(this.element, ".vn-preset-list li[data-preset]", items, { jQuery: false, fixed: true });
   }
 
@@ -277,7 +300,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async #onUpdatePreset(_event, target) {
-    await StageWindow.#updatePreset(target.closest("[data-preset]").dataset.preset);
+    await StageWindow.#updatePreset(target.dataset.preset);
   }
 
   static async #updatePreset(id) {
@@ -360,7 +383,13 @@ function presetRows(scene, group) {
   return listPresets(group?.id ?? null).map((p) => ({
     id: p.id,
     name: p.name,
-    groupLabel: group ? null : p.groups.map(label).join(", ") || null,
+    // Foundry shows tooltips as HTML, so the names are escaped.
+    tooltip: [
+      esc(p.name),
+      group ? null : p.groups.length ? `Groups: ${esc(p.groups.map(label).join(", "))}` : null,
+      lit?.id === p.id && lit.changed ? "The stage has changed since it was loaded" : null,
+      "Click to load · right-click for more",
+    ].filter(Boolean).join("<br>"),
     current: lit?.id === p.id,
     changed: lit?.id === p.id && lit.changed,
   }));

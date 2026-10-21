@@ -21,25 +21,21 @@
   </section>
 
   <section class="vn-section vn-presets {{#if collapsed.presets}}collapsed{{/if}}" data-section="presets">
-    <h3 data-action="toggleSection"><i class="fa-solid fa-chevron-down vn-chevron"></i> Presets</h3>
+    <h3 data-action="toggleSection"><i class="fa-solid fa-chevron-down vn-chevron"></i> Presets
+      {{#if changedPreset}}<button type="button" class="vn-preset-update" data-action="updatePreset" data-preset="{{changedPreset.id}}" data-tooltip="Update {{changedPreset.name}}: save what's on stage now over it"><i class="fa-solid fa-floppy-disk"></i> Update</button>{{/if}}
+      <button type="button" class="vn-icon {{#unless changedPreset}}vn-push{{/unless}}" data-action="savePreset" data-tooltip="Save stage as preset{{#if group}} in {{group.label}}{{/if}}"><i class="fa-solid fa-plus"></i></button>
+    </h3>
     <ul class="vn-preset-list">
       {{#each presets}}
-      <li data-preset="{{id}}" data-name="{{name}}" class="{{#if current}}current{{/if}}">
-        <button type="button" class="vn-preset-load" data-action="loadPreset" data-tooltip="Load: background and cast">
-          <i class="fa-solid fa-play"></i> <span class="vn-name">{{name}}</span>
-          {{#if changed}}<span class="vn-changed" data-tooltip="The stage has changed since this preset was loaded"></span>{{/if}}
+      <li data-preset="{{id}}" data-name="{{name}}">
+        <button type="button" class="vn-preset-chip {{#if current}}current{{/if}}" data-action="loadPreset" data-tooltip="{{tooltip}}">
+          <i class="fa-solid fa-play"></i><span class="vn-name">{{name}}</span>{{#if changed}}<span class="vn-changed"></span>{{/if}}
         </button>
-        {{#if groupLabel}}<span class="vn-preset-group">{{groupLabel}}</span>{{/if}}
-        {{#if changed}}<button type="button" class="vn-preset-update" data-action="updatePreset" data-tooltip="Save what's on stage now over this preset"><i class="fa-solid fa-floppy-disk"></i> Update</button>{{/if}}
-        <button type="button" class="vn-icon vn-preset-more" data-tooltip="Update, rename, groups, delete" aria-label="More"><i class="fa-solid fa-ellipsis-vertical"></i></button>
       </li>
       {{else}}
-      <li class="vn-empty">No presets{{#if group}} in this group{{/if}} yet.</li>
+      <li class="vn-empty">No presets{{#if group}} in this group{{/if}} yet. Save the stage with +.</li>
       {{/each}}
     </ul>
-    <div class="vn-section-foot">
-      <button type="button" data-action="savePreset"><i class="fa-solid fa-plus"></i> Save stage as preset…</button>
-    </div>
   </section>
 
   <section class="vn-section vn-background {{#if collapsed.background}}collapsed{{/if}}" data-section="background">

@@ -20,7 +20,7 @@
 .vn-stage .vn-section.collapsed h3 { margin-bottom: 0; }
 .vn-stage .vn-cast.collapsed { flex: none; }
 
-.vn-stage .vn-bg-scroll { max-height: 16rem; overflow-y: auto; padding-right: 0.2rem; }
+.vn-stage .vn-bg-scroll { max-height: 10rem; overflow-y: auto; padding-right: 0.2rem; }
 .vn-stage .vn-bg-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.4rem; }
 .vn-stage .vn-bg-folder { font-size: var(--font-size-12, 12px); opacity: 0.7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vn-stage .vn-bg-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr)); gap: 0.3rem; }
@@ -91,19 +91,17 @@
 .vn-character-menu .vn-expression-label { font-size: 11px; padding-bottom: 2px; }
 
 /* The Party and presets */
+.vn-stage .vn-preset-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.25rem; max-height: 6.2rem; overflow-y: auto; }
+.vn-stage .vn-preset-list li.vn-empty { width: 100%; }
+.vn-stage button.vn-preset-chip { display: inline-flex; align-items: center; gap: 0.3rem; max-width: 11rem; height: 1.75rem; padding: 0 0.55rem; border-radius: 0.9rem; font-size: var(--font-size-13, 13px); }
+.vn-stage button.vn-preset-chip i { font-size: 0.7em; opacity: 0.7; }
+.vn-stage button.vn-preset-chip .vn-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vn-stage button.vn-preset-chip.current { border-color: var(--color-warm-2, #c9593f); background: color-mix(in srgb, var(--color-warm-2, #c9593f) 24%, transparent); font-weight: bold; }
+.vn-stage .vn-changed { flex: none; width: 0.45rem; height: 0.45rem; border-radius: 50%; background: #e0a64a; }
+.vn-stage h3 .vn-preset-update { margin-left: auto; height: 1.6rem; padding: 0 0.5rem; font-size: var(--font-size-12, 12px); }
+.vn-stage .vn-presets h3 .vn-icon:not(.vn-push) { margin-left: 0; }
 .vn-stage .vn-party-icon { display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; border-radius: 3px; background: color-mix(in srgb, var(--color-warm-2, #c9593f) 25%, transparent); }
 .vn-stage .vn-cast-list li .vn-party-icon { width: 2rem; height: 2rem; }
-.vn-stage .vn-preset-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.2rem; }
-.vn-stage .vn-preset-list li { display: flex; align-items: center; gap: 0.4rem; }
-.vn-stage .vn-preset-load { flex: 1; justify-content: flex-start; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.vn-stage .vn-preset-group { font-size: var(--font-size-12, 12px); opacity: 0.65; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40%; }
-.vn-stage .vn-preset-list li.current .vn-preset-load { border-color: var(--color-warm-2, #c9593f); background: color-mix(in srgb, var(--color-warm-2, #c9593f) 24%, transparent); font-weight: bold; }
-.vn-stage .vn-preset-load .vn-name { overflow: hidden; text-overflow: ellipsis; }
-.vn-stage .vn-changed { flex: none; width: 0.5rem; height: 0.5rem; margin-left: 0.3rem; border-radius: 50%; background: #e0a64a; }
-.vn-stage .vn-preset-update { padding: 0 0.5rem; height: 1.6rem; }
-.vn-stage .vn-preset-more { opacity: 0.7; }
-.vn-stage .vn-preset-more:hover { opacity: 1; }
-.vn-stage .vn-section-foot { display: flex; gap: 0.5rem; margin-top: 0.4rem; }
 
 .vn-character-menu .vn-menu-actions { display: flex; align-items: center; gap: 0.25rem; margin-top: 0.4rem; padding-top: 0.35rem; border-top: 1px solid rgba(255, 255, 255, 0.12); }
 .vn-character-menu .vn-expression-list + .vn-menu-actions { margin-top: 0.4rem; }
