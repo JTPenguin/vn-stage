@@ -4,6 +4,9 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 
 ## [Unreleased]
 
+### Added
+- Fades (`scripts/fades.js`): portraits (and the bottom shade) fade in when they arrive and out when they leave (0.35 s); a new background crossfades over the old one (0.6 s), including videos. Loading a preset crossfades the whole cast. Moves and expression changes stay instant. Every screen draws its own fades, so there are no extra document updates; viewers whose system asks for reduced motion see instant changes.
+
 ### Fixed
 - Removing a hand-added folder that is also one of the group's automatic folders hid the automatic one too. Now only the hand-added entry goes, and the automatic folder shows in its place.
 

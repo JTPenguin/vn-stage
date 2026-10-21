@@ -17,9 +17,11 @@ import { GroupsWindow } from "./groups-window.js";
 import { listPresets, savePreset, loadPreset, deletePreset, updatePreset, renamePreset, setPresetGroups } from "./presets.js";
 import { setExpression, resetAllExpressions, currentExpression, preloadStage, isRelayGM } from "./expressions.js";
 import { startClicks, stopClicks, dropTarget, setWindowDrag } from "./interact.js";
+import { registerFades } from "./fades.js";
 
 Hooks.once("init", () => {
   registerSettings();
+  registerFades();
   foundry.applications.handlebars.loadTemplates({
     "vn-stage.bg": `modules/${MODULE}/templates/stage-bg.hbs`,
     "vn-stage.cast-row": `modules/${MODULE}/templates/cast-row.hbs`,
