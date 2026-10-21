@@ -61,7 +61,6 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
 
   #filter = "";
   #groupLabel = null;
-  #bgFit = null; // keeps the Background strip at three rows of thumbnails as the window resizes
   #rows = new Map(); // Cast row id → its row (from the last render): who it adds, and their entry on stage
 
   get title() {
@@ -127,21 +126,6 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     });
     this.#applyFilter();
 
-    // The Background strip shows three rows of thumbnails, then scrolls (thumbnails grow with the window).
-    this.#bgFit?.disconnect();
-    const scroll = this.element.querySelector(".vn-bg-scroll");
-    if (scroll) {
-      const fit = () => {
-        const thumb = scroll.querySelector(".vn-bg-choice");
-        if (!thumb?.offsetHeight) return;
-        const gap = parseFloat(getComputedStyle(thumb.parentElement).rowGap) || 0;
-        scroll.style.maxHeight = `${3 * thumb.offsetHeight + 2 * gap + 2}px`;
-      };
-      this.#bgFit = new ResizeObserver(fit);
-      this.#bgFit.observe(scroll);
-      fit();
-    }
-
     // Video backgrounds: the thumbnail plays while hovered, then rewinds to its first frame.
     for (const video of this.element.querySelectorAll(".vn-bg-choice video")) {
       const button = video.closest(".vn-bg-choice");
@@ -181,12 +165,6 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     }
 
     this.element.querySelector("select[name=group]")?.addEventListener("change", (event) => setStageGroup(event.target.value));
-  }
-
-  _onClose(options) {
-    super._onClose(options);
-    this.#bgFit?.disconnect();
-    this.#bgFit = null;
   }
 
   /** The preset menu: right-click a preset chip. Made once; the window's element outlives its renders. */

@@ -6,7 +6,7 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 
 ### Changed
 - Presets are compact chips that wrap several to a row (the section scrolls past about three rows). Click to load; right-click for Update from stage, Rename…, Groups…, Delete. The lit preset's chip is highlighted, with a dot once the stage changes. Update (when the lit preset has changed) and + (save the stage as a preset) sit in the section header. Group names moved into each chip's tooltip.
-- The Background strip shows three rows of thumbnails before it scrolls (was about five), so the Cast list gets more room. The height follows the thumbnails as the window is resized.
+- The Background strip shows three rows of thumbnails before it scrolls (was about five), so the Cast list gets more room. Thumbnails stay a fixed size (5.5rem wide) instead of stretching with the window; a wider window fits more per row.
 
 ### Added
 - The Groups window (the gear button next to the Group menu): every group on the left; the selected group's Characters, Background folders and Presets on the right, all managed the same way (× takes one out, + Add… opens a checklist to bring more in). Tagged characters and automatic folders are marked. Rename and Delete sit by the group's name. Replaces Edit group mode.
