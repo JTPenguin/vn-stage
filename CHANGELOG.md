@@ -4,6 +4,17 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 
 ## [Unreleased]
 
+### Fixed
+- The Stage window wouldn't open when a manifest wrote `forms` as an object keyed by form (with `dir`) instead of a list (with `folder`): "forms is not iterable". Both shapes are read now, and a form with no manifest of its own uses its entry in the parent's manifest (files relative to the parent, the parent's VN sizing). One unreadable manifest now leaves out only that character, never the whole Cast list.
+
+### Changed
+- Party members are ordinary characters: move, switch sides, reorder or remove each one like anyone else (their Cast list toggles work too). The Party is a shortcut: its Left or Right toggle puts every member on that side (members already there stay put, the rest join at the back), the lit toggle takes them all off, and dropping The Party or the party actor on the stage gathers them all at the drop point. Its row is lit when they all stand on one side, and faintly lit when some are on stage. Each stage remembers the order its party members last stood in (scene flag `partyOrder`) for the next time they're added together.
+- Presets mark party members (`partyMember`). On load, members still in the party stand where they were saved, new members join right after them, and members who've left stay off.
+- Stages and presets with the old whole-party entry read it as its members, in its order.
+
+### Removed
+- The live party entry: a mid-scene change to the PF2e party no longer changes the stage by itself (add The Party again, or load a preset). Reordering within the party (the blue marker), the party's moves when dragging a member, the Party items in the character menu, and `setPartyOrder` are gone.
+
 ### Added
 - Fades (`scripts/fades.js`): portraits (and the bottom shade) fade in when they arrive and out when they leave (0.35 s); a new background crossfades over the old one (0.6 s), including videos. Loading a preset crossfades the whole cast. Moves and expression changes stay instant. Every screen draws its own fades, so there are no extra document updates; viewers whose system asks for reduced motion see instant changes.
 

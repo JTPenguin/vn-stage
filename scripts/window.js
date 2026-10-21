@@ -1,6 +1,6 @@
 import { MODULE } from "./constants.js";
 import { artIndex, indexedActorKey } from "./art.js";
-import { getCast, resolveCast, addToCast, addParty, removeFromCast, hasParty, PARTY_LABEL } from "./cast.js";
+import { getCast, addToCast, addParty, removeParty, partySide, partyMembers, removeFromCast, hasParty, PARTY_LABEL } from "./cast.js";
 import { setWindowDrag, openCastMenu } from "./interact.js";
 import {
   listPresets, getPreset, savePreset, loadPreset, deletePreset, findPresetByName, updatePreset, renamePreset, stagePreset,
@@ -80,12 +80,11 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     const group = getGroup(selected);
     this.#groupLabel = group?.label ?? (selected === RECENT ? "Recent" : null);
 
-    const partyEntry = getCast(scene).find((e) => e.party);
     const presets = presetRows(scene, group);
 
     // The Cast list: the group's members (Recent in its order, or everyone);
     // everyone else is listed after them, shown only while searching.
-    const rows = await castRows(index, resolveCast(scene));
+    const rows = await castRows(index, getCast(scene));
     this.#rows = new Map(rows.map((r) => [r.row, r]));
     const members = memberNames(selected, index);
     const inGroup = new Set(members);
@@ -102,7 +101,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       recentSelected: selected === RECENT,
       group,
       bg: await backgroundStrips(scene, group, collapsed),
-      party: hasParty() ? { label: PARTY_LABEL, side: partyEntry?.side ?? null } : null,
+      party: hasParty() ? { label: PARTY_LABEL, side: partySide(scene), onStage: partyOnStage(scene) } : null,
       presets,
       changedPreset: presets.find((p) => p.changed) ?? null,
       cast: mine.map(rowContext),
@@ -146,12 +145,13 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       li.addEventListener("dragstart", (event) => {
         const party = li.hasAttribute("data-party");
         const row = this.#rows.get(li.dataset.row);
-        const entry = party ? getCast().find((e) => e.party) : row?.entry;
+        // What's being moved is left out when working out the drop point: the character, or every party member on stage.
+        const ignore = party ? partyEntryIds() : row?.entry?.id ?? null;
         const data = party ? { type: "VNStageParty" } : { type: "VNStageCast", name: row?.name, actorUuid: row?.actorUuid ?? null };
-        if (entry) data.ignore = entry.id;
+        if (ignore) data.ignore = ignore;
         event.dataTransfer.setData("text/plain", JSON.stringify(data));
         event.dataTransfer.effectAllowed = "copyMove";
-        setWindowDrag({ ignore: entry?.id ?? null });
+        setWindowDrag({ ignore });
       });
       li.addEventListener("dragend", () => setWindowDrag(null));
       // Right-click a character's row: the same character menu as on the stage.
@@ -254,10 +254,9 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     await resetAllExpressions();
   }
 
-  /** The Party's Left / Right toggles, the same way. */
+  /** The Party's Left / Right toggles: put every member on that side; the lit one (all of them there) takes them all off. */
   static async #onAddParty(_event, target) {
-    const entry = getCast().find((e) => e.party);
-    if (entry?.side === target.dataset.side) await removeFromCast(entry.id);
+    if (partySide() === target.dataset.side) await removeParty();
     else await addParty(target.dataset.side);
   }
 
@@ -305,7 +304,18 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
 
 /** The cast entry (not The Party) a row's toggles work on: its actor's, or for art alone, the art-only entry. */
 function castEntryFor(row) {
-  return getCast().find((e) => !e.party && (row.actorUuid ? e.actorUuid === row.actorUuid : !e.actorUuid && e.name === row.key)) ?? null;
+  return getCast().find((e) => (row.actorUuid ? e.actorUuid === row.actorUuid : !e.actorUuid && e.name === row.key)) ?? null;
+}
+
+/** The cast entry ids of the party members on stage. */
+export function partyEntryIds(scene = canvas.scene) {
+  const members = new Set(partyMembers().map((a) => a.uuid));
+  return getCast(scene).filter((e) => members.has(e.actorUuid)).map((e) => e.id);
+}
+
+/** Is any party member on stage? (The Party's row lights up a little, even when they're split.) */
+function partyOnStage(scene) {
+  return partyEntryIds(scene).length > 0;
 }
 
 /**
@@ -333,10 +343,8 @@ async function castRows(index, resolved) {
     rows.push({ row: `art:${art.key}`, key: art.key, name: art.key, actorUuid: null, label: art.label, note: usedKeys.has(art.key) ? "art only" : null, thumb: art.thumb });
   }
   for (const r of rows) {
-    const mine = resolved.filter((e) => (r.actorUuid ? e.actorUuid === r.actorUuid : !e.actorUuid && e.name === r.key));
-    r.entry = mine.find((e) => !e.partyOf) ?? null;
+    r.entry = resolved.find((e) => (r.actorUuid ? e.actorUuid === r.actorUuid : !e.actorUuid && e.name === r.key)) ?? null;
     r.side = r.entry?.side ?? null;
-    r.inParty = !r.entry && mine.some((e) => e.partyOf);
   }
   return rows;
 }
@@ -344,9 +352,9 @@ async function castRows(index, resolved) {
 function rowContext(r) {
   return {
     row: r.row, label: r.label, note: r.note, thumb: r.thumb,
-    onStage: !!r.entry || r.inParty,
+    onStage: !!r.entry,
     search: `${r.label} ${r.note ?? ""} ${r.key}`.toLowerCase(),
-    left: r.side === "left", right: r.side === "right", inParty: r.inParty,
+    left: r.side === "left", right: r.side === "right",
   };
 }
 

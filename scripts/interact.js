@@ -1,7 +1,7 @@
 import { MODULE, PART, FRAME, LAYOUT } from "./constants.js";
 import { characterArt, artKeyOf } from "./art.js";
 import { ArtPicker } from "./art-picker.js";
-import { getCast, resolveCast, characterPrefs, setFlip, removeFromCast, addParty, moveEntry, setPartyOrder, displayName, PARTY_LABEL } from "./cast.js";
+import { getCast, resolveCast, characterPrefs, setFlip, removeFromCast, moveEntry, displayName } from "./cast.js";
 import { placements } from "./layout.js";
 import { canChange, currentExpression, setExpression } from "./expressions.js";
 import { isStage } from "./stage.js";
@@ -9,10 +9,10 @@ import { AdjustWindow } from "./adjust.js";
 import { chooseCharacterGroups } from "./groups-window.js";
 
 /**
- * Working on the stage itself. Dragging a portrait moves the character (or The
- * Party) within its side or to the other one. Clicking a portrait opens its character menu:
+ * Working on the stage itself. Dragging a portrait moves the character within
+ * its side or to the other one. Clicking a portrait opens its character menu:
  * the expressions, and for the GM a row of actions (Flip, Adjust, VN art…,
- * Groups…, Remove; for a party member, The Party's sides and Remove party).
+ * Groups…, Remove).
  * Players get the expressions of characters they own, nothing else. The GM gets
  * the same menu by right-clicking a Cast row in the Stage window (`openCastMenu`).
  */
@@ -61,7 +61,7 @@ function onDown(event) {
   if (!entry) return;
   event.stopImmediatePropagation();
   event.preventDefault();
-  press = { x: event.clientX, y: event.clientY, t: performance.now(), entry, tile, dragging: false, wholeParty: false };
+  press = { x: event.clientX, y: event.clientY, t: performance.now(), entry, tile, dragging: false };
 }
 
 function onMove(event) {
@@ -72,18 +72,7 @@ function onMove(event) {
     startDrag();
   }
   moveGhost(event.clientX, event.clientY);
-  const target = targetFor(press.entry, event.clientX, event.clientY);
-  const wholeParty = !!press.entry.partyOf && !target?.within;
-  if (wholeParty !== press.wholeParty) {
-    press.wholeParty = wholeParty;
-    showMoving(wholeParty);
-  }
-  showMarker(target);
-}
-
-/** A party member dropped inside the party reorders it; anywhere else, the whole party (or the character) moves. */
-function targetFor(entry, clientX, clientY) {
-  return (entry.partyOf && partyTarget(entry, clientX, clientY)) || dropTarget(clientX, clientY, rawId(entry));
+  showMarker(dropTarget(event.clientX, event.clientY, press.entry.id));
 }
 
 async function onUp(event) {
@@ -91,19 +80,13 @@ async function onUp(event) {
   press = null;
   if (!p || event.button !== 0) return;
   if (p.dragging) {
-    const target = targetFor(p.entry, event.clientX, event.clientY);
+    const target = dropTarget(event.clientX, event.clientY, p.entry.id);
     endDrag(p);
-    if (target?.order) await setPartyOrder(target.order);
-    else if (target) await moveEntry(rawId(p.entry), target.side, target.index);
+    if (target) await moveEntry(p.entry.id, target.side, target.index);
     return;
   }
   if (performance.now() - p.t > CLICK_TIME) return;
   if (canChange(p.entry)) openMenu(p.entry, event.clientX, event.clientY);
-}
-
-/** The cast entry a portrait belongs to: a party member moves The Party. */
-function rawId(entry) {
-  return entry.partyOf ?? entry.id;
 }
 
 /** The front-most portrait whose visible pixels are under the pointer. */
@@ -130,22 +113,15 @@ function startDrag() {
   ghost = document.createElement("div");
   ghost.className = "vn-drag-ghost";
   document.body.append(ghost);
-  showMoving(false);
+  showMoving();
 }
 
-/**
- * Dim what the drop would move, on this screen: the character, or the whole
- * party once a party member's drop would move The Party.
- */
-function showMoving(wholeParty) {
-  for (const t of dimmed) if (!t.destroyed) t.renderFlags.set({ refreshState: true }); // Foundry resets the alpha
-  const id = wholeParty ? press.entry.partyOf : press.entry.id;
-  dimmed = canvas.tiles.placeables.filter((t) => {
-    const castId = t.document.getFlag(MODULE, "castId");
-    return castId === id || (wholeParty && castId?.startsWith(`${id}.`));
-  });
+/** Dim the character being moved, on this screen. */
+function showMoving() {
+  const id = press.entry.id;
+  dimmed = canvas.tiles.placeables.filter((t) => t.document.getFlag(MODULE, "castId") === id);
   for (const t of dimmed) if (t.mesh) t.mesh.alpha = 0.35;
-  ghost.textContent = wholeParty ? PARTY_LABEL : displayName(press.entry);
+  ghost.textContent = displayName(press.entry);
 }
 
 function moveGhost(x, y) {
@@ -175,7 +151,7 @@ function onDragKey(event) {
 /**
  * Where a drop at this point would put a character: { side, index, x } (x is
  * where the marker goes, in frame pixels), or null outside the frame. `ignore`
- * is the cast entry being moved, left out of the count.
+ * is the cast entry being moved (or a list of them, for the party), left out of the count.
  */
 export function dropTarget(clientX, clientY, ignore = null) {
   const point = canvas.canvasCoordinatesFromClient({ x: clientX, y: clientY });
@@ -183,18 +159,14 @@ export function dropTarget(clientX, clientY, ignore = null) {
   const x = point.x - sceneX, y = point.y - sceneY;
   if (x < 0 || y < 0 || x > FRAME.width || y > FRAME.height) return null;
 
-  // Each cast entry's centre on the stage (The Party's: its members' average).
+  // Each character's centre on the stage.
+  const skip = new Set([ignore ?? []].flat());
   const centres = new Map();
   for (const p of placements.values()) {
-    const id = p.entry.partyOf ?? p.entry.id;
-    if (id === ignore) continue;
-    const c = centres.get(id) ?? { side: p.entry.side, sum: 0, n: 0 };
-    c.sum += p.box.x + p.box.width / 2;
-    c.n += 1;
-    centres.set(id, c);
+    if (!skip.has(p.entry.id)) centres.set(p.entry.id, p.box.x + p.box.width / 2);
   }
-  const order = getCast().filter((e) => e.id !== ignore && centres.has(e.id));
-  const sideOf = (s) => order.filter((e) => e.side === s).map((e) => centres.get(e.id).sum / centres.get(e.id).n);
+  const order = getCast().filter((e) => centres.has(e.id));
+  const sideOf = (s) => order.filter((e) => e.side === s).map((e) => centres.get(e.id));
   const left = sideOf("left"), right = sideOf("right");
 
   // Which side: the gap between the two clusters, or the middle of the usable width.
@@ -213,36 +185,7 @@ export function dropTarget(clientX, clientY, ignore = null) {
   return { side, index, x: mx };
 }
 
-/**
- * Where a party member dropped here would stand within the party: { order, x },
- * with `order` the party's new standing order (actor ids), or null when the drop
- * is outside the party's span (then the whole party moves).
- */
-function partyTarget(member, clientX, clientY) {
-  const point = canvas.canvasCoordinatesFromClient({ x: clientX, y: clientY });
-  const { sceneX = 0, sceneY = 0 } = canvas.dimensions;
-  const x = point.x - sceneX, y = point.y - sceneY;
-  if (x < 0 || y < 0 || x > FRAME.width || y > FRAME.height) return null;
-
-  const members = resolveCast().filter((e) => e.partyOf === member.partyOf).map((e) => ({ e, p: placements.get(e.id) }));
-  if (members.length < 2 || members.some((m) => !m.p)) return null;
-  const others = members.filter((m) => m.e.id !== member.id);
-  const centres = others.map((m) => m.p.box.x + m.p.box.width / 2);
-  const margin = 0.4 * (members.reduce((s, m) => s + m.p.box.width, 0) / members.length);
-  if (x < Math.min(...centres) - margin || x > Math.max(...centres) + margin) return null;
-
-  // Standing order runs from the outer edge: left to right on the left, right to left on the right.
-  const left = member.side === "left";
-  const index = centres.filter((c) => (left ? c < x : c > x)).length;
-  const prev = centres[index - 1], next = centres[index];
-  const step = margin * (left ? 1 : -1);
-  const mx = prev !== undefined && next !== undefined ? (prev + next) / 2 : prev !== undefined ? prev + step : next - step;
-  const ids = others.map((m) => m.e.id.split(".").pop());
-  ids.splice(index, 0, member.id.split(".").pop());
-  return { order: ids, x: mx, within: true };
-}
-
-/** A vertical line on the GM's screen where a drop would land: gold to move, blue to reorder within the party. */
+/** A vertical line on the GM's screen where a drop would land. */
 function showMarker(target) {
   if (!target) return clearMarker();
   if (!marker || marker.destroyed) {
@@ -252,7 +195,7 @@ function showMarker(target) {
   }
   const { sceneX = 0, sceneY = 0 } = canvas.dimensions;
   marker.clear();
-  marker.lineStyle(8, target.within ? 0x4fb3ff : 0xe0a64a, 0.9);
+  marker.lineStyle(8, 0xe0a64a, 0.9);
   marker.moveTo(sceneX + target.x, sceneY + 0.4 * FRAME.height);
   marker.lineTo(sceneX + target.x, sceneY + FRAME.height);
 }
@@ -390,15 +333,7 @@ async function gmActions(entry, key, name) {
   }
   actions.push({ label: "Groups…", icon: "fa-solid fa-layer-group", run: () => chooseCharacterGroups(key, name) });
   if (!entry) return actions;
-  if (entry.partyOf) {
-    const side = resolveCast().find((e) => e.id === entry.id)?.side;
-    actions.push("|",
-      { label: "The Party: left", icon: "fa-solid fa-arrow-left", active: side === "left", run: () => addParty("left") },
-      { label: "The Party: right", icon: "fa-solid fa-arrow-right", active: side === "right", run: () => addParty("right") },
-      { label: "Remove The Party", icon: "fa-solid fa-users-slash", run: () => removeFromCast(entry.partyOf) });
-  } else {
-    actions.push("|", { label: "Remove from the stage", icon: "fa-solid fa-xmark", run: () => removeFromCast(entry.id) });
-  }
+  actions.push("|", { label: "Remove from the stage", icon: "fa-solid fa-xmark", run: () => removeFromCast(entry.id) });
   return actions;
 }
 

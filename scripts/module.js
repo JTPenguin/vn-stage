@@ -7,12 +7,12 @@
 import { MODULE } from "./constants.js";
 import { registerSettings } from "./settings.js";
 import { isStage, makeStage, unmakeStage, setBackground, currentBackground } from "./stage.js";
-import { getCast, resolveCast, addToCast, addParty, setCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip } from "./cast.js";
+import { getCast, resolveCast, addToCast, addParty, removeParty, partySide, setCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip } from "./cast.js";
 import { artIndex, characterArt, clearArtCache } from "./art.js";
 import { layout, lastArrangement } from "./layout.js";
 import { listGroups, getGroup, memberNames, createGroup, addFolder, addMember, groupFolders, stageGroup, setStageGroup } from "./groups.js";
 import { startView, stopView, viewLocked, viewFitted } from "./view.js";
-import { StageWindow } from "./window.js";
+import { StageWindow, partyEntryIds } from "./window.js";
 import { GroupsWindow } from "./groups-window.js";
 import { listPresets, savePreset, loadPreset, deletePreset, updatePreset, renamePreset, setPresetGroups } from "./presets.js";
 import { setExpression, resetAllExpressions, currentExpression, preloadStage, isRelayGM } from "./expressions.js";
@@ -28,7 +28,7 @@ Hooks.once("init", () => {
   });
   const api = {
     isStage, makeStage, unmakeStage, setBackground, currentBackground,
-    getCast, resolveCast, addToCast, addParty, setCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip,
+    getCast, resolveCast, addToCast, addParty, removeParty, partySide, setCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip,
     artIndex, characterArt, clearArtCache, layout,
     setExpression, resetAllExpressions, currentExpression,
     listPresets, savePreset, loadPreset, deletePreset, updatePreset, renamePreset, setPresetGroups,
@@ -80,12 +80,8 @@ Hooks.on("updateScene", (scene, changes) => {
 // active GM's screen redraws the viewed stage. Other stages catch up when viewed.
 Hooks.on("updateActor", (actor, changes) => {
   if (!isStage()) return;
-  // The party's membership changed: a stage with The Party on it redraws.
-  if (actor === game.actors.party && foundry.utils.hasProperty(changes, "system.details.members")) {
-    if (!getCast().some((e) => e.party)) return;
-    if (isRelayGM()) layout(canvas.scene);
-    return StageWindow.refresh();
-  }
+  // The party's membership changed: The Party's row in the Stage window shows who's on stage.
+  if (actor === game.actors.party && foundry.utils.hasProperty(changes, "system.details.members")) return StageWindow.refresh();
   if (!foundry.utils.hasProperty(changes, `flags.${MODULE}`)) return;
   const onStage = resolveCast().some((e) => e.actorUuid === actor.uuid);
   if (!onStage) return;
@@ -109,18 +105,18 @@ Hooks.on("updateSetting", (setting) => {
 // GM: drop an actor or the party (sidebar), a Cast row or The Party (Stage window) where it should stand.
 Hooks.on("dropCanvasData", (_canvas, data, event) => {
   if (!game.user.isGM || !isStage() || !["Actor", "VNStageCast", "VNStageParty"].includes(data.type)) return;
-  const target = dropTarget(event.clientX, event.clientY, data.ignore ?? null);
+  const actor = data.type === "Actor" ? fromUuidSync(data.uuid) : null;
+  const isPartyActor = actor?.isOfType?.("party") || actor?.type === "party";
+  // The party (from the window or the sidebar) leaves its members on stage out when working out the drop point.
+  const target = dropTarget(event.clientX, event.clientY, isPartyActor ? partyEntryIds() : data.ignore ?? null);
   setWindowDrag(null);
   if (!target) return false;
   const { side, index } = target;
   if (data.type === "VNStageParty") addParty(side, { index });
   else if (data.type === "VNStageCast") addToCast({ name: data.name, actorUuid: data.actorUuid ?? null, side, index });
-  else {
-    const actor = fromUuidSync(data.uuid);
-    // The party actor itself (PF2e) puts The Party there, not a token or a character.
-    if (actor?.isOfType?.("party") || actor?.type === "party") addParty(side, { index });
-    else if (actor) addToCast({ name: actor.name, actorUuid: actor.uuid, side, index });
-  }
+  // The party actor itself (PF2e) puts every member there, not a token or a character.
+  else if (isPartyActor) addParty(side, { index });
+  else if (actor) addToCast({ name: actor.name, actorUuid: actor.uuid, side, index });
   return false; // no token
 });
 

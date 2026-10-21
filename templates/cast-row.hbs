@@ -2,8 +2,8 @@
   <img src="{{thumb}}" alt="" loading="lazy">
   <span class="vn-name">{{label}}</span>
   {{#if note}}<span class="vn-note" data-tooltip="The art this actor uses">{{note}}</span>{{/if}}
-  <span class="vn-toggles" {{#if inParty}}data-tooltip="On stage with The Party"{{/if}}>
-    <button type="button" class="vn-toggle {{#if left}}active{{/if}}" data-action="add" data-side="left" aria-pressed="{{left}}" {{#if inParty}}disabled{{/if}}>Left</button>
-    <button type="button" class="vn-toggle {{#if right}}active{{/if}}" data-action="add" data-side="right" aria-pressed="{{right}}" {{#if inParty}}disabled{{/if}}>Right</button>
+  <span class="vn-toggles">
+    <button type="button" class="vn-toggle {{#if left}}active{{/if}}" data-action="add" data-side="left" aria-pressed="{{left}}">Left</button>
+    <button type="button" class="vn-toggle {{#if right}}active{{/if}}" data-action="add" data-side="right" aria-pressed="{{right}}">Right</button>
   </span>
 </li>

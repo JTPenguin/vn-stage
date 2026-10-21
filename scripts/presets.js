@@ -1,12 +1,15 @@
 import { MODULE } from "./constants.js";
-import { getCast, setCast } from "./cast.js";
+import { getCast, setCast, partyMembers, orderedMembers, isOldPartyEntry } from "./cast.js";
 import { currentBackground, setBackground, decodePath } from "./stage.js";
 import { getGroup, stageGroup, setStageGroup } from "./groups.js";
 
 /**
  * Presets: a saved background and cast (sides and order), loaded onto a stage in
- * one click. The Party is saved as an entry, not as names, so it fills in with
- * whoever is in the party when the preset loads. A preset can belong to any
+ * one click. Party members are saved marked as such (`partyMember`), so a
+ * preset fits whoever is in the party when it loads: members still in it stand
+ * where they were saved, new members join next to them, and members who've left
+ * stay off. (Older presets hold one entry for the whole party, filled in with
+ * every member where it stood.) A preset can belong to any
  * number of groups; one saved while a group is selected starts in that group.
  * Each stage remembers the preset last loaded or saved on it (a scene flag), so
  * the Stage window can light it and offer Update once the stage has changed.
@@ -51,12 +54,44 @@ export function findPresetByName(name, groupId) {
     && (groupId ? p.groups.includes(groupId) : !p.groups.length)) ?? null;
 }
 
-/** What a preset keeps of a stage: its background and its cast without ids or expressions. */
+/** What a preset keeps of a stage: its background, and its cast without ids or expressions, party members marked. */
 function snapshot(scene) {
+  const members = new Set(partyMembers().map((a) => a.uuid));
   return {
     background: currentBackground(scene),
-    cast: getCast(scene).map(({ id: _id, expression: _x, ...rest }) => rest),
+    cast: getCast(scene).map(({ id: _id, expression: _x, ...rest }) => (members.has(rest.actorUuid) ? { ...rest, partyMember: true } : rest)),
   };
+}
+
+/**
+ * A preset's cast fitted to today's party. Saved members still in the party keep
+ * their places; members who've left are dropped; new members join right after
+ * the last saved member who's still here (or where the first saved member stood).
+ * An old whole-party entry becomes every member, where it stood.
+ */
+function fitParty(saved, scene) {
+  const current = orderedMembers(scene.getFlag(MODULE, "partyOrder") ?? []);
+  const here = new Set(current.map((a) => a.uuid));
+  // Members the preset already places (marked, or standing alone in an older preset).
+  const placed = new Set(saved.filter((e) => !isOldPartyEntry(e) && here.has(e.actorUuid)).map((e) => e.actorUuid));
+  const newcomers = (side) => current.filter((a) => !placed.has(a.uuid))
+    .map((a) => ({ name: a.name, actorUuid: a.uuid, side }));
+  const out = [];
+  let anchor = null; // where newcomers go: { at (index in out), side }
+  for (const e of saved) {
+    if (isOldPartyEntry(e)) {
+      for (const a of orderedMembers(e.order)) if (!placed.has(a.uuid)) { out.push({ name: a.name, actorUuid: a.uuid, side: e.side }); placed.add(a.uuid); }
+      continue;
+    }
+    if (!e.partyMember) { out.push(e); continue; }
+    if (here.has(e.actorUuid)) {
+      const { partyMember: _p, ...rest } = e;
+      out.push(rest);
+      anchor = { at: out.length, side: e.side };
+    } else anchor ??= { at: out.length, side: e.side };
+  }
+  if (anchor) out.splice(anchor.at, 0, ...newcomers(anchor.side));
+  return out;
 }
 
 /** Save the viewed stage as a new preset (or over the one with the same name in the stage's group). */
@@ -134,7 +169,7 @@ export async function loadPreset(id, { scene = canvas.scene } = {}) {
   const groups = preset.groups.filter((g) => getGroup(g));
   if (groups.length && !groups.includes(stageGroup(scene))) await setStageGroup(groups[0], scene);
   if (preset.background) await setBackground(preset.background, { scene });
-  await setCast(preset.cast ?? [], { scene });
+  await setCast(fitParty(preset.cast ?? [], scene), { scene });
   await scene.setFlag(MODULE, "preset", id);
 }
 

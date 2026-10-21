@@ -175,3 +175,4 @@
 .vn-stage .vn-cast-divider { margin: 0.4rem 0 0.15rem; padding: 0.15rem 0.2rem 0; border-top: 1px solid var(--color-border, #0003); font-size: var(--font-size-12, 12px); text-transform: uppercase; opacity: 0.7; }
 .vn-stage .vn-cast-divider[hidden] { display: none; }
 .vn-stage .vn-cast-list li .vn-note { max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vn-stage .vn-cast-list li.partly-on-stage { background: color-mix(in srgb, var(--color-warm-2, #c9593f) 10%, transparent); box-shadow: inset 3px 0 0 color-mix(in srgb, var(--color-warm-2, #c9593f) 50%, transparent); }

@@ -40,7 +40,7 @@ function readManifest(name) {
  * @returns {Promise<{name, portrait, thumb, frame, facePx, adjust, size, expressions}|null>}
  */
 export async function characterArt(name) {
-  const m = await readManifest(name);
+  const m = (await readManifest(name)) ?? (await inlineForm(name));
   const portrait = m?.files?.portrait;
   if (!portrait) return null;
   const vn = m.vn_size ?? {};
@@ -60,6 +60,42 @@ export async function characterArt(name) {
     size: vn.size ?? null,
     groups: Array.isArray(m.groups) ? m.groups : [],
     expressions,
+  };
+}
+
+/**
+ * A manifest's forms as a list of { form, label, folder }, whichever way it
+ * writes them: a list with `folder` (the pipeline's form tool), or an object
+ * keyed by form with `dir` (forms made by hand, such as a ghost pass).
+ */
+export function formsOf(m) {
+  const raw = m?.forms;
+  const list = Array.isArray(raw) ? raw
+    : raw && typeof raw === "object" ? Object.entries(raw).map(([form, f]) => ({ form, ...f })) : [];
+  return list.map((f) => ({ ...f, folder: (f.folder ?? f.dir ?? "").replace(/\/$/, "") })).filter((f) => f.folder);
+}
+
+/**
+ * A form folder with no manifest of its own: its entry in the parent's
+ * `forms` lists the files (relative to the parent), and it shares the parent's
+ * VN sizing (a pixel pass over the parent's art keeps the face boxes).
+ */
+async function inlineForm(key) {
+  const i = key.lastIndexOf("/forms/");
+  if (i === -1) return null;
+  const parent = key.slice(0, i);
+  const pm = await readManifest(parent);
+  const folder = key.slice(parent.length + 1);
+  const form = formsOf(pm).find((f) => f.folder === folder);
+  if (!form?.files?.portrait) return null;
+  const local = (file) => (file.startsWith(`${folder}/`) ? file.slice(folder.length + 1) : `../`.repeat(folder.split("/").length) + file);
+  const expressions = Object.fromEntries(Object.entries(form.files.expressions ?? {}).map(([k, f]) => [k, local(f)]));
+  return {
+    character: pm.character,
+    form_of: { character: pm.character ?? parent, label: form.label, form: form.form },
+    files: { portrait: local(form.files.portrait), avatar: form.files.avatar ? local(form.files.avatar) : undefined, expressions },
+    vn_size: form.vn_size ?? pm.vn_size,
+    groups: form.groups ?? pm.groups,
   };
 }
 
@@ -86,10 +122,17 @@ async function buildIndex() {
   // Each character, and each of its forms that has a VN portrait of its own.
   const keys = [...names];
   for (const name of names) {
-    const forms = (await readManifest(name))?.forms ?? [];
-    for (const f of forms) if (f.folder) keys.push(`${name}/${f.folder.replace(/\/$/, "")}`);
+    try {
+      for (const f of formsOf(await readManifest(name))) keys.push(`${name}/${f.folder}`);
+    } catch (err) {
+      console.warn(`VN Stage | Can't read the forms of ${name}`, err);
+    }
   }
-  const arts = await Promise.all(keys.map(characterArt));
+  // One unreadable manifest leaves that character out, never the whole list.
+  const arts = await Promise.all(keys.map((k) => characterArt(k).catch((err) => {
+    console.warn(`VN Stage | Can't read the art for ${k}`, err);
+    return null;
+  })));
   return arts.filter(Boolean).sort((a, b) => a.label.localeCompare(b.label));
 }
 

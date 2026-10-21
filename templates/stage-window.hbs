@@ -77,9 +77,9 @@
     </div>
     <ul class="vn-cast-list">
       {{#if party}}
-      <li class="vn-cast-party {{#if party.side}}on-stage{{/if}}" data-search="the party" data-party draggable="true">
+      <li class="vn-cast-party {{#if party.side}}on-stage{{else if party.onStage}}partly-on-stage{{/if}}" data-search="the party" data-party draggable="true">
         <span class="vn-party-icon"><i class="fa-solid fa-users"></i></span>
-        <span class="vn-name">{{party.label}}</span>
+        <span class="vn-name" data-tooltip="Every party member at once. Left or Right gathers them on that side; the lit one takes them all off.">{{party.label}}</span>
         <span class="vn-toggles">
           <button type="button" class="vn-toggle {{#if (eq party.side 'left')}}active{{/if}}" data-action="addParty" data-side="left" aria-pressed="{{eq party.side 'left'}}">Left</button>
           <button type="button" class="vn-toggle {{#if (eq party.side 'right')}}active{{/if}}" data-action="addParty" data-side="right" aria-pressed="{{eq party.side 'right'}}">Right</button>
