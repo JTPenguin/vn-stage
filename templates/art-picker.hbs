@@ -1,0 +1,22 @@
+<div class="vn-art-picker-body">
+  <p class="hint">
+    {{#if linked}}Linked to <strong>{{currentLabel}}</strong>.{{else}}Automatic: <strong>{{autoLabel}}</strong>.{{/if}}
+    Pick the art this actor should use. The link stays if the actor is renamed.
+  </p>
+  <div class="vn-art-tools">
+    <input type="search" name="filter" value="{{filter}}" placeholder="Search characters and forms" autocomplete="off">
+    <button type="button" class="{{#unless linked}}active{{/unless}}" data-action="automatic" data-tooltip="Match by name, then by the actor's own images (Automatic: {{autoLabel}})"><i class="fa-solid fa-wand-magic-sparkles"></i> Automatic</button>
+  </div>
+  <ul class="vn-art-list">
+    {{#each arts}}
+    <li data-key="{{key}}" data-search="{{search}}">
+      <button type="button" class="vn-art-choice {{#if current}}current{{/if}}" data-action="choose">
+        <img src="{{thumb}}" alt="" loading="lazy">
+        <span class="vn-name">{{label}}</span>
+      </button>
+    </li>
+    {{else}}
+    <li class="vn-empty">No characters found. Set the art folder in the module settings.</li>
+    {{/each}}
+  </ul>
+</div>

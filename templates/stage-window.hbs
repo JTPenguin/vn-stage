@@ -110,7 +110,7 @@
       {{#each cast}}
       <li data-name="{{name}}" data-search="{{search}}" draggable="true" class="{{#if onStage}}on-stage{{/if}} {{#if @root.editing}}{{#unless member}}not-member{{/unless}}{{/if}}">
         <img src="{{thumb}}" alt="" loading="lazy">
-        <span class="vn-name">{{name}}</span>
+        <span class="vn-name">{{label}}</span>
         {{#if @root.editing}}
           {{#if member}}
           <button type="button" class="vn-icon" data-action="removeMember" data-tooltip="Remove from this group"><i class="fa-solid fa-user-minus"></i></button>

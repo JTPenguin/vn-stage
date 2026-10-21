@@ -1,5 +1,5 @@
 import { MODULE } from "./constants.js";
-import { artIndex } from "./art.js";
+import { artIndex, artKeyOf } from "./art.js";
 import { getCast, resolveCast, addToCast, addParty, removeFromCast, hasParty, PARTY_LABEL } from "./cast.js";
 import { setWindowDrag } from "./interact.js";
 import { listPresets, savePreset, loadPreset, deletePreset, findPresetByName } from "./presets.js";
@@ -76,6 +76,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   #editing = false;      // Edit group mode: the rarely used group controls
   #showEveryone = false; // in Edit group mode, list everyone, not just members
   #groupLabel = null;
+  #entryByKey = new Map(); // art key → the cast entry standing on stage with it (from the last render)
 
   get title() {
     return this.#groupLabel ? `VN Stage · ${this.#groupLabel}` : "VN Stage";
@@ -99,7 +100,10 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     const members = new Set(group ? memberNames(group.id, index) : []);
     const cast = getCast(scene);
     const resolved = resolveCast(scene);
-    const onStage = new Set(resolved.map((e) => e.name));
+    // Who stands on stage, by art key (an actor may use art under another name).
+    const keyed = await Promise.all(resolved.map(async (e) => ({ e, key: (await artKeyOf(e)) ?? e.name })));
+    const onStage = new Set(keyed.map((k) => k.key));
+    this.#entryByKey = new Map(keyed.filter((k) => !k.e.partyOf).map((k) => [k.key, k.e]));
     const partyEntry = cast.find((e) => e.party);
 
     // The Cast list: the group's members, Recent in its order, or everyone.
@@ -108,7 +112,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     if (editing && this.#showEveryone) names = index.map((a) => a.name);
     else names = memberNames(selected, index);
     let list = names.map((n) => byName.get(n)).filter(Boolean);
-    if (selected !== RECENT) list.sort((a, b) => a.name.localeCompare(b.name));
+    if (selected !== RECENT) list.sort((a, b) => a.label.localeCompare(b.label));
 
     return {
       ...context,
@@ -122,10 +126,12 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       party: hasParty() ? { label: PARTY_LABEL, side: partyEntry?.side ?? null } : null,
       presets: listPresets(group?.id ?? null).map((p) => ({ ...p, groupLabel: group ? null : (p.group ? getGroup(p.group)?.label ?? p.group : null) })),
       cast: list.map((a) => {
-        const side = cast.find((e) => !e.party && e.name === a.name)?.side ?? null;
-        const inParty = !side && resolved.some((e) => e.partyOf && e.name === a.name);
+        const here = keyed.filter((k) => k.key === a.key);
+        const side = here.find((k) => !k.e.partyOf)?.e.side ?? null;
+        const inParty = !side && here.some((k) => k.e.partyOf);
         return {
-          name: a.name, thumb: a.thumb, onStage: onStage.has(a.name), search: a.name.toLowerCase(), member: members.has(a.name),
+          name: a.key, label: a.label, thumb: a.thumb, onStage: onStage.has(a.key),
+          search: `${a.label} ${a.key}`.toLowerCase(), member: members.has(a.key),
           left: side === "left", right: side === "right", inParty,
         };
       }),
@@ -152,8 +158,8 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     for (const li of this.element.querySelectorAll(".vn-cast-list li[draggable]")) {
       li.addEventListener("dragstart", (event) => {
         const party = li.hasAttribute("data-party");
-        const entry = getCast().find((e) => (party ? e.party : !e.party && e.name === li.dataset.name));
-        const data = party ? { type: "VNStageParty" } : { type: "VNStageCast", name: li.dataset.name };
+        const entry = party ? getCast().find((e) => e.party) : this.#entryByKey.get(li.dataset.name);
+        const data = party ? { type: "VNStageParty" } : { type: "VNStageCast", name: entry?.name ?? li.dataset.name, actorUuid: entry?.actorUuid ?? null };
         if (entry) data.ignore = entry.id;
         event.dataTransfer.setData("text/plain", JSON.stringify(data));
         event.dataTransfer.effectAllowed = "copyMove";
@@ -197,8 +203,9 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   /** Left / Right toggles: turn on to put the character there (or move them), turn the lit one off to remove them. */
   static async #onAdd(_event, target) {
     const name = target.closest("[data-name]").dataset.name;
-    const entry = getCast().find((e) => !e.party && e.name === name);
+    const entry = await castEntryFor(name);
     if (entry?.side === target.dataset.side) await removeFromCast(entry.id);
+    else if (entry) await addToCast({ name: entry.name, actorUuid: entry.actorUuid, side: target.dataset.side });
     else await addToCast({ name, side: target.dataset.side });
   }
 
@@ -350,6 +357,14 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     this.#showEveryone = !this.#showEveryone;
     this.render();
   }
+}
+
+/** The cast entry (not The Party) standing on the stage with this art key, or null. */
+async function castEntryFor(key) {
+  for (const e of getCast()) {
+    if (!e.party && ((await artKeyOf(e)) ?? e.name) === key) return e;
+  }
+  return null;
 }
 
 /** A one-field name dialog; resolves to the trimmed name, or null. */

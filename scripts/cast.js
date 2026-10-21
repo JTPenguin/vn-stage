@@ -1,6 +1,7 @@
 import { MODULE } from "./constants.js";
 import { layout } from "./layout.js";
 import { noteRecent } from "./groups.js";
+import { artKeyOf } from "./art.js";
 
 /**
  * The cast is the source of truth for who stands on a stage: a scene flag
@@ -47,6 +48,20 @@ export function resolveCast(scene = canvas.scene) {
     }
   }
   return out;
+}
+
+/** The name to show for a cast entry: its actor's current name, or its own. */
+export function displayName(entry) {
+  return (entry.actorUuid && fromUuidSync(entry.actorUuid)?.name) || entry.name;
+}
+
+/** Link an actor to an art key (VN art…), or clear the link with null so it's found automatically again. GM only. */
+export async function setActorArt(actorUuid, key) {
+  requireGM();
+  const actor = fromUuidSync(actorUuid);
+  if (!actor) return;
+  if (key) return actor.setFlag(MODULE, "art", key);
+  return actor.unsetFlag(MODULE, "art");
 }
 
 /** The party's characters in a party entry's standing order; new members at the back, by name. */
@@ -105,7 +120,7 @@ export async function addToCast({ name, actorUuid = null, side = "left", index =
   } else {
     insertAt(cast, { id: foundry.utils.randomID(), name, actorUuid, side }, index);
   }
-  await noteRecent(name);
+  await noteRecent((await artKeyOf({ name, actorUuid })) ?? name);
   return saveCast(scene, cast);
 }
 

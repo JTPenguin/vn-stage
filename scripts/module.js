@@ -107,7 +107,7 @@ Hooks.on("dropCanvasData", (_canvas, data, event) => {
   if (!target) return false;
   const { side, index } = target;
   if (data.type === "VNStageParty") addParty(side, { index });
-  else if (data.type === "VNStageCast") addToCast({ name: data.name, side, index });
+  else if (data.type === "VNStageCast") addToCast({ name: data.name, actorUuid: data.actorUuid ?? null, side, index });
   else {
     const actor = fromUuidSync(data.uuid);
     // The party actor itself (PF2e) puts The Party there, not a token or a character.

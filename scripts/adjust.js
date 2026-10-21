@@ -1,5 +1,6 @@
+import { artKeyOf } from "./art.js";
 import { MODULE, FRAME, SIZE_CHOICES, faceGuide } from "./constants.js";
-import { resolveCast, characterPrefs, setPrefs } from "./cast.js";
+import { resolveCast, characterPrefs, setPrefs, displayName } from "./cast.js";
 import { placements } from "./layout.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -26,29 +27,32 @@ export class AdjustWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   static #open = null;
 
   /** Open for the cast entry `castId` on the viewed stage (one at a time). */
-  static open(castId) {
+  static async open(castId) {
     const entry = resolveCast().find((e) => e.id === castId);
     if (!entry) return;
+    const key = (await artKeyOf(entry)) ?? entry.name;
     AdjustWindow.#open?.close();
-    AdjustWindow.#open = new AdjustWindow({ entry });
+    AdjustWindow.#open = new AdjustWindow({ entry, key });
     return AdjustWindow.#open.render({ force: true });
   }
 
-  constructor({ entry, ...options }) {
+  /** `key`: the character's art key, which owns the saved choices. */
+  constructor({ entry, key, ...options }) {
     super({ id: `vn-stage-adjust-${entry.id}`, ...options });
     this.entry = entry;
-    this.#save = foundry.utils.debounce((patch) => setPrefs(this.entry.name, patch), 120);
+    this.key = key;
+    this.#save = foundry.utils.debounce((patch) => setPrefs(this.key, patch), 120);
   }
 
   #save;
   #onLayout = null;
 
   get title() {
-    return `Adjust: ${this.entry.name}`;
+    return `Adjust: ${displayName(this.entry)}`;
   }
 
   async _prepareContext() {
-    const p = characterPrefs(this.entry.name);
+    const p = characterPrefs(this.key);
     const placed = placements.get(this.entry.id);
     const auto = placed?.size?.auto;
     const from = { sheet: "from the sheet", manifest: "from the art", default: "default" }[auto?.source] ?? "";
@@ -74,7 +78,7 @@ export class AdjustWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       }
     }
     this.element.querySelector("select[name=size]")?.addEventListener("change", (event) => {
-      setPrefs(this.entry.name, { size: event.target.value || null });
+      setPrefs(this.key, { size: event.target.value || null });
     });
     if (!this.#onLayout) {
       this.#onLayout = Hooks.on(`${MODULE}.layout`, () => drawGuide(this.entry.id));
@@ -96,7 +100,7 @@ export class AdjustWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async #onReset() {
-    await setPrefs(this.entry.name, { scale: 1, yOffset: 0 });
+    await setPrefs(this.key, { scale: 1, yOffset: 0 });
     this.render();
   }
 

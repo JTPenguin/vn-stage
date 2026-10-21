@@ -1,6 +1,7 @@
 import { MODULE, PART, FRAME, LAYOUT } from "./constants.js";
-import { characterArt, artIndex } from "./art.js";
-import { getCast, resolveCast, characterPrefs, setFlip, removeFromCast, addParty, moveEntry, setPartyOrder, PARTY_LABEL } from "./cast.js";
+import { characterArt, artIndex, artKeyOf } from "./art.js";
+import { ArtPicker } from "./art-picker.js";
+import { getCast, resolveCast, characterPrefs, setFlip, removeFromCast, addParty, moveEntry, setPartyOrder, displayName, PARTY_LABEL } from "./cast.js";
 import { placements } from "./layout.js";
 import { canChange, currentExpression, setExpression } from "./expressions.js";
 import { getGroup, stageGroup, memberNames, addMember } from "./groups.js";
@@ -144,7 +145,7 @@ function showMoving(wholeParty) {
     return castId === id || (wholeParty && castId?.startsWith(`${id}.`));
   });
   for (const t of dimmed) if (t.mesh) t.mesh.alpha = 0.35;
-  ghost.textContent = wholeParty ? PARTY_LABEL : press.entry.name;
+  ghost.textContent = wholeParty ? PARTY_LABEL : displayName(press.entry);
 }
 
 function moveGhost(x, y) {
@@ -292,7 +293,7 @@ function hover(event) {
     canvas.app.view.style.cursor = "pointer";
     hoverLabel ??= Object.assign(document.createElement("div"), { className: "vn-hover-name" });
     if (!hoverLabel.isConnected) document.body.append(hoverLabel);
-    hoverLabel.textContent = p.entry.name;
+    hoverLabel.textContent = displayName(p.entry);
     // Centred above the face (or the top of the image), in screen pixels.
     const { sceneX = 0, sceneY = 0 } = canvas.dimensions;
     const top = p.face ? p.face.y : p.box.y;
@@ -315,16 +316,17 @@ function clearHover() {
 
 async function openMenu(entry, clientX, clientY) {
   closeMenu();
-  const art = await characterArt(entry.name);
+  const key = (await artKeyOf(entry)) ?? entry.name;
+  const art = await characterArt(key);
   const expressions = Object.entries(art?.expressions ?? {});
-  const actions = game.user.isGM ? await gmActions(entry) : [];
+  const actions = game.user.isGM ? await gmActions(entry, key) : [];
   if (expressions.length < 2 && !actions.length) return;
   const current = currentExpression(entry);
 
   const el = document.createElement("div");
   el.className = "vn-character-menu";
   el.setAttribute("role", "menu");
-  el.innerHTML = `<div class="vn-menu-name">${esc(entry.name)}</div>`;
+  el.innerHTML = `<div class="vn-menu-name">${esc(displayName(entry))}</div>`;
 
   if (expressions.length >= 2) {
     const list = document.createElement("div");
@@ -369,17 +371,20 @@ async function openMenu(entry, clientX, clientY) {
 }
 
 /** The GM's row: what this character (or party member) can have done to them. */
-async function gmActions(entry) {
-  const flip = !!characterPrefs(entry.name).flip;
+async function gmActions(entry, key) {
+  const flip = !!characterPrefs(key).flip;
   const actions = [
-    { label: "Flip", icon: "fa-solid fa-left-right", active: flip, run: () => setFlip(entry.name, !flip) },
+    { label: "Flip", icon: "fa-solid fa-left-right", active: flip, run: () => setFlip(key, !flip) },
     { label: "Adjust size and height", icon: "fa-solid fa-sliders", run: () => AdjustWindow.open(entry.id) },
   ];
+  if (entry.actorUuid) {
+    actions.push({ label: "VN art…: which character's art this actor uses", icon: "fa-solid fa-image-portrait", run: () => ArtPicker.open(entry.actorUuid) });
+  }
   const groupId = StageWindow.editingGroup;
   if (groupId && getGroup(groupId)) {
     const members = memberNames(groupId, await artIndex());
-    if (!members.includes(entry.name)) {
-      actions.push({ label: `Add to ${getGroup(groupId).label}`, icon: "fa-solid fa-user-plus", run: () => addMember(groupId, entry.name) });
+    if (!members.includes(key)) {
+      actions.push({ label: `Add to ${getGroup(groupId).label}`, icon: "fa-solid fa-user-plus", run: () => addMember(groupId, key) });
     }
   }
   if (entry.partyOf) {

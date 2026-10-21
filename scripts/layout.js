@@ -1,6 +1,6 @@
 import { MODULE, FRAME, PART, FACE, SIZE, LAYOUT, faceGuide } from "./constants.js";
 import { arrange, clusterCentres } from "./arrange.js";
-import { characterArt } from "./art.js";
+import { characterArt, artKeyOf } from "./art.js";
 import { resolveCast, characterPrefs } from "./cast.js";
 import { isStage } from "./stage.js";
 import { currentExpression } from "./expressions.js";
@@ -112,8 +112,9 @@ function shadeTiles(placed) {
 /** One character's image and size, before they're placed. */
 async function measure(entry) {
   const actor = entry.actorUuid ? fromUuidSync(entry.actorUuid) : null;
-  const art = await characterArt(entry.name);
-  const prefs = characterPrefs(entry.name);
+  const key = (await artKeyOf(entry)) ?? entry.name;
+  const art = await characterArt(key);
+  const prefs = characterPrefs(key);
   const size = sizeOf(prefs, actor, art);
   const scale = size.scale * (prefs.scale ?? 1);
 
@@ -130,11 +131,11 @@ async function measure(entry) {
     width = tex?.width ? (height * tex.width) / tex.height : height * (2 / 3);
   }
 
-  return { entry, art, prefs, size, src, width, height, k, fallback };
+  return { entry, key, art, prefs, size, src, width, height, k, fallback };
 }
 
 /** Where one character stands: box (frame pixels) and draw order; first-placed in front. */
-function finish({ entry, art, prefs, size, src, width, height, k, fallback }, cx, i, zoom = 1) {
+function finish({ entry, key, art, prefs, size, src, width, height, k, fallback }, cx, i, zoom = 1) {
   // At full size, start from the head box: the face's top sits on the guide for
   // this size, unless that would lift the cut-off bottom edge into view; then
   // (and with no face measurement) the image stands on the bottom edge.
@@ -155,7 +156,7 @@ function finish({ entry, art, prefs, size, src, width, height, k, fallback }, cx
   }
   const box = { x: cx - width / 2, y, width, height };
   const flip = !!prefs.flip;
-  return { entry, src, box, sort: 100 - i, flip, fallback, size, zoom, face: faceBox(art, box, k, flip) };
+  return { entry, key, src, box, sort: 100 - i, flip, fallback, size, zoom, face: faceBox(art, box, k, flip) };
 }
 
 /** A character's creature size: the Adjust window's choice, then the sheet, then the manifest. */

@@ -1,5 +1,5 @@
 import { MODULE } from "./constants.js";
-import { characterArt } from "./art.js";
+import { characterArt, artKeyOf } from "./art.js";
 import { getCast, resolveCast } from "./cast.js";
 import { layout } from "./layout.js";
 import { isStage } from "./stage.js";
@@ -72,7 +72,7 @@ export async function preloadStage(scene = canvas.scene) {
   if (!isStage(scene)) return;
   const srcs = [];
   for (const e of resolveCast(scene)) {
-    const art = await characterArt(e.name);
+    const art = await characterArt((await artKeyOf(e)) ?? e.name);
     if (art) srcs.push(...Object.values(art.expressions));
   }
   await Promise.all(srcs.map((src) => foundry.canvas.loadTexture(src).catch(() => null)));
