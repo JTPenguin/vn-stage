@@ -18,16 +18,46 @@ ln -s "/home/justin/Projects/Wayfinder Chronicles/Module/vn-stage" ~/.local/shar
 
 ## Settings (world)
 
-- **Art folder:** one subfolder per character, named as the character, holding `portrait.webp` (neutral), `expressions/` and `manifest.json`.
+- **Art folder:** one subfolder per character, named as the character, holding `portrait.webp` (neutral), `expressions/` and `manifest.json`; forms in `forms/<name>/` with their own manifest.
 - **Safety-net background:** set once as the scene's own background when it becomes a stage. The background shown during play is a tile above it, because changing a scene's own background redraws the canvas on every screen.
+- **Group background folders:** a folder every group finds its backgrounds in by itself, when it exists; `{group}` stands for the group's name (`strahd/scenes/{group}/`). Other modules can add folders with the `vn-stage.groupFolders` hook.
 
-## Console API (0.0.x)
+## Console API
 
-`VNStage` (also `game.modules.get("vn-stage").api`):
+`VNStage` (also `game.modules.get("vn-stage").api`). GM only where it changes anything.
 
-- `makeStage()`: turn the viewed scene into a stage (2560 × 1440, gridless, no vision).
-- `setBackground(src)`: show an image as the stage background.
-- `status()`: what the module sees on this screen.
+| Area | Functions |
+|---|---|
+| Stage | `isStage`, `makeStage`, `unmakeStage`, `setBackground(src)`, `currentBackground` |
+| Cast | `getCast`, `addToCast({ name, actorUuid, side, index })`, `addParty(side, { index })`, `removeParty`, `partySide`, `setCast`, `removeFromCast(id)`, `switchSide`, `moveInSide`, `clearCast`, `setFlip`, `layout` |
+| Art | `artIndex`, `characterArt(key)`, `clearArtCache` |
+| Expressions and forms | `setExpression(castId, key)`, `setForm(castId, artKey)`, `resetAllExpressions`, `currentExpression` |
+| Presets | `listPresets(groupId)`, `savePreset(name)`, `loadPreset(id)`, `deletePreset`, `updatePreset`, `renamePreset`, `setPresetGroups` |
+| Groups | `listGroups`, `getGroup`, `memberNames`, `createGroup`, `addFolder`, `addMember`, `groupFolders`, `stageGroup`, `setStageGroup` |
+| Windows | `openWindow()`, `openGroups(groupId)` |
+| Debugging | `status()`: what the module sees on this screen |
+
+**Hooks it calls:** `vn-stage.layout(scene, placements)` after each layout (each portrait's box, for other modules); `vn-stage.groupFolders(group, folders)` to let modules add a group's automatic folders.
+
+## Stored data
+
+Change any of these only with a step in `scripts/migrate.js` (bump `SCHEMA`), so stored data is upgraded once and the code reads one form.
+
+| Where | Key | Holds |
+|---|---|---|
+| World setting | `artRoot`, `safetyBackground`, `groupFolders` | The settings above |
+| World setting | `schema` | The last data upgrade run (migrate.js) |
+| World setting | `groups` | `{ [id]: { label, folders, images, add, remove, hideAuto, deleted } }`; members also come from manifest `groups` tags |
+| World setting | `presets` | `{ [id]: { name, groups, background, cast, saved } }`; cast entries may carry `partyMember` and `form` |
+| World setting | `recent` | `{ names }`: art keys, newest first (24) |
+| World setting | `characterPrefs` | `{ [art key]: { flip, scale, yOffset, size } }` |
+| Client setting | `collapsed` | Which Stage window sections and folder strips this GM collapsed |
+| Scene flag | `stage` | `{ version }`: the scene is a stage |
+| Scene flag | `cast` | `[{ id, name, actorUuid, side, expression?, form? }]` in standing order (`expression` and `form` only for art without an actor) |
+| Scene flag | `partyOrder` | Actor ids, the order the party last stood in |
+| Scene flag | `group`, `backgroundFolder`, `preset` | The stage's group, its last-browsed folder, and the preset last loaded or saved |
+| Actor flag | `expression`, `form`, `art` | The actor's expression and form (follow them to every stage), and its VN art… link |
+| Tile flag | `part`, and for portraits `castId`, `name`, `key`, `fallback`; for the shade `shade` | What the module drew (`background`, `portrait`, `shade`) |
 
 ## Checks
 

@@ -1,28 +1,21 @@
 import { MODULE, PART, FRAME, LAYOUT } from "./constants.js";
-import { characterArt, artKeyOf, baseArtKeyOf, formsFor } from "./art.js";
-import { ArtPicker } from "./art-picker.js";
-import { getCast, characterPrefs, setFlip, removeFromCast, moveEntry, displayName } from "./cast.js";
+import { getCast, moveEntry, displayName } from "./cast.js";
 import { placements } from "./layout.js";
-import { canChange, currentExpression, chooseExpression, chooseForm, offstageEntry } from "./expressions.js";
+import { canChange } from "./expressions.js";
 import { isStage } from "./stage.js";
-import { AdjustWindow } from "./adjust.js";
 import { dropSlot } from "./rules.js";
-import { chooseCharacterGroups } from "./groups-window.js";
+import { openMenu, closeMenu } from "./menu.js";
 
 /**
  * Working on the stage itself. Dragging a portrait moves the character within
- * its side or to the other one. Clicking a portrait opens its character menu:
- * the character's forms (when it has more than one), the expressions, and for
- * the GM a row of actions (Flip, Adjust, VN art…, Groups…, Remove).
- * Players get the expressions of characters they own, nothing else. The GM gets
- * the same menu by right-clicking a Cast row in the Stage window (`openCastMenu`).
+ * its side or to the other one (GM); clicking one opens its character menu
+ * (menu.js) for anyone who may change it; hovering shows the GM its name.
  */
 
 const CLICK_MOVE = 6;   // pixels: more than this is a drag, not a click
 const CLICK_TIME = 600; // ms
 const ALPHA = 0.5;      // transparent parts of a portrait don't count as a click
 let press = null;       // the press that started on a portrait: { x, y, t, entry, tile, dragging }
-let menu = null;
 let hoverFrame = null;
 
 /*
@@ -237,179 +230,4 @@ function clearHover() {
   hoverFrame = null;
   hoverLabel?.remove();
   if (canvas.app?.view) canvas.app.view.style.cursor = "";
-}
-
-/* -------------------------------------------- */
-/*  The character menu                          */
-/* -------------------------------------------- */
-
-/**
- * The character menu for a Cast row (GM). On stage, the same menu as clicking
- * the portrait. Off stage, the forms and expressions they'll arrive with, plus
- * Flip and Groups….
- */
-export function openCastMenu(row, clientX, clientY) {
-  return openMenu(row.entry ?? offstageEntry(row.name, row.actorUuid), clientX, clientY);
-}
-
-/**
- * `entry` is the cast entry on stage, or a stand-in for a character who isn't
- * (`offstage`). The menu works on the form shown (its expressions, Flip,
- * Adjust); Groups… always works on the character.
- */
-async function openMenu(entry, clientX, clientY) {
-  closeMenu();
-  const onStage = !entry.offstage;
-  const key = (await artKeyOf(entry)) ?? entry.name;
-  const groupKey = (await baseArtKeyOf(entry)) ?? entry.name;
-  const art = await characterArt(key);
-  const expressions = Object.entries(art?.expressions ?? {});
-  const forms = await formsFor(key);
-  const name = entry.actorUuid ? displayName(entry) : (await characterArt(groupKey))?.label ?? entry.name;
-  const actions = game.user.isGM ? await gmActions(onStage ? entry : null, key, name, groupKey) : [];
-  if (expressions.length < 2 && forms.length < 2 && !actions.length) return;
-  const current = currentExpression(entry);
-
-  const el = document.createElement("div");
-  el.className = "vn-character-menu";
-  el.setAttribute("role", "menu");
-  el.innerHTML = `<div class="vn-menu-name">${esc(name)}${onStage ? "" : ' <span class="vn-menu-note">· arrives like this</span>'}</div>`;
-
-  if (forms.length >= 2) {
-    const list = document.createElement("div");
-    list.className = "vn-form-list";
-    for (const f of forms) {
-      const button = menuButton(`vn-form${f.key === key ? " current" : ""}`,
-        `<img src="${esc(encodeURI(f.thumb))}" alt=""><span class="vn-form-label">${esc(f.label)}</span>`,
-        () => chooseForm(entry, f.key));
-      button.dataset.tooltip = f.label;
-      list.append(button);
-    }
-    el.append(list);
-  }
-
-  if (expressions.length >= 2) {
-    const list = document.createElement("div");
-    list.className = "vn-expression-list";
-    for (const [key, src] of expressions) {
-      const button = menuButton(`vn-expression${key === current ? " current" : ""}`,
-        `<span class="vn-expression-face"></span><span class="vn-expression-label">${esc(label(key))}</span>`,
-        () => chooseExpression(entry, key));
-      faceThumb(button.querySelector(".vn-expression-face"), src, art);
-      list.append(button);
-    }
-    el.append(list);
-  }
-
-  if (actions.length) {
-    const row = document.createElement("div");
-    row.className = "vn-menu-actions";
-    for (const a of actions) {
-      if (a === "|") {
-        row.append(Object.assign(document.createElement("span"), { className: "vn-menu-divider" }));
-        continue;
-      }
-      const button = menuButton(`vn-menu-action${a.active ? " active" : ""}`, `<i class="${a.icon}"></i>`, a.run);
-      button.dataset.tooltip = a.label;
-      button.setAttribute("aria-label", a.label);
-      row.append(button);
-    }
-    el.append(row);
-  }
-
-  el.style.zIndex = String(topZ() + 1);
-  document.body.append(el);
-  // Beside the pointer, kept on screen.
-  const { width, height } = el.getBoundingClientRect();
-  el.style.left = `${Math.min(Math.max(8, clientX + 16), window.innerWidth - width - 8)}px`;
-  el.style.top = `${Math.min(Math.max(8, clientY - height / 2), window.innerHeight - height - 8)}px`;
-
-  menu = el;
-  setTimeout(() => {
-    document.addEventListener("pointerdown", onOutside, true);
-    document.addEventListener("keydown", onKey, true);
-  });
-}
-
-/** The GM's row: what this character (or party member) can have done to them. Off stage (no `entry`), only Flip and Groups…. */
-async function gmActions(entry, key, name, groupKey = key) {
-  const flip = !!characterPrefs(key).flip;
-  const actions = [{ label: "Flip", icon: "fa-solid fa-left-right", active: flip, run: () => setFlip(key, !flip) }];
-  if (entry) actions.push({ label: "Adjust size and height", icon: "fa-solid fa-sliders", run: () => AdjustWindow.open(entry.id) });
-  if (entry?.actorUuid) {
-    actions.push({ label: "VN art…: which character's art this actor uses", icon: "fa-solid fa-image-portrait", run: () => ArtPicker.open(entry.actorUuid) });
-  }
-  actions.push({ label: "Groups…", icon: "fa-solid fa-layer-group", run: () => chooseCharacterGroups(groupKey, name) });
-  if (!entry) return actions;
-  actions.push("|", { label: "Remove from the stage", icon: "fa-solid fa-xmark", run: () => removeFromCast(entry.id) });
-  return actions;
-}
-
-function menuButton(className, html, run) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = className;
-  button.setAttribute("role", "menuitem");
-  button.innerHTML = html;
-  button.addEventListener("click", async () => {
-    closeMenu();
-    await run();
-  });
-  return button;
-}
-
-/**
- * Above every window (the Stage window's Cast rows open the menu too). Foundry
- * raises each window it opens past the last; its counter is internal
- * (ApplicationV2._maxZ), so the open windows' own layers are checked as well.
- */
-function topZ() {
-  const windows = [...document.querySelectorAll(".application, .app, .window-app")]
-    .map((w) => Number(getComputedStyle(w).zIndex) || 0);
-  return Math.max(100, foundry.applications.api.ApplicationV2?._maxZ ?? 0, ...windows);
-}
-
-export function closeMenu() {
-  menu?.remove();
-  menu = null;
-  document.removeEventListener("pointerdown", onOutside, true);
-  document.removeEventListener("keydown", onKey, true);
-}
-
-function onOutside(event) {
-  if (menu && !menu.contains(event.target)) closeMenu();
-}
-
-function onKey(event) {
-  if (event.key === "Escape") closeMenu();
-}
-
-function esc(text) {
-  return foundry.utils.escapeHTML(text);
-}
-
-function label(key) {
-  return key.charAt(0).toUpperCase() + key.slice(1);
-}
-
-/**
- * A head-and-shoulders thumbnail: the face box (the same in every expression,
- * since they're painted on the portrait) zoomed into a square.
- */
-function faceThumb(el, src, art) {
-  const size = 60; // matches .vn-expression-face
-  el.style.backgroundImage = `url("${encodeURI(src)}")`;
-  const [fw, fh] = art.frame ?? [960, 1440];
-  const box = art.faceBox;
-  if (!box) {
-    el.style.backgroundSize = "cover";
-    el.style.backgroundPosition = "center top";
-    return;
-  }
-  const [x, y, w, h] = box;
-  const side = Math.max(w, h) * 1.8;
-  const cx = x + w / 2, cy = y + h / 2;
-  const k = size / side;
-  el.style.backgroundSize = `${fw * k}px ${fh * k}px`;
-  el.style.backgroundPosition = `${-(cx - side / 2) * k}px ${-(cy - side / 2) * k}px`;
 }

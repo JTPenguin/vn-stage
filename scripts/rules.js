@@ -24,6 +24,34 @@ export function orderMembers(members, order = []) {
 }
 
 /**
+ * A cast from before schema 1 in today's form (the one-time migration): the
+ * removed "Full" side reads as left (alone, a side is centred anyway), and an
+ * old whole-party entry becomes the party's `members` ({ id, uuid, name }) in
+ * its order, skipping members standing alone, with ids "<entry id>.<actor id>".
+ * For presets, `preset` marks members `partyMember: true`, and with no members
+ * known keeps the old entry as it is, so it can still fill in when loaded. On a
+ * stage an empty party has nobody to show, so the entry goes.
+ */
+export function upgradeCast(cast, members, { preset = false } = {}) {
+  const sides = ["left", "right"];
+  const alone = new Set(cast.filter((e) => !isOldPartyEntry(e)).map((e) => e.actorUuid).filter(Boolean));
+  const out = [];
+  for (const raw of cast) {
+    const e = { ...raw, side: sides.includes(raw.side) ? raw.side : "left" };
+    if (!isOldPartyEntry(e)) { out.push(e); continue; }
+    if (!members.length) { if (preset) out.push(e); continue; }
+    for (const a of orderMembers(members, e.order)) {
+      if (alone.has(a.uuid)) continue;
+      const entry = { name: a.name, actorUuid: a.uuid, side: e.side };
+      if (e.id) entry.id = `${e.id}.${a.id}`;
+      if (preset) entry.partyMember = true;
+      out.push(entry);
+    }
+  }
+  return out;
+}
+
+/**
  * A preset's saved cast fitted to today's party (`members`, in standing order).
  * Saved members still in the party keep their places; members who've left are
  * dropped; new members join right after the last saved member who's still here

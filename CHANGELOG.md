@@ -4,124 +4,33 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 
 ## [Unreleased]
 
-### Changed (audit, items 1–4)
-- The Stage and Groups windows render once per burst of changes (50 ms), instead of once per tile and setting change.
-- Adding The Party writes the Recent list once, not once per member. Only one GM re-lays out a stage when it's opened.
-- Saving a cast, a cast entry's expression or form, or a character's Flip, size or height no longer calls the layout directly: the GM's screen that made the change lays out when it lands (`updateScene`, `createSetting`/`updateSetting` in module.js). This removes the import cycles (cast ↔ layout, expressions ↔ layout, art ↔ settings), and the load check now reports any new cycle.
-- A world setting saved for the first time (`createSetting`) now refreshes the windows too.
-- Rules that need no Foundry moved to `scripts/rules.js` (party fitting, preset comparison, forms reading, group membership, Recent, the drop slot), with tests in `tools/test.mjs`.
-- Fades turn themselves off for the session after any error, removing their stand-ins and restoring full view, instead of throwing. The character menu's layer also checks the open windows, not only Foundry's internal counter.
-- README: the test command, an after-Foundry-update checklist, and a note that art folder names are keys.
+## [0.2.0] - 2026-10-21
+
+What changed since 0.1.0, as it stands now. (The day-by-day history is in the git log.)
+
+### Added
+- **Working on the stage itself.** Click a portrait for its character menu: its forms, its expressions, and for the GM Flip, Adjust, VN art…, Groups… and Remove. Drag a portrait to move the character within its side or to the other side (a marker shows where; Escape cancels); Foundry's own drag and selection box no longer start on a portrait. The GM sees each character's name on hover. Drop a Cast row, The Party, the party actor or any actor from the sidebar where they should stand.
+- **Layout for crowds** (`scripts/arrange.js`, tuned in `LAYOUT`): characters cluster from their outer edge; a side alone is centred and spreads out a little (`roomyStep`); the right 17% stays clear for Foundry's sidebar. Crowded stages share the width in proportion to each side's needs, shrink the buffers, then zoom everyone out around their faces to no less than 75%; a bottom shade hides edges that rise into view.
+- **The Party** as a shortcut: Left or Right gathers every PF2e party member (PCs and travelling NPCs; familiars stay off) on that side, the lit toggle takes them all off, and each stage remembers the order they last stood in (`partyOrder`). Members are otherwise ordinary characters.
+- **Presets**, shown as chips: click to load (background and cast), right-click for Update from stage, Rename…, Groups…, Delete; + in the header saves the stage. The preset last loaded or saved is lit, with a dot and an Update button once the stage changes. Presets mark party members and fit today's party on load (members still here keep their places, new ones join beside them, leavers stay off), and save each character's form. A preset can be in several groups.
+- **The Groups window** (gear button by the Group menu, replacing Edit group mode): every group's characters, backgrounds and presets, managed the same way (× takes one out, + Add… opens a checklist). Groups now also hold single background images and presets, and pick up automatic folders: the "Group background folders" setting (`{group}` pattern) and the `vn-stage.groupFolders` hook for other modules. Groups… in the character menu, on presets and on backgrounds.
+- **Art keys and forms:** a character's art is a folder under the art root, its forms subfolders with their own VN portraits. An actor finds its art by its VN art… link, its name, then its own images. A character with several forms switches between them from the menu (crossfade; the expression carries over when it can); the form is saved on the actor, so it follows them and players can switch their own. Forms and expressions can be chosen off stage from a Cast row's menu, before adding the character.
+- **Video backgrounds** (`.webm`, `.mp4`, `.m4v`, `.ogv`), looping silently; their thumbnails play on hover. The Background strip shows three rows of fixed-size thumbnails, then scrolls.
+- **Cast list:** one row per world actor with VN art (linked, so owners keep control), plus art no actor uses; lit Left/Right toggles place, move or remove; searching finds characters outside the group too, under "Not in this group". Right-click a row for the character menu.
+- **Fades** (`scripts/fades.js`): portraits fade in and out, backgrounds and form changes crossfade, drawn by each screen with no document updates; off for reduced motion, and off for the session after any error.
+- **Stored-data upgrades** (`scripts/migrate.js`, world setting `schema`): the active GM's screen runs any pending upgrade once when Foundry is ready. Schema 1 converts old whole-party entries, the removed Full side, and presets' single `group`.
+- **Checks:** `tools/check-load.mjs` also reports import cycles; `tools/test.mjs` tests the Foundry-free rules in `scripts/rules.js` and `scripts/arrange.js`.
+
+### Changed
+- The Stage window only runs the scene (group, presets, background, cast); what a group holds is managed in the Groups window. It renders once per burst of changes.
+- The layout runs from hooks on the screen of the GM who made a change, so saving data never calls it directly (and the scripts have no import cycles).
+- The character menu opens above every window.
+
+### Fixed
+- One unreadable or differently shaped manifest no longer empties the Cast list or stops the Stage window opening; both shapes of `forms` are read.
 
 ### Removed
-- `resolveCast` (it had become another name for `getCast`). `partyEntryIds` moved to `cast.js`; Cast rows and their toggles share one matching rule.
-
-### Added
-- Set a character's form and expression before adding them: right-clicking an off-stage Cast row opens the character menu with its Forms and Expressions rows ("arrives like this"). For a character with an actor the choice is saved on the actor, as on stage; for art alone it's remembered on this screen until they're next added (`scripts/pending.js`), and a reload forgets it.
-
-### Fixed
-- Right-clicking a Cast row opened the character menu behind the Stage window. The menu now opens above every window.
-
-### Added
-- Forms: a character with more than one form that has a VN portrait gets a Forms row at the top of its character menu ("Base", then each form). Clicking one switches the portrait with a crossfade; the expression carries over when the form has it, otherwise neutral, and each form keeps its own Adjust settings. A character with an actor keeps its form on the actor (flag `vn-stage.form`), so it follows them to every stage and players can switch their own character's form; art alone keeps it on its cast entry. Presets save each character's form and put it back on load. Combat-only forms aren't offered.
-
-### Changed
-- Forms no longer get their own rows in the Cast list; they're switched from the character menu. An actor linked to a form with VN art… still has its row.
-
-### Fixed
-- The Stage window wouldn't open when a manifest wrote `forms` as an object keyed by form (with `dir`) instead of a list (with `folder`): "forms is not iterable". Both shapes are read now, and a form with no manifest of its own uses its entry in the parent's manifest (files relative to the parent, the parent's VN sizing). One unreadable manifest now leaves out only that character, never the whole Cast list.
-
-### Changed
-- Party members are ordinary characters: move, switch sides, reorder or remove each one like anyone else (their Cast list toggles work too). The Party is a shortcut: its Left or Right toggle puts every member on that side (members already there stay put, the rest join at the back), the lit toggle takes them all off, and dropping The Party or the party actor on the stage gathers them all at the drop point. Its row is lit when they all stand on one side, and faintly lit when some are on stage. Each stage remembers the order its party members last stood in (scene flag `partyOrder`) for the next time they're added together.
-- Presets mark party members (`partyMember`). On load, members still in the party stand where they were saved, new members join right after them, and members who've left stay off.
-- Stages and presets with the old whole-party entry read it as its members, in its order.
-
-### Removed
-- The live party entry: a mid-scene change to the PF2e party no longer changes the stage by itself (add The Party again, or load a preset). Reordering within the party (the blue marker), the party's moves when dragging a member, the Party items in the character menu, and `setPartyOrder` are gone.
-
-### Added
-- Fades (`scripts/fades.js`): portraits (and the bottom shade) fade in when they arrive and out when they leave (0.35 s); a new background crossfades over the old one (0.6 s), including videos. Loading a preset crossfades the whole cast. Moves and expression changes stay instant. Every screen draws its own fades, so there are no extra document updates; viewers whose system asks for reduced motion see instant changes.
-
-### Fixed
-- Removing a hand-added folder that is also one of the group's automatic folders hid the automatic one too. Now only the hand-added entry goes, and the automatic folder shows in its place.
-
-### Changed
-- Presets are compact chips that wrap several to a row (the section scrolls past about three rows). Click to load; right-click for Update from stage, Rename…, Groups…, Delete. The lit preset's chip is highlighted, with a dot once the stage changes. Update (when the lit preset has changed) and + (save the stage as a preset) sit in the section header. Group names moved into each chip's tooltip.
-- The Background strip shows three rows of thumbnails before it scrolls (was about five), so the Cast list gets more room. Thumbnails stay a fixed size (5.5rem wide) instead of stretching with the window; a wider window fits more per row.
-
-### Added
-- The Groups window (the gear button next to the Group menu): every group on the left; the selected group's Characters, Background folders and Presets on the right, all managed the same way (× takes one out, + Add… opens a checklist to bring more in). Tagged characters and automatic folders are marked. Rename and Delete sit by the group's name. Replaces Edit group mode.
-- Automatic group folders: the "Group background folders" setting (a folder pattern with `{group}`), and the `vn-stage.groupFolders` hook for other modules (`Hooks.on("vn-stage.groupFolders", (group, folders) => folders.push(…))`). A folder is used only when it exists; removing one hides it from that group.
-- Presets can belong to several groups. Loading one keeps the stage's group when the preset is in it, otherwise selects its first group.
-- The preset last loaded or saved on a stage is lit; once the stage changes it shows a dot and an Update button. Each preset's ⋯ menu (or right-click): Update from stage, Rename…, Groups…, Delete. "Save stage as preset…" sits under the list.
-- Groups… in the character menu (always, not just while editing a group) and in a preset's menu: tick the groups it belongs to, with New group….
-- Single backgrounds in groups: the Groups window's Backgrounds section takes folders (Add folder…) and single images or videos (Add background…). In the Stage window they get their own strip, "Single backgrounds". Right-click any background thumbnail for Groups…; a background shown from Browse… that's in no strip appears after the default one (dashed), so it can be added.
-- Searching the Cast list finds everyone: the group's matches first, then matches from outside the group under "Not in this group", with the same Left/Right toggles. With the search empty, only the group shows.
-- Right-clicking a Cast row opens the character menu: the full menu when they're on stage; Flip and Groups… when they aren't.
-
-### Changed
-- Cast rows are actors: one row per world actor with VN art, linked to it, so its owners control its expression even when it found its art by VN art… or its images. Several actors sharing one character's art each get a row (with the art's name beside theirs). Art no actor uses stays as an art-only row.
-- The Stage window only runs the scene: Edit group mode, New group, the folder chips and Show everyone are gone (all in the Groups window now). Refresh also re-reads the background folders.
-
-### Removed
-- `StageWindow.editingGroup`.
-
-### Added
-- Video backgrounds: `.webm` (and `.mp4`, `.m4v`, `.ogv`) files can be chosen with Browse… and appear in the Background strip, marked with a film icon; their thumbnails play while hovered. On the stage they loop silently on every screen (the background tile's video settings).
-
-### Fixed
-- The Background section scrolls when it holds many images (up to about four rows show; Browse and the folder stay below), and keeps its scroll position when the window refreshes.
-- The Party showed only the party's PCs; NPCs in the party (companions in Curse of Strahd) now stand with it too. Familiars stay off the stage.
-
-### Added
-- Art keys: a character's art is a folder under the art root, a character ("Rahadin") or a form with its own VN portrait ("Rahadin/forms/corrupted"). Forms appear in the Cast list as "Rahadin · the Corrupted". Saved choices (flip, scale, height, size) and group membership belong to the key.
-- An actor finds its art by, in order: its VN art… link (an actor flag), a folder named like it, its own images (portrait, token, ring subject) when they live in the art folder, walking up to the nearest folder with a VN portrait (a combat-only form uses its character's art). Several actors can share one character, and renaming an actor loses nothing.
-- VN art… (GM character menu, for actors): pick the character or form an actor uses, with search; Automatic clears the link and shows what it would find.
-- Names shown on the stage (menu, hover, drag, Adjust) are the actor's current name.
-
-### Added
-- Dropping the party actor from the sidebar onto a stage puts The Party where it's dropped, instead of a party token.
-
-### Fixed
-- A party member could stand on the stage twice: once with The Party and once on their own (dropped from the sidebar or added from the Cast list). Adding a party member while The Party is on stage now does nothing (with a notice); adding The Party absorbs members already standing on their own; and drawing the stage never shows anyone twice (also after joining the party while on stage).
-
-### Added
-- Rearrange The Party: drop a party member inside the party's span to move them within it (a blue marker); drop them anywhere else to move the whole party (the gold marker, as before). While dragging, only the member dims until the drop would move the party, then the whole party dims. The order is kept on the party entry (`order`, actor ids), so presets keep it; new members stand at the back, by name.
-
-### Changed
-- Clusters with room to spare spread out: neighbours stand up to 75% of their average width apart (`LAYOUT.roomyStep`) instead of 55%, so a party alone on the stage isn't bunched. Crowding and zoom still use 55%, so crowded stages are unchanged.
-
-### Removed
-- The Party's whole-width side (Full): in the Cast list, the character menu and the layout (`LAYOUT.fullStep`). A side alone on the stage is already centred. Stages and presets saved with it read as Left.
-
-### Changed
-- Cast list: Left and Right are lit toggles, one at a time. Turn one on to place the character or move them; turn the lit one off to remove them. The separate remove buttons are gone. A party member's toggles are disabled ("On stage with The Party").
-- Cast list: the whole row of anyone on the stage lights up.
-
-### Added
-- Drag a portrait on the stage to move the character within its side or to the other side (a party member moves The Party). A marker shows where it will land; Escape cancels. The press is the module's alone: Foundry no longer starts its own selection box or drag on a portrait.
-- Drag a Cast row, The Party, or an actor from the sidebar onto the stage to put them where they're dropped (the marker shows while dragging).
-- Cast list: a remove button on every character standing on the stage, and on The Party.
-- GM hover: the character's name above their head, and a pointer cursor.
-
-### Changed
-- Characters are worked on the stage itself: clicking a portrait opens its character menu (`scripts/interact.js`), with the expressions and, for the GM, a row of actions: Flip, Adjust, Add to group (while editing one), Remove; for a party member, The Party's left, right and whole-width sides and Remove The Party. Players still get only the expressions of characters they own.
-- The Stage window's On stage section is gone (its rows, expression menus and buttons); Reset everyone to neutral moves to the Cast heading.
-
-### Changed
-- Crowded stages zoom out around each face's centre instead of the ground: faces stay where they stood at full size and only shrink, so they don't sink behind bottom HUDs; bodies shrink upward. The face guide follows.
-
-### Added
-- Bottom shade: while any portrait's cut-off bottom edge is in view (zoomed out, or raised with Adjust), a dark band fades in over the 10% above the highest exposed edge and is solid below it. Two locked tiles (`assets/shade-fade.webp`, `assets/shade-solid.webp`); none at full size.
-
-### Changed
-- Crowded stages: one pass of fixed rules driven by crowding (the width the clusters need at full size, with full buffers, over the width available). The two sides always share the width in proportion to what each needs, so spacing matches; the outer pads and centre gap shrink smoothly to a quarter between crowding 1.0 and 1.2; then every portrait zooms out alike, to no less than 75% (the face guide follows); only past that do clusters overlap more. The arithmetic is in `scripts/arrange.js`, free of Foundry calls; tuning values in `LAYOUT`. `VNStage.status()` reports the zoom, crowding and buffers.
-- Layout clusters characters instead of spreading them across half the frame: neighbours overlap by about half a portrait, and a cluster squeezes only when it runs out of room. With both sides in use, each cluster sits at its own outer edge; with one side in use, that side gets the whole width and its cluster is centred. The Party at full width is centred with wider spacing. The right 17% of the frame stays clear for Foundry's sidebar (`LAYOUT` in `constants.js`).
-
-### Added
-- The Party: a cast entry that stands for the PF2e party's characters whenever the stage is drawn. Put it on the left, the right or the whole width (spread evenly) from the top of the Cast list; On stage shows it as one row (forward, back, side, remove) with its members beneath (expression, adjust, flip). A change to the party's membership redraws the stage (the active GM's screen).
-- Presets: save the stage's background and cast (sides and order; The Party as an entry) under a name, and load it in one click from the new Presets section. A preset saved with a group selected belongs to that group, is listed with it, and selects it again when loaded. Saving over a name asks first; deleting asks first.
-- API: `resolveCast`, `addParty`, `setCast`, `listPresets`, `savePreset`, `loadPreset`, `deletePreset`.
+- The On stage section, Edit group mode, the whole-width (Full) side, and the live whole-party entry with its reordering and menu items.
 
 ## [0.1.0] - 2026-10-20
 

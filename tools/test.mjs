@@ -111,6 +111,19 @@ test("a preset with no party members adds nobody", () => {
   assert.deepEqual(names(R.fitPartyCast([{ name: "Strahd", side: "right" }], [A, B])), ["Strahd:right"]);
 });
 
+test("upgrading an old cast: Full reads as left; the party entry becomes its members, keeping ids", () => {
+  const old = [{ id: "s", name: "Strahd", side: "full" }, { id: "p", party: true, side: "right", order: ["b"] }, { id: "x", name: "Ana", actorUuid: "A", side: "left" }];
+  const out = R.upgradeCast(old, [A, B]);
+  assert.deepEqual(out.map((e) => `${e.id}:${e.name}:${e.side}`), ["s:Strahd:left", "p.b:Bo:right", "x:Ana:left"]);
+  assert.ok(R.upgradeCast(old, [A, B], { preset: true }).find((e) => e.name === "Bo").partyMember);
+});
+
+test("upgrading with no party known: a preset keeps the old entry (it fills in when loaded); a stage drops it", () => {
+  const old = [{ party: true, side: "left", order: [] }, { name: "Strahd", side: "right" }];
+  assert.deepEqual(R.upgradeCast(old, [], { preset: true }), old);
+  assert.deepEqual(R.upgradeCast(old, []), [{ name: "Strahd", side: "right" }]);
+});
+
 test("remembered order first, then the rest as given", () => {
   assert.deepEqual(R.orderMembers([A, B, C], ["c"]).map((a) => a.id), ["c", "a", "b"]);
 });

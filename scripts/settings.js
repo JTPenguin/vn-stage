@@ -33,6 +33,14 @@ export function registerSettings({ onArtRootChange = () => {} } = {}) {
     default: "",
   });
 
+  // The last one-time data upgrade run in this world (migrate.js).
+  game.settings.register(MODULE, "schema", {
+    scope: "world",
+    config: false,
+    type: Number,
+    default: 0,
+  });
+
   // Groups: { [id]: { label, folders: [], images: [], add: [], remove: [], hideAuto: [], deleted } }. Members also come from manifest tags.
   game.settings.register(MODULE, "groups", {
     scope: "world",

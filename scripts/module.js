@@ -15,9 +15,10 @@ import { startView, stopView, viewLocked, viewFitted } from "./view.js";
 import { StageWindow } from "./window.js";
 import { GroupsWindow } from "./groups-window.js";
 import { listPresets, savePreset, loadPreset, deletePreset, updatePreset, renamePreset, setPresetGroups } from "./presets.js";
-import { setExpression, resetAllExpressions, currentExpression, preloadStage, isRelayGM } from "./expressions.js";
+import { setExpression, setForm, resetAllExpressions, currentExpression, preloadStage, isRelayGM } from "./expressions.js";
 import { startClicks, stopClicks, dropTarget, setWindowDrag } from "./interact.js";
 import { registerFades } from "./fades.js";
+import { migrate, migrationPending } from "./migrate.js";
 
 Hooks.once("init", () => {
   registerSettings({ onArtRootChange: clearArtCache });
@@ -30,7 +31,7 @@ Hooks.once("init", () => {
     isStage, makeStage, unmakeStage, setBackground, currentBackground,
     getCast, addToCast, addParty, removeParty, partySide, setCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip,
     artIndex, characterArt, clearArtCache, layout,
-    setExpression, resetAllExpressions, currentExpression,
+    setExpression, setForm, resetAllExpressions, currentExpression,
     listPresets, savePreset, loadPreset, deletePreset, updatePreset, renamePreset, setPresetGroups,
     listGroups, getGroup, memberNames, createGroup, addFolder, addMember, groupFolders, stageGroup, setStageGroup,
     openWindow: () => StageWindow.open(),
@@ -40,6 +41,9 @@ Hooks.once("init", () => {
   game.modules.get(MODULE).api = api;
   globalThis.VNStage = api;
 });
+
+// One-time upgrades of stored data (migrate.js), by the active GM once Foundry is ready.
+Hooks.once("ready", () => migrate());
 
 // The Stage window's button, in the token controls (the GM's usual layer).
 Hooks.on("getSceneControlButtons", (controls) => {
@@ -60,7 +64,8 @@ Hooks.on("canvasReady", () => {
   preloadStage();
   StageWindow.refresh();
   // Catch up on anything that changed while this stage wasn't viewed (a flip, new art). One GM is enough.
-  if (isRelayGM() && isStage()) layout(canvas.scene);
+  // Before a data upgrade has run (the first draw comes before "ready"), migrate() lays out instead.
+  if (isRelayGM() && isStage() && !migrationPending()) layout(canvas.scene);
 });
 Hooks.on("canvasTearDown", () => {
   stopView();

@@ -2,7 +2,7 @@ import { MODULE } from "./constants.js";
 import { noteRecent } from "./groups.js";
 import { baseArtKeyOf } from "./art.js";
 import { takePending } from "./pending.js";
-import { isOldPartyEntry, orderMembers } from "./rules.js";
+import { orderMembers } from "./rules.js";
 
 /**
  * The cast is the source of truth for who stands on a stage: a scene flag
@@ -16,8 +16,8 @@ import { isOldPartyEntry, orderMembers } from "./rules.js";
  * remembers the order its party members last stood in (scene flag `partyOrder`,
  * actor ids), for the next time they're added together.
  *
- * Older stages have one entry for the whole party, { id, party: true, side, order };
- * it's read as its members, in that order.
+ * Older stages had one entry for the whole party, { id, party: true, side, order };
+ * migrate.js turns it into its members once.
  */
 
 export const SIDES = ["left", "right"];
@@ -60,21 +60,9 @@ function memberEntry(actor, side, id = foundry.utils.randomID()) {
   return { id, name: actor.name, actorUuid: actor.uuid, side };
 }
 
-/**
- * The cast, with any old whole-party entry read as its members (ids
- * "<entry id>.<actor id>", so they stay the same until the cast is next saved).
- */
+/** The cast (a copy). Older stored forms are upgraded once by migrate.js, not here. */
 export function getCast(scene = canvas.scene) {
-  const raw = foundry.utils.deepClone(scene?.getFlag(MODULE, "cast") ?? []);
-  const alone = new Set(raw.filter((e) => !isOldPartyEntry(e)).map((e) => e.actorUuid).filter(Boolean));
-  const cast = [];
-  for (const e of raw) {
-    // The Party's old "whole width" side (removed 2026-10-20) reads as the left: alone, a side is centred anyway.
-    if (!SIDES.includes(e.side)) e.side = "left";
-    if (!isOldPartyEntry(e)) cast.push(e);
-    else for (const a of orderedMembers(e.order)) if (!alone.has(a.uuid)) cast.push(memberEntry(a, e.side, `${e.id}.${a.id}`));
-  }
-  return cast;
+  return foundry.utils.deepClone(scene?.getFlag(MODULE, "cast") ?? []);
 }
 
 /** Save the cast, remembering the order its party members stand in. */

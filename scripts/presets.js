@@ -17,15 +17,11 @@ import { getGroup, stageGroup, setStageGroup } from "./groups.js";
  * the Stage window can light it and offer Update once the stage has changed.
  *
  * Stored in a world setting: { [id]: { name, groups: [], background, cast, saved } }.
- * Older presets have `group` (one id or null) instead; they're read as `groups`.
  */
 
 function all() {
   const presets = foundry.utils.deepClone(game.settings.get(MODULE, "presets"));
-  for (const p of Object.values(presets)) {
-    p.groups ??= p.group ? [p.group] : [];
-    delete p.group;
-  }
+  for (const p of Object.values(presets)) p.groups ??= []; // older `group` fields are upgraded once by migrate.js
   return presets;
 }
 
