@@ -4,6 +4,18 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 
 ## [Unreleased]
 
+### Changed (audit, items 1–4)
+- The Stage and Groups windows render once per burst of changes (50 ms), instead of once per tile and setting change.
+- Adding The Party writes the Recent list once, not once per member. Only one GM re-lays out a stage when it's opened.
+- Saving a cast, a cast entry's expression or form, or a character's Flip, size or height no longer calls the layout directly: the GM's screen that made the change lays out when it lands (`updateScene`, `createSetting`/`updateSetting` in module.js). This removes the import cycles (cast ↔ layout, expressions ↔ layout, art ↔ settings), and the load check now reports any new cycle.
+- A world setting saved for the first time (`createSetting`) now refreshes the windows too.
+- Rules that need no Foundry moved to `scripts/rules.js` (party fitting, preset comparison, forms reading, group membership, Recent, the drop slot), with tests in `tools/test.mjs`.
+- Fades turn themselves off for the session after any error, removing their stand-ins and restoring full view, instead of throwing. The character menu's layer also checks the open windows, not only Foundry's internal counter.
+- README: the test command, an after-Foundry-update checklist, and a note that art folder names are keys.
+
+### Removed
+- `resolveCast` (it had become another name for `getCast`). `partyEntryIds` moved to `cast.js`; Cast rows and their toggles share one matching rule.
+
 ### Added
 - Set a character's form and expression before adding them: right-clicking an off-stage Cast row opens the character menu with its Forms and Expressions rows ("arrives like this"). For a character with an actor the choice is saved on the actor, as on stage; for art alone it's remembered on this screen until they're next added (`scripts/pending.js`), and a reload forgets it.
 

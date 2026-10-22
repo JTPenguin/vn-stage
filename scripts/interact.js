@@ -1,11 +1,12 @@
 import { MODULE, PART, FRAME, LAYOUT } from "./constants.js";
 import { characterArt, artKeyOf, baseArtKeyOf, formsFor } from "./art.js";
 import { ArtPicker } from "./art-picker.js";
-import { getCast, resolveCast, characterPrefs, setFlip, removeFromCast, moveEntry, displayName } from "./cast.js";
+import { getCast, characterPrefs, setFlip, removeFromCast, moveEntry, displayName } from "./cast.js";
 import { placements } from "./layout.js";
 import { canChange, currentExpression, chooseExpression, chooseForm, offstageEntry } from "./expressions.js";
 import { isStage } from "./stage.js";
 import { AdjustWindow } from "./adjust.js";
+import { dropSlot } from "./rules.js";
 import { chooseCharacterGroups } from "./groups-window.js";
 
 /**
@@ -57,7 +58,7 @@ function onDown(event) {
   if (event.button !== 0 || event.target !== canvas.app?.view || !isStage()) return;
   const tile = portraitAt(event.clientX, event.clientY);
   if (!tile) return closeMenu();
-  const entry = resolveCast().find((e) => e.id === tile.document.getFlag(MODULE, "castId"));
+  const entry = getCast().find((e) => e.id === tile.document.getFlag(MODULE, "castId"));
   if (!entry) return;
   event.stopImmediatePropagation();
   event.preventDefault();
@@ -167,22 +168,7 @@ export function dropTarget(clientX, clientY, ignore = null) {
   }
   const order = getCast().filter((e) => centres.has(e.id));
   const sideOf = (s) => order.filter((e) => e.side === s).map((e) => centres.get(e.id));
-  const left = sideOf("left"), right = sideOf("right");
-
-  // Which side: the gap between the two clusters, or the middle of the usable width.
-  const boundary = left.length && right.length
-    ? (Math.max(...left) + Math.min(...right)) / 2
-    : (FRAME.width * (1 - LAYOUT.sidebar)) / 2;
-  const side = x < boundary ? "left" : "right";
-  const list = side === "left" ? left : right;
-  // Standing order runs from the outer edge: left to right on the left, right to left on the right.
-  const inward = side === "left" ? (c) => c < x : (c) => c > x;
-  const index = list.filter(inward).length;
-  const prev = list[index - 1], next = list[index];
-  const gap = 0.06 * FRAME.width * (side === "left" ? 1 : -1);
-  const mx = prev !== undefined && next !== undefined ? (prev + next) / 2
-    : prev !== undefined ? prev + gap : next !== undefined ? next - gap : x;
-  return { side, index, x: mx };
+  return dropSlot(x, sideOf("left"), sideOf("right"), FRAME.width, LAYOUT.sidebar);
 }
 
 /** A vertical line on the GM's screen where a drop would land. */
@@ -331,8 +317,7 @@ async function openMenu(entry, clientX, clientY) {
     el.append(row);
   }
 
-  // Above every window (the Stage window's Cast rows open it too); Foundry raises each window it opens past the last.
-  el.style.zIndex = String((foundry.applications.api.ApplicationV2._maxZ ?? 100) + 1);
+  el.style.zIndex = String(topZ() + 1);
   document.body.append(el);
   // Beside the pointer, kept on screen.
   const { width, height } = el.getBoundingClientRect();
@@ -371,6 +356,17 @@ function menuButton(className, html, run) {
     await run();
   });
   return button;
+}
+
+/**
+ * Above every window (the Stage window's Cast rows open the menu too). Foundry
+ * raises each window it opens past the last; its counter is internal
+ * (ApplicationV2._maxZ), so the open windows' own layers are checked as well.
+ */
+function topZ() {
+  const windows = [...document.querySelectorAll(".application, .app, .window-app")]
+    .map((w) => Number(getComputedStyle(w).zIndex) || 0);
+  return Math.max(100, foundry.applications.api.ApplicationV2?._maxZ ?? 0, ...windows);
 }
 
 export function closeMenu() {

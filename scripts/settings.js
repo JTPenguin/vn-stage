@@ -1,7 +1,7 @@
 import { MODULE } from "./constants.js";
-import { clearArtCache } from "./art.js";
 
-export function registerSettings() {
+/** `onArtRootChange` runs when the art folder changes (module.js passes the art cache's clear, so this file needs no import of art.js). */
+export function registerSettings({ onArtRootChange = () => {} } = {}) {
   game.settings.register(MODULE, "artRoot", {
     name: "VNSTAGE.Settings.ArtRoot.Name",
     hint: "VNSTAGE.Settings.ArtRoot.Hint",
@@ -10,7 +10,7 @@ export function registerSettings() {
     type: String,
     default: "",
     filePicker: "folder",
-    onChange: () => clearArtCache(),
+    onChange: () => onArtRootChange(),
   });
 
   game.settings.register(MODULE, "safetyBackground", {

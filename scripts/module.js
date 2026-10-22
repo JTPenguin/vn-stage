@@ -7,12 +7,12 @@
 import { MODULE } from "./constants.js";
 import { registerSettings } from "./settings.js";
 import { isStage, makeStage, unmakeStage, setBackground, currentBackground } from "./stage.js";
-import { getCast, resolveCast, addToCast, addParty, removeParty, partySide, setCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip } from "./cast.js";
+import { getCast, addToCast, addParty, removeParty, partySide, partyEntryIds, setCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip } from "./cast.js";
 import { artIndex, characterArt, clearArtCache } from "./art.js";
 import { layout, lastArrangement } from "./layout.js";
 import { listGroups, getGroup, memberNames, createGroup, addFolder, addMember, groupFolders, stageGroup, setStageGroup } from "./groups.js";
 import { startView, stopView, viewLocked, viewFitted } from "./view.js";
-import { StageWindow, partyEntryIds } from "./window.js";
+import { StageWindow } from "./window.js";
 import { GroupsWindow } from "./groups-window.js";
 import { listPresets, savePreset, loadPreset, deletePreset, updatePreset, renamePreset, setPresetGroups } from "./presets.js";
 import { setExpression, resetAllExpressions, currentExpression, preloadStage, isRelayGM } from "./expressions.js";
@@ -20,7 +20,7 @@ import { startClicks, stopClicks, dropTarget, setWindowDrag } from "./interact.j
 import { registerFades } from "./fades.js";
 
 Hooks.once("init", () => {
-  registerSettings();
+  registerSettings({ onArtRootChange: clearArtCache });
   registerFades();
   foundry.applications.handlebars.loadTemplates({
     "vn-stage.bg": `modules/${MODULE}/templates/stage-bg.hbs`,
@@ -28,7 +28,7 @@ Hooks.once("init", () => {
   });
   const api = {
     isStage, makeStage, unmakeStage, setBackground, currentBackground,
-    getCast, resolveCast, addToCast, addParty, removeParty, partySide, setCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip,
+    getCast, addToCast, addParty, removeParty, partySide, setCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip,
     artIndex, characterArt, clearArtCache, layout,
     setExpression, resetAllExpressions, currentExpression,
     listPresets, savePreset, loadPreset, deletePreset, updatePreset, renamePreset, setPresetGroups,
@@ -59,20 +59,23 @@ Hooks.on("canvasReady", () => {
   startClicks();
   preloadStage();
   StageWindow.refresh();
-  // Catch up on anything that changed while this stage wasn't viewed (a flip, new art).
-  if (game.user.isGM && isStage()) layout(canvas.scene);
+  // Catch up on anything that changed while this stage wasn't viewed (a flip, new art). One GM is enough.
+  if (isRelayGM() && isStage()) layout(canvas.scene);
 });
 Hooks.on("canvasTearDown", () => {
   stopView();
   stopClicks();
 });
 
-// Stage or cast flags changed on the scene being viewed.
-Hooks.on("updateScene", (scene, changes) => {
-  if (scene.id !== canvas.scene?.id) return;
+// Stage or cast flags changed. A cast change is laid out by the GM who made it
+// (on any stage, viewed or not); the viewed stage's screens catch up.
+Hooks.on("updateScene", (scene, changes, _options, userId) => {
   if (!foundry.utils.hasProperty(changes, `flags.${MODULE}`)) return;
+  const castChanged = foundry.utils.hasProperty(changes, `flags.${MODULE}.cast`);
+  if (castChanged && userId === game.user.id && game.user.isGM) layout(scene);
+  if (scene.id !== canvas.scene?.id) return;
   if (isStage(scene) !== viewFitted()) startView(); // became, or stopped being, a stage
-  if (foundry.utils.hasProperty(changes, `flags.${MODULE}.cast`)) preloadStage(scene);
+  if (castChanged) preloadStage(scene);
   StageWindow.refresh();
 });
 
@@ -83,7 +86,7 @@ Hooks.on("updateActor", (actor, changes) => {
   // The party's membership changed: The Party's row in the Stage window shows who's on stage.
   if (actor === game.actors.party && foundry.utils.hasProperty(changes, "system.details.members")) return StageWindow.refresh();
   if (!foundry.utils.hasProperty(changes, `flags.${MODULE}`)) return;
-  const onStage = resolveCast().some((e) => e.actorUuid === actor.uuid);
+  const onStage = getCast().some((e) => e.actorUuid === actor.uuid);
   if (!onStage) return;
   if (isRelayGM()) layout(canvas.scene);
   StageWindow.refresh();
@@ -94,12 +97,18 @@ for (const hook of ["createTile", "updateTile", "deleteTile"]) {
   Hooks.on(hook, (tile) => { if (tile.parent?.id === canvas.scene?.id) StageWindow.refresh(); });
 }
 
-Hooks.on("updateSetting", (setting) => {
+// A world setting saved for the first time is created, not updated, so both count.
+Hooks.on("createSetting", (setting, _options, userId) => onSettingChanged(setting, userId));
+Hooks.on("updateSetting", (setting, _changes, _options, userId) => onSettingChanged(setting, userId));
+
+function onSettingChanged(setting, userId) {
   const keys = ["characterPrefs", "groups", "recent", "presets", "groupFolders"].map((k) => `${MODULE}.${k}`);
   if (!keys.includes(setting.key)) return;
+  // Flip, size or height changed by this GM: the viewed stage re-lays out.
+  if (setting.key === `${MODULE}.characterPrefs` && userId === game.user.id && game.user.isGM && isStage()) layout(canvas.scene);
   StageWindow.refresh();
   GroupsWindow.refresh();
-});
+}
 
 // GM shortcut: drop an actor on the left or right half of a stage.
 // GM: drop an actor or the party (sidebar), a Cast row or The Party (Stage window) where it should stand.

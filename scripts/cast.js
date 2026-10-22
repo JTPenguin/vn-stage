@@ -1,13 +1,14 @@
 import { MODULE } from "./constants.js";
-import { layout } from "./layout.js";
 import { noteRecent } from "./groups.js";
 import { baseArtKeyOf } from "./art.js";
 import { takePending } from "./pending.js";
+import { isOldPartyEntry, orderMembers } from "./rules.js";
 
 /**
  * The cast is the source of truth for who stands on a stage: a scene flag
  * listing each character in standing order. Portrait tiles are drawn from it
- * by `layout`, so every change here ends with a layout.
+ * by `layout`, which the GM's screen runs whenever its own change to a cast
+ * flag lands (module.js), so nothing here calls it.
  *
  * Entry: { id, name, actorUuid|null, side: "left"|"right" }. Party members are
  * ordinary entries; The Party is only a shortcut that adds, gathers or removes
@@ -35,16 +36,6 @@ export function hasParty() {
   return !!game.actors.party;
 }
 
-/** An entry from before party members were separate: it stands for the whole party. */
-export function isOldPartyEntry(e) {
-  return !!e?.party && !e.name && !e.actorUuid;
-}
-
-/** The cast, kept for the many callers that drew The Party's members from it; it's the same list now. */
-export function resolveCast(scene = canvas.scene) {
-  return getCast(scene);
-}
-
 /** The name to show for a cast entry: its actor's current name, or its own. */
 export function displayName(entry) {
   return (entry.actorUuid && fromUuidSync(entry.actorUuid)?.name) || entry.name;
@@ -61,11 +52,7 @@ export async function setActorArt(actorUuid, key) {
 
 /** The party's members in this stage's remembered order (actor ids, `order` for old entries); the rest after, as the system lists them. */
 export function orderedMembers(order = []) {
-  const rank = (a) => { const i = order.indexOf(a.id); return i === -1 ? Infinity : i; };
-  return partyMembers()
-    .map((a, i) => ({ a, i }))
-    .sort((x, y) => rank(x.a) - rank(y.a) || x.i - y.i)
-    .map(({ a }) => a);
+  return orderMembers(partyMembers(), order);
 }
 
 /** An entry for one party member. */
@@ -96,8 +83,7 @@ async function saveCast(scene, cast) {
   const standing = cast.filter((e) => members.has(e.actorUuid)).map((e) => fromUuidSync(e.actorUuid)?.id).filter(Boolean);
   const before = scene.getFlag(MODULE, "partyOrder") ?? [];
   const partyOrder = [...standing, ...before.filter((id) => !standing.includes(id))];
-  await scene.update({ [`flags.${MODULE}.cast`]: cast, [`flags.${MODULE}.partyOrder`]: partyOrder });
-  return layout(scene);
+  return scene.update({ [`flags.${MODULE}.cast`]: cast, [`flags.${MODULE}.partyOrder`]: partyOrder });
 }
 
 function requireGM() {
@@ -150,7 +136,8 @@ export async function addParty(side = "left", { index = null, scene = canvas.sce
     insertAt(rest, e, at);
     if (at !== null) at++;
   }
-  for (const a of moving) await noteRecent((await baseArtKeyOf({ name: a.name, actorUuid: a.uuid })) ?? a.name);
+  const keys = await Promise.all(moving.map(async (a) => (await baseArtKeyOf({ name: a.name, actorUuid: a.uuid })) ?? a.name));
+  await noteRecent(keys);
   return saveCast(scene, rest);
 }
 
@@ -159,6 +146,12 @@ export async function removeParty({ scene = canvas.scene } = {}) {
   requireGM();
   const members = new Set(partyMembers().map((a) => a.uuid));
   return saveCast(scene, getCast(scene).filter((e) => !members.has(e.actorUuid)));
+}
+
+/** The cast entry ids of the party members on stage (left out when working out where the party is dropped). */
+export function partyEntryIds(scene = canvas.scene) {
+  const members = new Set(partyMembers().map((a) => a.uuid));
+  return getCast(scene).filter((e) => members.has(e.actorUuid)).map((e) => e.id);
 }
 
 /** Where the party stands: "left" or "right" when every member is on stage on that side, otherwise null. */
@@ -251,7 +244,6 @@ export async function setPrefs(name, patch) {
   requireGM();
   const all = foundry.utils.deepClone(game.settings.get(MODULE, "characterPrefs"));
   all[name] = { ...all[name], ...patch };
-  await game.settings.set(MODULE, "characterPrefs", all);
-  // Re-lay out the viewed stage; others pick it up the next time they're laid out.
-  return layout(canvas.scene);
+  // The viewed stage re-lays out when the setting lands (module.js); others catch up when next viewed.
+  return game.settings.set(MODULE, "characterPrefs", all);
 }

@@ -50,8 +50,14 @@ export class GroupsWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     return this.#instance.render({ force: true });
   }
 
+  static #refreshTimer = null;
+
+  /** Re-render if open; calls within 50 ms make one render (see StageWindow.refresh). */
   static refresh() {
-    if (this.#instance?.rendered) this.#instance.render();
+    clearTimeout(this.#refreshTimer);
+    this.#refreshTimer = setTimeout(() => {
+      if (this.#instance?.rendered) this.#instance.render();
+    }, 50);
   }
 
   #selected = null;

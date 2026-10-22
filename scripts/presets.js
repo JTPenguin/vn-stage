@@ -1,5 +1,6 @@
 import { MODULE } from "./constants.js";
-import { getCast, setCast, partyMembers, orderedMembers, isOldPartyEntry } from "./cast.js";
+import { getCast, setCast, partyMembers, orderedMembers } from "./cast.js";
+import { fitPartyCast, stable } from "./rules.js";
 import { currentBackground, setBackground, decodePath } from "./stage.js";
 import { getGroup, stageGroup, setStageGroup } from "./groups.js";
 
@@ -84,37 +85,6 @@ async function applyForms(cast) {
   return cast;
 }
 
-/**
- * A preset's cast fitted to today's party. Saved members still in the party keep
- * their places; members who've left are dropped; new members join right after
- * the last saved member who's still here (or where the first saved member stood).
- * An old whole-party entry becomes every member, where it stood.
- */
-function fitParty(saved, scene) {
-  const current = orderedMembers(scene.getFlag(MODULE, "partyOrder") ?? []);
-  const here = new Set(current.map((a) => a.uuid));
-  // Members the preset already places (marked, or standing alone in an older preset).
-  const placed = new Set(saved.filter((e) => !isOldPartyEntry(e) && here.has(e.actorUuid)).map((e) => e.actorUuid));
-  const newcomers = (side) => current.filter((a) => !placed.has(a.uuid))
-    .map((a) => ({ name: a.name, actorUuid: a.uuid, side }));
-  const out = [];
-  let anchor = null; // where newcomers go: { at (index in out), side }
-  for (const e of saved) {
-    if (isOldPartyEntry(e)) {
-      for (const a of orderedMembers(e.order)) if (!placed.has(a.uuid)) { out.push({ name: a.name, actorUuid: a.uuid, side: e.side }); placed.add(a.uuid); }
-      continue;
-    }
-    if (!e.partyMember) { out.push(e); continue; }
-    if (here.has(e.actorUuid)) {
-      const { partyMember: _p, ...rest } = e;
-      out.push(rest);
-      anchor = { at: out.length, side: e.side };
-    } else anchor ??= { at: out.length, side: e.side };
-  }
-  if (anchor) out.splice(anchor.at, 0, ...newcomers(anchor.side));
-  return out;
-}
-
 /** Save the viewed stage as a new preset (or over the one with the same name in the stage's group). */
 export async function savePreset(name, { scene = canvas.scene } = {}) {
   requireGM();
@@ -190,7 +160,8 @@ export async function loadPreset(id, { scene = canvas.scene } = {}) {
   const groups = preset.groups.filter((g) => getGroup(g));
   if (groups.length && !groups.includes(stageGroup(scene))) await setStageGroup(groups[0], scene);
   if (preset.background) await setBackground(preset.background, { scene });
-  await setCast(await applyForms(fitParty(preset.cast ?? [], scene)), { scene });
+  const members = orderedMembers(scene.getFlag(MODULE, "partyOrder") ?? []);
+  await setCast(await applyForms(fitPartyCast(preset.cast ?? [], members)), { scene });
   await scene.setFlag(MODULE, "preset", id);
 }
 
@@ -213,15 +184,6 @@ export function stagePreset(scene = canvas.scene) {
   const same = (a, b) => (a ? decodePath(a) : null) === (b ? decodePath(b) : null);
   const changed = !same(now.background, preset.background) || stable(now.cast) !== stable(preset.cast ?? []);
   return { id, changed };
-}
-
-/** JSON with sorted keys, so entries compare equal whatever order their fields were written in. */
-function stable(value) {
-  if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`;
-  if (value && typeof value === "object") {
-    return `{${Object.keys(value).filter((k) => value[k] != null).sort().map((k) => `${JSON.stringify(k)}:${stable(value[k])}`).join(",")}}`;
-  }
-  return JSON.stringify(value ?? null);
 }
 
 function today() {

@@ -1,5 +1,8 @@
 import { MODULE } from "./constants.js";
 import { artRoot } from "./settings.js";
+import { formsOf, familyOf } from "./rules.js";
+
+export { formsOf, familyOf };
 
 /**
  * Character art by convention: `<art root>/<key>/` holds `portrait.webp`
@@ -61,18 +64,6 @@ export async function characterArt(name) {
     groups: Array.isArray(m.groups) ? m.groups : [],
     expressions,
   };
-}
-
-/**
- * A manifest's forms as a list of { form, label, folder }, whichever way it
- * writes them: a list with `folder` (the pipeline's form tool), or an object
- * keyed by form with `dir` (forms made by hand, such as a ghost pass).
- */
-export function formsOf(m) {
-  const raw = m?.forms;
-  const list = Array.isArray(raw) ? raw
-    : raw && typeof raw === "object" ? Object.entries(raw).map(([form, f]) => ({ form, ...f })) : [];
-  return list.map((f) => ({ ...f, folder: (f.folder ?? f.dir ?? "").replace(/\/$/, "") })).filter((f) => f.folder);
 }
 
 /**
@@ -192,12 +183,6 @@ export async function baseArtKeyOf(entry) {
 export function chosenForm(entry) {
   const actor = entry.actorUuid ? fromUuidSync(entry.actorUuid) : null;
   return (actor ? actor.getFlag(MODULE, "form") : entry.form) ?? null;
-}
-
-/** The character a key belongs to: "Rahadin/forms/corrupted" → "Rahadin". */
-export function familyOf(key) {
-  const i = key.indexOf("/forms/");
-  return i === -1 ? key : key.slice(0, i);
 }
 
 /**

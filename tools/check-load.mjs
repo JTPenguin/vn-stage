@@ -1,7 +1,8 @@
 /**
  * Load every script the way Foundry does (the full import graph), with stand-ins
  * for Foundry's globals, and report the first error. Catches what a syntax check
- * misses: clashing names, missing exports, bad import paths.
+ * misses: clashing names, missing exports, bad import paths. Also reports
+ * import cycles.
  *
  *   ELECTRON_RUN_AS_NODE=1 ~/foundryvtt/foundryvtt tools/check-load.mjs
  */
@@ -27,6 +28,25 @@ globalThis.Hooks = { on() {}, once() {}, callAll() {}, off() {} };
 globalThis.game = {};
 globalThis.CONST = {};
 globalThis.PIXI = {};
+
+// Import cycles: they load today because the imports are only used inside
+// functions, but one top-level use would break loading. Keep the graph a tree.
+const graph = Object.fromEntries(fs.readdirSync(src).filter((f) => f.endsWith(".js")).map((f) => [
+  f.replace(/\.js$/, ""),
+  [...fs.readFileSync(path.join(src, f), "utf8").matchAll(/from "\.\/([\w-]+)\.js"/g)].map((m) => m[1]),
+]));
+const cycles = [];
+const visit = (node, trail) => {
+  if (trail.includes(node)) return cycles.push([...trail.slice(trail.indexOf(node)), node].join(" → "));
+  for (const next of graph[node] ?? []) visit(next, [...trail, node]);
+};
+for (const node of Object.keys(graph)) visit(node, []);
+const unique = [...new Set(cycles.map((c) => c.split(" → ").slice(0, -1).sort().join(",")))];
+if (unique.length) {
+  console.log(`IMPORT CYCLES (${unique.length}):`);
+  for (const c of new Set(cycles)) console.log(`  ${c}`);
+  process.exitCode = 1;
+}
 
 try {
   await import(pathToFileURL(path.join(tmp, "module.mjs")).href);

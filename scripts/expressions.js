@@ -1,7 +1,6 @@
 import { MODULE } from "./constants.js";
 import { characterArt, artKeyOf, baseArtKeyOf, formsFor } from "./art.js";
-import { getCast, resolveCast } from "./cast.js";
-import { layout } from "./layout.js";
+import { getCast } from "./cast.js";
 import { isStage } from "./stage.js";
 import { pendingFor, setPending } from "./pending.js";
 
@@ -29,7 +28,7 @@ export function canChange(entry, user = game.user) {
 }
 
 export async function setExpression(castId, key, { scene = canvas.scene } = {}) {
-  const entry = resolveCast(scene).find((e) => e.id === castId);
+  const entry = getCast(scene).find((e) => e.id === castId);
   if (!entry || !canChange(entry)) return;
   const actor = entry.actorUuid ? fromUuidSync(entry.actorUuid) : null;
   if (actor) {
@@ -42,8 +41,7 @@ export async function setExpression(castId, key, { scene = canvas.scene } = {}) 
   if (!raw) return;
   if (key === NEUTRAL) delete raw.expression;
   else raw.expression = key;
-  await scene.setFlag(MODULE, "cast", cast);
-  return layout(scene);
+  return scene.setFlag(MODULE, "cast", cast); // the stage re-lays out when it lands (module.js)
 }
 
 /**
@@ -53,7 +51,7 @@ export async function setExpression(castId, key, { scene = canvas.scene } = {}) 
  * expression carries over when the form has it, otherwise it shows neutral.
  */
 export async function setForm(castId, key, { scene = canvas.scene } = {}) {
-  const entry = resolveCast(scene).find((e) => e.id === castId);
+  const entry = getCast(scene).find((e) => e.id === castId);
   if (!entry || !canChange(entry)) return;
   const base = (await baseArtKeyOf(entry)) ?? entry.name;
   const value = key === base ? null : key;
@@ -65,8 +63,7 @@ export async function setForm(castId, key, { scene = canvas.scene } = {}) {
   if (!raw) return;
   if (value) raw.form = value;
   else delete raw.form;
-  await scene.setFlag(MODULE, "cast", cast);
-  return layout(scene);
+  return scene.setFlag(MODULE, "cast", cast);
 }
 
 /**
@@ -112,7 +109,6 @@ export async function resetAllExpressions() {
     for (const e of cast) delete e.expression;
     await scene.setFlag(MODULE, "cast", cast);
   }
-  await layout(canvas.scene);
   ui.notifications.info("VN Stage | Everyone is back to neutral.");
 }
 
@@ -125,7 +121,7 @@ export function isRelayGM() {
 export async function preloadStage(scene = canvas.scene) {
   if (!isStage(scene)) return;
   const srcs = [];
-  for (const e of resolveCast(scene)) {
+  for (const e of getCast(scene)) {
     const key = (await artKeyOf(e)) ?? e.name;
     const art = await characterArt(key);
     if (art) srcs.push(...Object.values(art.expressions));

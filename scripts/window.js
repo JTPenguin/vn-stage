@@ -1,6 +1,6 @@
 import { MODULE } from "./constants.js";
 import { artIndex, indexedActorKey } from "./art.js";
-import { getCast, addToCast, addParty, removeParty, partySide, partyMembers, removeFromCast, hasParty, PARTY_LABEL } from "./cast.js";
+import { getCast, addToCast, addParty, removeParty, partySide, partyEntryIds, removeFromCast, hasParty, PARTY_LABEL } from "./cast.js";
 import { setWindowDrag, openCastMenu } from "./interact.js";
 import {
   listPresets, getPreset, savePreset, loadPreset, deletePreset, findPresetByName, updatePreset, renamePreset, stagePreset,
@@ -54,9 +54,17 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     return this.#instance.render({ force: true });
   }
 
-  /** Re-render if open (the cast, background, groups or scene changed). */
+  static #refreshTimer = null;
+
+  /**
+   * Re-render if open (the cast, background, groups or scene changed). One
+   * change to the stage fires a hook per tile, so calls within 50 ms make one render.
+   */
   static refresh() {
-    if (this.#instance?.rendered) this.#instance.render();
+    clearTimeout(this.#refreshTimer);
+    this.#refreshTimer = setTimeout(() => {
+      if (this.#instance?.rendered) this.#instance.render();
+    }, 50);
   }
 
   #filter = "";
@@ -302,15 +310,14 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 }
 
-/** The cast entry (not The Party) a row's toggles work on: its actor's, or for art alone, the art-only entry. */
-function castEntryFor(row) {
-  return getCast().find((e) => (row.actorUuid ? e.actorUuid === row.actorUuid : !e.actorUuid && e.name === row.key)) ?? null;
+/** Does cast entry `e` stand for this Cast row? Its actor's entry, or for art alone, the art-only entry with its key. */
+function isRowEntry(row, e) {
+  return row.actorUuid ? e.actorUuid === row.actorUuid : !e.actorUuid && e.name === row.key;
 }
 
-/** The cast entry ids of the party members on stage. */
-export function partyEntryIds(scene = canvas.scene) {
-  const members = new Set(partyMembers().map((a) => a.uuid));
-  return getCast(scene).filter((e) => members.has(e.actorUuid)).map((e) => e.id);
+/** The cast entry a row's toggles work on, read fresh (the row's own may be from the last render). */
+function castEntryFor(row) {
+  return getCast().find((e) => isRowEntry(row, e)) ?? null;
 }
 
 /** Is any party member on stage? (The Party's row lights up a little, even when they're split.) */
@@ -325,7 +332,7 @@ function partyOnStage(scene) {
  * stands on stage without an actor); forms have no rows of their own. Each row
  * knows its cast entry on stage.
  */
-async function castRows(index, resolved) {
+async function castRows(index, cast) {
   const byKey = new Map(index.map((a) => [a.key, a]));
   const keys = new Set(byKey.keys());
   const rows = [];
@@ -338,7 +345,7 @@ async function castRows(index, resolved) {
     usedKeys.add(key);
     rows.push({ row: actor.uuid, key, name: actor.name, actorUuid: actor.uuid, label: actor.name, note: art.label !== actor.name ? art.label : null, thumb: art.thumb });
   }
-  const artOnlyOnStage = new Set(resolved.filter((e) => !e.actorUuid).map((e) => e.name));
+  const artOnlyOnStage = new Set(cast.filter((e) => !e.actorUuid).map((e) => e.name));
   for (const art of index) {
     if (usedKeys.has(art.key) && !artOnlyOnStage.has(art.key)) continue;
     // Forms are switched from the character menu, so they get no row of their own (unless one stands on stage as art alone).
@@ -346,7 +353,7 @@ async function castRows(index, resolved) {
     rows.push({ row: `art:${art.key}`, key: art.key, name: art.key, actorUuid: null, label: art.label, note: usedKeys.has(art.key) ? "art only" : null, thumb: art.thumb });
   }
   for (const r of rows) {
-    r.entry = resolved.find((e) => (r.actorUuid ? e.actorUuid === r.actorUuid : !e.actorUuid && e.name === r.key)) ?? null;
+    r.entry = cast.find((e) => isRowEntry(r, e)) ?? null;
     r.side = r.entry?.side ?? null;
   }
   return rows;

@@ -1,7 +1,7 @@
 import { MODULE, FRAME, PART, FACE, SIZE, LAYOUT, faceGuide } from "./constants.js";
 import { arrange, clusterCentres } from "./arrange.js";
 import { characterArt, artKeyOf } from "./art.js";
-import { resolveCast, characterPrefs } from "./cast.js";
+import { getCast, characterPrefs } from "./cast.js";
 import { isStage } from "./stage.js";
 import { currentExpression } from "./expressions.js";
 
@@ -32,7 +32,7 @@ export function layout(scene = canvas.scene) {
 
 async function doLayout(scene) {
   if (!game.user.isGM || !isStage(scene)) return;
-  const cast = resolveCast(scene);
+  const cast = getCast(scene);
   const sides = {};
   for (const side of ["left", "right"]) {
     sides[side] = await Promise.all(cast.filter((e) => e.side === side).map(measure));

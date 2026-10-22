@@ -1,5 +1,6 @@
 import { MODULE } from "./constants.js";
 import { folderExists } from "./stage.js";
+import { groupMembers, mergeRecent } from "./rules.js";
 
 /**
  * Groups: everything needed to run one scenario, location or arc. A group has a
@@ -58,11 +59,7 @@ export function memberNames(id, index) {
   if (id === ALL) return index.map((a) => a.name);
   if (id === RECENT) return game.settings.get(MODULE, "recent").names ?? [];
   const g = getGroup(id);
-  if (!g) return [];
-  const names = new Set(index.filter((a) => a.groups.includes(id)).map((a) => a.name));
-  for (const n of g.add) names.add(n);
-  for (const n of g.remove) names.delete(n);
-  return [...names];
+  return g ? groupMembers(id, index, g) : [];
 }
 
 async function change(id, fn) {
@@ -214,10 +211,13 @@ export async function setStageGroup(id, scene = canvas.scene) {
   return scene.setFlag(MODULE, "group", id ?? ALL);
 }
 
-/** Note a character as used, for the Recent group. */
-export async function noteRecent(name) {
+/** Note characters as used, for the Recent group: one name or several (the first ends up newest). One write. */
+export async function noteRecent(names) {
   if (!game.user.isGM) return;
-  const names = (game.settings.get(MODULE, "recent").names ?? []).filter((n) => n !== name);
-  names.unshift(name);
-  await game.settings.set(MODULE, "recent", { names: names.slice(0, RECENT_MAX) });
+  const used = [names].flat().filter(Boolean);
+  if (!used.length) return;
+  const before = game.settings.get(MODULE, "recent").names ?? [];
+  const next = mergeRecent(used, before, RECENT_MAX);
+  if (next.join("\n") === before.slice(0, RECENT_MAX).join("\n")) return;
+  await game.settings.set(MODULE, "recent", { names: next });
 }

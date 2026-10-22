@@ -31,11 +31,37 @@ ln -s "/home/justin/Projects/Wayfinder Chronicles/Module/vn-stage" ~/.local/shar
 
 ## Checks
 
-Before handing a change to Foundry, load every script with stand-ins for Foundry's globals (catches clashing names and broken imports, which a syntax check misses):
+Run both before handing a change to Foundry.
 
-```bash
-ELECTRON_RUN_AS_NODE=1 ~/foundryvtt/foundryvtt tools/check-load.mjs
-```
+- **Load check:** loads every script with stand-ins for Foundry's globals. Catches clashing names, broken imports and import cycles, which a syntax check misses.
+
+  ```bash
+  ELECTRON_RUN_AS_NODE=1 ~/foundryvtt/foundryvtt tools/check-load.mjs
+  ```
+
+- **Tests:** the rules that need no Foundry (`scripts/rules.js`, the layout arithmetic in `scripts/arrange.js`), with Node's test runner. New rules that can live without Foundry go in `rules.js`, with a test.
+
+  ```bash
+  ELECTRON_RUN_AS_NODE=1 ~/foundryvtt/foundryvtt tools/test.mjs
+  ```
+
+## After a Foundry update
+
+These rely on Foundry or PIXI behaviour that isn't a promised API. Check each on a stage after updating Foundry:
+
+| What to try | What it relies on | Where |
+|---|---|---|
+| Click and drag a portrait: the character menu opens, the drag moves them, and Foundry's selection box doesn't appear | Our window-level `pointerdown` listener (capture phase) runs before the canvas's own | `interact.js` |
+| Add, remove and swap: portraits fade, backgrounds crossfade | Stand-in `PrimarySpriteMesh`es added to `canvas.primary` (`sortDirty`), and the `refreshTile` hook scaling `tile.mesh.alpha` | `fades.js` (turns itself off on error; look for a console warning) |
+| Drag a portrait: it dims while dragged | Setting `tile.mesh.alpha` until the next `refreshState` | `interact.js` |
+| Right-click a Cast row: the menu opens above the Stage window | `ApplicationV2._maxZ` (internal), with the open windows' z-index as a fallback | `interact.js` (`topZ`) |
+| As a player, try to pan or zoom: the view stays fitted | Shadowing `canvas.pan` and `canvas.animatePan` | `view.js` |
+| Make stage on a new scene: the safety-net background shows | `scene.initialLevel` and the Level's `background.src` (v14 Levels) | `stage.js` |
+| Click a portrait's see-through edge: nothing happens | `PrimarySpriteMesh#containsCanvasPoint(point, alpha)` | `interact.js` (`portraitAt`) |
+
+## Keys to keep stable
+
+Saved choices (Flip, size, height), group memberships, Recent and VN art… links are keyed by the art folder's name under the art root (`Rahadin`, `Rahadin/forms/corrupted`). **Renaming a character's art folder loses them**; renaming actors is safe.
 
 ## Conventions
 
