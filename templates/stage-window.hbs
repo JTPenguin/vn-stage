@@ -69,7 +69,8 @@
 
   <section class="vn-section vn-cast {{#if collapsed.cast}}collapsed{{/if}}" data-section="cast">
     <h3 data-action="toggleSection"><i class="fa-solid fa-chevron-down vn-chevron"></i> Cast
-      <button type="button" class="vn-icon" data-action="resetExpressions" data-tooltip="Reset everyone's expression to neutral, on every stage"><i class="fa-solid fa-face-meh"></i></button>
+      <button type="button" class="vn-icon" data-action="clearStage" data-tooltip="Clear the stage: take everyone off" {{#unless anyoneOnStage}}disabled{{/unless}}><i class="fa-solid fa-broom"></i></button>
+      <button type="button" class="vn-icon vn-icon-tight" data-action="resetExpressions" data-tooltip="Reset everyone's expression to neutral, on every stage"><i class="fa-solid fa-face-meh"></i></button>
       <button type="button" class="vn-icon vn-icon-tight" data-action="refreshCast" data-tooltip="Re-read the art folder"><i class="fa-solid fa-rotate"></i></button>
     </h3>
     <div class="vn-cast-tools">

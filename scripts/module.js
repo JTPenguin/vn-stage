@@ -22,6 +22,17 @@ import { migrate, migrationPending } from "./migrate.js";
 
 Hooks.once("init", () => {
   registerSettings({ onArtRootChange: clearArtCache });
+  // Open the Stage window from the keyboard (GM). No key by default; set one in Configure Controls.
+  game.keybindings.register(MODULE, "openWindow", {
+    name: "VNSTAGE.Keybindings.OpenWindow.Name",
+    hint: "VNSTAGE.Keybindings.OpenWindow.Hint",
+    editable: [],
+    restricted: true,
+    onDown: () => {
+      StageWindow.open();
+      return true;
+    },
+  });
   registerFades();
   foundry.applications.handlebars.loadTemplates({
     "vn-stage.bg": `modules/${MODULE}/templates/stage-bg.hbs`,

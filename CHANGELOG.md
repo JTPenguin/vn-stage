@@ -4,6 +4,10 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 
 ## [Unreleased]
 
+### Added
+- Clear the stage (broom button in the Cast heading): everyone off this stage at once. Disabled when the stage is empty.
+- A keyboard shortcut to open the Stage window (GM), set in Configure Controls under VN Stage. No key by default.
+
 ## [0.2.0] - 2026-10-21
 
 What changed since 0.1.0, as it stands now. (The day-by-day history is in the git log.)

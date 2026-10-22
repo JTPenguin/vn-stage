@@ -13,6 +13,12 @@
         "Name": "Group background folders",
         "Hint": "A folder every group finds its backgrounds in by itself, when it exists. {group} stands for the group's name, for example strahd/scenes/{group}/. Leave blank for none. The Wayfinder Chronicles module adds each scenario's scene art without this."
       }
+    },
+    "Keybindings": {
+      "OpenWindow": {
+        "Name": "Open the Stage window",
+        "Hint": "Opens the VN Stage window (GM only). No key is set by default."
+      }
     }
   }
 }

@@ -1,6 +1,6 @@
 import { MODULE } from "./constants.js";
 import { artIndex } from "./art.js";
-import { addToCast, addParty, removeParty, partySide, partyEntryIds, removeFromCast, hasParty, PARTY_LABEL } from "./cast.js";
+import { getCast, addToCast, addParty, removeParty, clearCast, partySide, partyEntryIds, removeFromCast, hasParty, PARTY_LABEL } from "./cast.js";
 import { setWindowDrag } from "./interact.js";
 import { openCastMenu } from "./menu.js";
 import { castEntryFor, partyOnStage, castLists, rowContext, presetRows, backgroundStrips } from "./window-data.js";
@@ -34,6 +34,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       toggleFolder: StageWindow.#onToggleFolder,
       manageGroups: StageWindow.#onManageGroups,
       resetExpressions: StageWindow.#onResetExpressions,
+      clearStage: StageWindow.#onClearStage,
       addParty: StageWindow.#onAddParty,
       savePreset: StageWindow.#onSavePreset,
       loadPreset: StageWindow.#onLoadPreset,
@@ -100,6 +101,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       party: hasParty() ? { label: PARTY_LABEL, side: partySide(scene), onStage: partyOnStage(scene) } : null,
       presets,
       changedPreset: presets.find((p) => p.changed) ?? null,
+      anyoneOnStage: getCast(scene).length > 0,
       cast: mine.map(rowContext),
       others: others.map(rowContext),
       emptyCast: selected === ALL
@@ -244,6 +246,11 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static #onManageGroups() {
     GroupsWindow.open(stageGroup());
+  }
+
+  /** Everyone off this stage at once (they fade out). Load a preset to bring a scene back. */
+  static async #onClearStage() {
+    await clearCast();
   }
 
   static async #onResetExpressions() {
