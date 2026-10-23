@@ -6,6 +6,7 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 
 ### Changed
 - **Art is read from folders and sized by height, not by face.** The module reads `portrait.*`, `expressions/`, `forms/` and an optional `vn-stage.json` (see `docs/art-format.md`) and no longer reads any other art file. The GM's screen scans the art folder and saves the result as the world setting `artIndex`, so players read art without browsing files; the Stage window's refresh button rescans. Characters are sized by the file's `scale` and `yOffset` (Adjust stays relative to them; Reset returns to the file's values), and every character now shows its expressions. Crowded stages zoom around the face guide's centre line.
+- Wording: the settings hints, the empty-group text and the Groups window tooltip describe the art format (a group is "named in the character's `vn-stage.json`"), and no tool or campaign is named.
 - The character menu shows a labelled button per expression instead of face thumbnails.
 - The Adjust window's yellow face box is gone; the blue face guide stays as a drawing.
 
@@ -54,7 +55,7 @@ First release: the four required needs of the E3 plan (portraits on two sides, s
 - On stage rows: an expression menu for each character with expressions.
 - Reset everyone to neutral (On stage heading): clears every actor's saved expression and every stage's cast entries.
 - Every screen preloads all expressions of the characters on stage, so a change shows at once.
-- Groups: a name, any number of background folders and its characters, chosen from the Group menu at the top of the Stage window (each stage remembers its group). Members come from the manifests' `groups` tags (written by the Character Art Pipeline), plus hand additions, minus hand removals. With a group selected, the Cast list shows its members and the Background strip shows all its folders (a collapsible heading per folder when there's more than one); Browse… then sets a one-off background without changing any folder.
+- Groups: a name, any number of background folders and its characters, chosen from the Group menu at the top of the Stage window (each stage remembers its group). Members come from the art's `groups` names, plus hand additions, minus hand removals. With a group selected, the Cast list shows its members and the Background strip shows all its folders (a collapsible heading per folder when there's more than one); Browse… then sets a one-off background without changing any folder.
 - Built-in menu entries: All characters (as before groups) and Recent (the last 24 characters put on any stage).
 - Edit group mode (pencil): Rename, Delete (confirmed), folder chips with remove and Add folder…, add or remove members (Show everyone lists non-members), and add from On stage rows. Normal mode shows none of these. New group (+) is always available.
 - API: `listGroups`, `getGroup`, `memberNames`, `createGroup`, `addFolder`, `addMember`, `stageGroup`, `setStageGroup` (for the Landing and E4).

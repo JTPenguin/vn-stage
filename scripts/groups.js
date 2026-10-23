@@ -7,7 +7,7 @@ import { groupMembers, mergeRecent } from "./rules.js";
  * label, any number of background folders and single backgrounds, its characters and its presets
  * (presets name their groups; see presets.js). Members are the characters whose
  * the art's `groups` names it, plus ones added by hand, minus ones removed by
- * hand (a removal wins over a tag). Folders are the ones added by hand plus its
+ * hand (a removal wins over a name in the art's file). Folders are the ones added by hand plus its
  * automatic folders (the "Group background folders" pattern, and any a module
  * adds with the `vn-stage.groupFolders` hook) that exist, minus ones removed by
  * hand. Stored in a world setting; each stage remembers its group in a scene flag.
@@ -36,7 +36,7 @@ function blank() {
   return { label: null, folders: [], images: [], add: [], remove: [], hideAuto: [] };
 }
 
-/** Every group, from the settings and the art's tags, sorted by label. `index` is the art index. */
+/** Every group, from the settings and the art's group names, sorted by label. `index` is the art index. */
 export function listGroups(index) {
   const all = stored();
   const ids = new Set(Object.keys(all));
@@ -83,7 +83,7 @@ export function renameGroup(id, label) {
   return change(id, (g) => { g.label = label.trim() || null; });
 }
 
-/** Delete a group's settings. A tagged group stays hidden until it's created again. */
+/** Delete a group's settings. A group named in the art stays hidden until it's created again. */
 export async function deleteGroup(id) {
   requireGM();
   const all = stored();
@@ -175,7 +175,7 @@ export function removeMember(id, name) {
   });
 }
 
-/** Is `name` a member because of its art's tags (so removing it only hides it here)? */
+/** Is `name` a member because its art's vn-stage.json names the group (so removing it only hides it here)? */
 export function isTagged(id, name, index) {
   return !!index.find((a) => a.name === name)?.groups.includes(id);
 }

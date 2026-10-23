@@ -232,8 +232,8 @@ export function familyOf(key) {
 /* -------------------------------------------- */
 
 /**
- * A group's members: characters whose art tags name it (`index`: [{ name, groups }]),
- * plus ones added by hand, minus ones removed by hand (a removal wins over a tag).
+ * A group's members: characters whose art names it (`index`: [{ name, groups }]),
+ * plus ones added by hand, minus ones removed by hand (a removal wins over a name in the art).
  */
 export function groupMembers(id, index, { add = [], remove = [] } = {}) {
   const names = new Set(index.filter((a) => a.groups.includes(id)).map((a) => a.name));

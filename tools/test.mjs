@@ -82,24 +82,24 @@ test("a zoomed face keeps its centre on the guide", () => {
 const A = { id: "a", uuid: "A", name: "Ana" }, B = { id: "b", uuid: "B", name: "Bo" }, C = { id: "c", uuid: "C", name: "Cy" };
 const names = (cast) => cast.map((e) => `${e.name}:${e.side}`);
 const saved = [
-  { name: "Strahd", side: "right" },
+  { name: "Vane", side: "right" },
   { name: "Ana", actorUuid: "A", side: "left", partyMember: true },
   { name: "Bo", actorUuid: "B", side: "right", partyMember: true },
-  { name: "Ireena", side: "left" },
+  { name: "Pell", side: "left" },
 ];
 
 test("a preset loads the same party exactly as saved, without the party marks", () => {
   const out = R.fitPartyCast(saved, [A, B]);
-  assert.deepEqual(names(out), ["Strahd:right", "Ana:left", "Bo:right", "Ireena:left"]);
+  assert.deepEqual(names(out), ["Vane:right", "Ana:left", "Bo:right", "Pell:left"]);
   assert.ok(out.every((e) => !("partyMember" in e)));
 });
 
 test("members who left stay off; new members join after the last saved member still here", () => {
-  assert.deepEqual(names(R.fitPartyCast(saved, [A, C])), ["Strahd:right", "Ana:left", "Cy:left", "Ireena:left"]);
+  assert.deepEqual(names(R.fitPartyCast(saved, [A, C])), ["Vane:right", "Ana:left", "Cy:left", "Pell:left"]);
 });
 
 test("an all-new party stands where the first saved member stood", () => {
-  assert.deepEqual(names(R.fitPartyCast(saved, [C])), ["Strahd:right", "Cy:left", "Ireena:left"]);
+  assert.deepEqual(names(R.fitPartyCast(saved, [C])), ["Vane:right", "Cy:left", "Pell:left"]);
 });
 
 test("an old whole-party entry becomes every member, in its order, skipping members standing alone", () => {
@@ -108,20 +108,20 @@ test("an old whole-party entry becomes every member, in its order, skipping memb
 });
 
 test("a preset with no party members adds nobody", () => {
-  assert.deepEqual(names(R.fitPartyCast([{ name: "Strahd", side: "right" }], [A, B])), ["Strahd:right"]);
+  assert.deepEqual(names(R.fitPartyCast([{ name: "Vane", side: "right" }], [A, B])), ["Vane:right"]);
 });
 
 test("upgrading an old cast: Full reads as left; the party entry becomes its members, keeping ids", () => {
-  const old = [{ id: "s", name: "Strahd", side: "full" }, { id: "p", party: true, side: "right", order: ["b"] }, { id: "x", name: "Ana", actorUuid: "A", side: "left" }];
+  const old = [{ id: "s", name: "Vane", side: "full" }, { id: "p", party: true, side: "right", order: ["b"] }, { id: "x", name: "Ana", actorUuid: "A", side: "left" }];
   const out = R.upgradeCast(old, [A, B]);
-  assert.deepEqual(out.map((e) => `${e.id}:${e.name}:${e.side}`), ["s:Strahd:left", "p.b:Bo:right", "x:Ana:left"]);
+  assert.deepEqual(out.map((e) => `${e.id}:${e.name}:${e.side}`), ["s:Vane:left", "p.b:Bo:right", "x:Ana:left"]);
   assert.ok(R.upgradeCast(old, [A, B], { preset: true }).find((e) => e.name === "Bo").partyMember);
 });
 
 test("upgrading with no party known: a preset keeps the old entry (it fills in when loaded); a stage drops it", () => {
-  const old = [{ party: true, side: "left", order: [] }, { name: "Strahd", side: "right" }];
+  const old = [{ party: true, side: "left", order: [] }, { name: "Vane", side: "right" }];
   assert.deepEqual(R.upgradeCast(old, [], { preset: true }), old);
-  assert.deepEqual(R.upgradeCast(old, []), [{ name: "Strahd", side: "right" }]);
+  assert.deepEqual(R.upgradeCast(old, []), [{ name: "Vane", side: "right" }]);
 });
 
 test("remembered order first, then the rest as given", () => {
@@ -143,8 +143,8 @@ test("a form's family is the character it belongs to", () => {
 });
 
 test("group members: tags plus hand additions, and a hand removal wins over a tag", () => {
-  const index = [{ name: "Ezren", groups: ["PFS Intro 1"] }, { name: "Valeros", groups: ["PFS Intro 1"] }, { name: "Merisiel", groups: [] }];
-  const members = R.groupMembers("PFS Intro 1", index, { add: ["Merisiel"], remove: ["Valeros"] });
+  const index = [{ name: "Ezren", groups: ["The Crew"] }, { name: "Valeros", groups: ["The Crew"] }, { name: "Merisiel", groups: [] }];
+  const members = R.groupMembers("The Crew", index, { add: ["Merisiel"], remove: ["Valeros"] });
   assert.deepEqual(members.sort(), ["Ezren", "Merisiel"]);
 });
 

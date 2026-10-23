@@ -211,7 +211,7 @@ export async function chooseCharacterGroups(key, label) {
   }));
   const ids = await PickList.choose({
     title: `Groups: ${label}`, items, extra: newGroupButton,
-    hint: "Tick the groups this character belongs to. Unticking a tagged group only hides them from it.",
+    hint: "Tick the groups this character belongs to. Unticking a group named in the character's vn-stage.json only hides them from it.",
     empty: "No groups yet.",
   });
   if (ids) await setCharacterGroups(key, ids, await artIndex());

@@ -13,14 +13,14 @@ A private Foundry VTT module for visual-novel scenes on a native Foundry scene: 
 This repository is the module folder. Foundry loads it through a symlink:
 
 ```bash
-ln -s "/home/justin/Projects/Wayfinder Chronicles/Module/vn-stage" ~/.local/share/FoundryVTT/Data/modules/vn-stage
+ln -s "<path to this folder>" "<Foundry data folder>/Data/modules/vn-stage"
 ```
 
 ## Settings (world)
 
 - **Art folder:** one subfolder per character, with a `portrait` image and, if you like, `expressions/`, `forms/` and a `vn-stage.json`. The whole format, including how art is sized, is in [docs/art-format.md](docs/art-format.md).
 - **Safety-net background:** set once as the scene's own background when it becomes a stage. The background shown during play is a tile above it, because changing a scene's own background redraws the canvas on every screen.
-- **Group background folders:** a folder every group finds its backgrounds in by itself, when it exists; `{group}` stands for the group's name (`strahd/scenes/{group}/`). Other modules can add folders with the `vn-stage.groupFolders` hook.
+- **Group background folders:** a folder every group finds its backgrounds in by itself, when it exists; `{group}` stands for the group's name (`scenes/{group}/`). Other modules can add folders with the `vn-stage.groupFolders` hook.
 
 ## Console API
 
@@ -102,4 +102,4 @@ Saved choices (Flip, size, height), group memberships, Recent and VN art… link
 
 ## Design
 
-The plan lives in the Wayfinder Chronicles vault: `_Claude/E3 Brief.md`.
+The art format is in [docs/art-format.md](docs/art-format.md).
