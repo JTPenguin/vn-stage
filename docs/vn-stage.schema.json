@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "vn-stage.schema.json",
+  "title": "VN Stage character file",
+  "description": "The optional vn-stage.json beside a character's or form's portrait. See art-format.md.",
+  "type": "object",
+  "required": ["format"],
+  "properties": {
+    "format": { "const": 1, "description": "The format version." },
+    "label": { "type": "string", "minLength": 1, "description": "The name shown in the module. Default: the folder name." },
+    "portrait": { "type": "string", "minLength": 1, "description": "The neutral portrait, relative to this folder. Default: portrait.*" },
+    "avatar": { "type": "string", "minLength": 1, "description": "The small picture for lists. Default: avatar.*, else the portrait." },
+    "expressions": {
+      "type": "object",
+      "description": "Expression name (the file name without its extension) to label. Sets the order and the labels.",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "size": { "enum": ["tiny", "small", "medium", "large", "huge", "gargantuan"], "default": "medium" },
+    "scale": { "type": "number", "exclusiveMinimum": 0, "default": 1, "description": "Default height as a multiple of the frame height." },
+    "yOffset": { "type": "number", "default": 0, "description": "Default drop from standing on the bottom edge, as a share of the frame height. Positive is lower." },
+    "groups": { "type": "array", "items": { "type": "string", "minLength": 1 }, "default": [] }
+  },
+  "additionalProperties": true
+}

@@ -114,7 +114,126 @@ export function formsOf(m) {
   return list.map((f) => ({ ...f, folder: (f.folder ?? f.dir ?? "").replace(/\/$/, "") })).filter((f) => f.folder);
 }
 
-/** The character a key belongs to: "Rahadin/forms/corrupted" → "Rahadin". */
+export const ART_FORMAT = 1;
+export const ART_SIZES = ["tiny", "small", "medium", "large", "huge", "gargantuan"];
+const IMAGE_EXTENSIONS = ["webp", "png", "jpg", "jpeg", "avif"]; // in order of preference
+
+const extensionOf = (file) => (file.includes(".") ? file.slice(file.lastIndexOf(".") + 1).toLowerCase() : "");
+const stemOf = (file) => (file.includes(".") ? file.slice(0, file.lastIndexOf(".")) : file);
+const isImage = (file) => IMAGE_EXTENSIONS.includes(extensionOf(file));
+
+/** "deep-sorrow" → "Deep sorrow". */
+export function humanise(name) {
+  const text = name.replace(/[-_]+/g, " ").trim();
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** The best image in `files` whose name (without extension) is `stem`, or null. Names match without regard to case. */
+function pickImage(files, stem) {
+  const matches = files.filter((f) => isImage(f) && stemOf(f).toLowerCase() === stem);
+  matches.sort((a, b) => IMAGE_EXTENSIONS.indexOf(extensionOf(a)) - IMAGE_EXTENSIONS.indexOf(extensionOf(b)) || a.localeCompare(b));
+  return matches[0] ?? null;
+}
+
+/**
+ * The internal shape of one character or form, from what its folder holds and
+ * its `vn-stage.json` (docs/art-format.md). Nothing here reads files: the
+ * caller lists the folders and parses the file.
+ *
+ * `key` is the folder under the art folder ("Aganis Downard", or a form:
+ * "Mira Voss/forms/corrupted"). `listing` is { files, dirs } for that folder
+ * (names only), plus `expressions` (file names in its expressions/ folder),
+ * `forms` (names of its forms/ folders that have a portrait) and, for a form,
+ * `parentLabel` (the character's label). `file` is the parsed file, or null
+ * when there is none or it couldn't be read.
+ *
+ * Paths come back relative to the art folder (portrait, thumb and every
+ * expression), so whoever reads them from the index must put the art folder
+ * in front before loading an image. Returns null with no portrait.
+ * Problems with the file are described in `warnings` and never stop a load.
+ * @returns {null|{name, key, label, formLabel, portrait, thumb, expressions, labels, size, scale, yOffset, groups, forms, warnings}}
+ */
+export function normaliseArt(key, listing = {}, file = null) {
+  const files = listing.files ?? [];
+  const warnings = [];
+  const hasFile = files.some((f) => f.toLowerCase() === "vn-stage.json");
+  let data = null;
+  if (file && typeof file === "object" && !Array.isArray(file)) {
+    data = file;
+    if (data.format !== ART_FORMAT) {
+      warnings.push(data.format == null ? "vn-stage.json has no format number; reading it as format 1"
+        : `vn-stage.json is format ${JSON.stringify(data.format)}, which this module doesn't know; reading what it can`);
+    }
+  } else if (hasFile || file) {
+    warnings.push("vn-stage.json couldn't be read; using the folder alone");
+  }
+  data ??= {};
+
+  const text = (v) => (typeof v === "string" && v.trim() ? v.trim() : null);
+  const named = (v) => { const t = text(v); return t && files.includes(t) && isImage(t) ? t : null; };
+
+  const portraitFile = named(data.portrait) ?? pickImage(files, "portrait");
+  if (!portraitFile) return null;
+  const at = (f) => `${key}/${f}`;
+
+  const folderName = key.split("/").pop();
+  const isForm = key.includes("/forms/");
+  const formLabel = isForm ? (text(data.label) ?? humanise(folderName)) : null;
+  const label = isForm ? `${listing.parentLabel ?? familyOf(key)} · ${formLabel}` : (text(data.label) ?? folderName);
+
+  // Expressions: the file's order first, then the rest by file name; neutral is always the portrait.
+  const found = new Map(); // stem → file name, the preferred image type winning
+  for (const f of listing.expressions ?? []) {
+    const stem = stemOf(f);
+    if (!isImage(f) || stem.toLowerCase() === "neutral") continue;
+    const rank = (x) => IMAGE_EXTENSIONS.indexOf(extensionOf(x));
+    if (!found.has(stem) || rank(f) < rank(found.get(stem))) found.set(stem, f);
+  }
+  for (const [stem, f] of [...found].sort((x, y) => x[1].localeCompare(y[1]))) { found.delete(stem); found.set(stem, f); }
+  const listed = data.expressions && typeof data.expressions === "object" && !Array.isArray(data.expressions) ? data.expressions : {};
+  const order = [...Object.keys(listed).filter((n) => found.has(n)), ...[...found.keys()].filter((n) => !Object.hasOwn(listed, n))];
+  const expressions = { neutral: at(portraitFile) };
+  const labels = { neutral: "Neutral" };
+  for (const n of order) {
+    expressions[n] = `${key}/expressions/${found.get(n)}`;
+    labels[n] = text(Object.hasOwn(listed, n) ? listed[n] : null) ?? humanise(n);
+  }
+
+  let size = "medium";
+  if (data.size != null) {
+    if (ART_SIZES.includes(data.size)) size = data.size;
+    else warnings.push(`size ${JSON.stringify(data.size)} isn't one of ${ART_SIZES.join(", ")}; using medium`);
+  }
+  let scale = 1;
+  if (data.scale != null) {
+    if (typeof data.scale === "number" && Number.isFinite(data.scale) && data.scale > 0) scale = data.scale;
+    else warnings.push(`scale ${JSON.stringify(data.scale)} isn't a positive number; using 1`);
+  }
+  let yOffset = 0;
+  if (data.yOffset != null) {
+    if (typeof data.yOffset === "number" && Number.isFinite(data.yOffset)) yOffset = data.yOffset;
+    else warnings.push(`yOffset ${JSON.stringify(data.yOffset)} isn't a number; using 0`);
+  }
+
+  return {
+    name: key,
+    key,
+    label,
+    formLabel,
+    portrait: at(portraitFile),
+    thumb: at(named(data.avatar) ?? pickImage(files, "avatar") ?? portraitFile),
+    expressions,
+    labels,
+    size,
+    scale,
+    yOffset,
+    groups: Array.isArray(data.groups) ? data.groups.filter((g) => typeof g === "string" && g.trim()).map((g) => g.trim()) : [],
+    forms: isForm ? [] : [...(listing.forms ?? [])].sort((a, b) => a.localeCompare(b)).map((f) => `${key}/forms/${f}`),
+    warnings,
+  };
+}
+
+/** The character a key belongs to: "Mira Voss/forms/corrupted" → "Mira Voss". */
 export function familyOf(key) {
   const i = key.indexOf("/forms/");
   return i === -1 ? key : key.slice(0, i);

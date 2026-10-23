@@ -5,6 +5,7 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 ## [Unreleased]
 
 ### Added
+- The art format, written down (`docs/art-format.md`, with a JSON Schema in `docs/vn-stage.schema.json`): a character is a folder with a portrait, plus an optional `vn-stage.json`. `normaliseArt` in `scripts/rules.js` turns a folder listing and that file into the module's own shape, with tests. Nothing reads art this way yet.
 - Clear the stage (broom button in the Cast heading): everyone off this stage at once. Disabled when the stage is empty.
 - A keyboard shortcut to open the Stage window (GM), set in Configure Controls under VN Stage. No key by default.
 

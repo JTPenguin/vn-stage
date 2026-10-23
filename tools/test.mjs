@@ -145,8 +145,8 @@ test("forms read as a list (folder) or an object (dir), without trailing slashes
 });
 
 test("a form's family is the character it belongs to", () => {
-  assert.equal(R.familyOf("Rahadin/forms/corrupted"), "Rahadin");
-  assert.equal(R.familyOf("Rahadin"), "Rahadin");
+  assert.equal(R.familyOf("Mira Voss/forms/corrupted"), "Mira Voss");
+  assert.equal(R.familyOf("Mira Voss"), "Mira Voss");
 });
 
 test("group members: tags plus hand additions, and a hand removal wins over a tag", () => {
@@ -175,4 +175,134 @@ test("on an empty stage a drop's side is by the middle of the usable width", () 
   const middle = (FRAME.width * (1 - LAYOUT.sidebar)) / 2;
   assert.equal(R.dropSlot(middle - 1, [], [], FRAME.width, LAYOUT.sidebar).side, "left");
   assert.equal(R.dropSlot(middle + 1, [], [], FRAME.width, LAYOUT.sidebar).side, "right");
+});
+
+/* -------------------------------------------- */
+/*  Art folders                                 */
+/* -------------------------------------------- */
+
+const bare = { files: ["portrait.webp"], dirs: [] };
+
+test("a bare folder: a portrait is all a character needs", () => {
+  const a = R.normaliseArt("Mira Voss", bare, null);
+  assert.equal(a.key, "Mira Voss");
+  assert.equal(a.name, "Mira Voss");
+  assert.equal(a.label, "Mira Voss");
+  assert.equal(a.portrait, "Mira Voss/portrait.webp");
+  assert.equal(a.thumb, "Mira Voss/portrait.webp", "no avatar: the portrait stands in");
+  assert.deepEqual(a.expressions, { neutral: "Mira Voss/portrait.webp" });
+  assert.deepEqual(a.labels, { neutral: "Neutral" });
+  assert.equal(a.size, "medium");
+  assert.equal(a.scale, 1);
+  assert.equal(a.yOffset, 0);
+  assert.deepEqual(a.groups, []);
+  assert.deepEqual(a.forms, []);
+  assert.deepEqual(a.warnings, []);
+});
+
+test("no portrait, no character", () => {
+  assert.equal(R.normaliseArt("Empty", { files: ["avatar.webp", "notes.txt"], dirs: [] }, null), null);
+});
+
+test("a full file sets every field", () => {
+  const listing = { files: ["portrait.webp", "avatar.png", "vn-stage.json"], dirs: ["expressions"], expressions: ["happy.webp", "angry.webp", "fear.webp"] };
+  const file = { format: 1, label: "Lady Mira", avatar: "avatar.png", expressions: { happy: "Glad", fear: "Afraid" }, size: "large", scale: 0.57, yOffset: 0.055, groups: ["Crew", " Allies "] };
+  const a = R.normaliseArt("Mira Voss", listing, file);
+  assert.equal(a.label, "Lady Mira");
+  assert.equal(a.thumb, "Mira Voss/avatar.png");
+  assert.equal(a.size, "large");
+  assert.equal(a.scale, 0.57);
+  assert.equal(a.yOffset, 0.055);
+  assert.deepEqual(a.groups, ["Crew", "Allies"]);
+  assert.deepEqual(a.warnings, []);
+});
+
+test("expressions: neutral first, listed names in the file's order, the rest by file name, labels from names", () => {
+  const listing = { files: ["portrait.webp"], dirs: ["expressions"], expressions: ["angry.webp", "deep-sorrow.png", "happy.webp", "fear.webp"] };
+  const a = R.normaliseArt("X", listing, { format: 1, expressions: { happy: "Glad", fear: "Afraid", missing: "Gone" } });
+  assert.deepEqual(Object.keys(a.expressions), ["neutral", "happy", "fear", "angry", "deep-sorrow"]);
+  assert.deepEqual(a.labels, { neutral: "Neutral", happy: "Glad", fear: "Afraid", angry: "Angry", "deep-sorrow": "Deep sorrow" });
+  assert.equal(a.expressions["deep-sorrow"], "X/expressions/deep-sorrow.png");
+});
+
+test("an expression called neutral is ignored: the portrait is always neutral", () => {
+  const a = R.normaliseArt("X", { files: ["portrait.webp"], expressions: ["neutral.webp", "Neutral.png", "calm.webp"] }, null);
+  assert.deepEqual(Object.keys(a.expressions), ["neutral", "calm"]);
+  assert.equal(a.expressions.neutral, "X/portrait.webp");
+});
+
+test("mixed image types: any of the five count, others don't, and webp wins a tie", () => {
+  const listing = { files: ["Portrait.JPG", "portrait.png", "avatar.avif"], expressions: ["a.jpeg", "b.avif", "c.gif", "notes.txt", "d.png", "d.webp"] };
+  const a = R.normaliseArt("X", listing, null);
+  assert.equal(a.portrait, "X/portrait.png", "png beats jpg");
+  assert.equal(a.thumb, "X/avatar.avif");
+  assert.deepEqual(Object.keys(a.expressions), ["neutral", "a", "b", "d"]);
+  assert.equal(a.expressions.d, "X/expressions/d.webp");
+});
+
+test("forms are listed by key; a form's label joins its parent's, and a form has no forms of its own", () => {
+  const parent = R.normaliseArt("Mira Voss", { files: ["portrait.webp"], dirs: ["forms"], forms: ["corrupted", "ghost"] }, null);
+  assert.deepEqual(parent.forms, ["Mira Voss/forms/corrupted", "Mira Voss/forms/ghost"]);
+  const form = R.normaliseArt("Mira Voss/forms/corrupted", { files: ["portrait.webp"], forms: ["x"], parentLabel: "Mira Voss" }, null);
+  assert.equal(form.label, "Mira Voss · Corrupted");
+  assert.equal(form.formLabel, "Corrupted");
+  assert.deepEqual(form.forms, []);
+  const named = R.normaliseArt("Mira Voss/forms/ghost", { files: ["portrait.webp"] }, { format: 1, label: "Spectre" });
+  assert.equal(named.label, "Mira Voss · Spectre");
+  assert.equal(R.familyOf(named.key), "Mira Voss");
+});
+
+test("a form folder with no portrait isn't offered", () => {
+  assert.equal(R.normaliseArt("Mira Voss/forms/twin-scimitars", { files: ["token-combat.webp"] }, null), null);
+});
+
+test("an unknown format warns and still reads what it can", () => {
+  const a = R.normaliseArt("X", bare, { format: 2, label: "Future", scale: 0.8 });
+  assert.equal(a.label, "Future");
+  assert.equal(a.scale, 0.8);
+  assert.equal(a.warnings.length, 1);
+  assert.match(a.warnings[0], /format 2/);
+  assert.equal(R.normaliseArt("X", bare, { label: "No number" }).warnings.length, 1);
+});
+
+test("a broken file warns once and the folder still loads", () => {
+  const listing = { files: ["portrait.webp", "vn-stage.json"] };
+  for (const file of [null, "text", [1, 2]]) {
+    const a = R.normaliseArt("X", listing, file);
+    assert.equal(a.portrait, "X/portrait.webp");
+    assert.equal(a.warnings.length, 1);
+  }
+  assert.deepEqual(R.normaliseArt("X", bare, null).warnings, [], "no file is not a problem");
+});
+
+test("bad values fall back to defaults, each with a warning", () => {
+  const a = R.normaliseArt("X", bare, { format: 1, size: "colossal", scale: -1, yOffset: "low", groups: "Crew", avatar: "missing.png", portrait: "nope.png" });
+  assert.equal(a.size, "medium");
+  assert.equal(a.scale, 1);
+  assert.equal(a.yOffset, 0);
+  assert.deepEqual(a.groups, []);
+  assert.equal(a.portrait, "X/portrait.webp", "a named portrait that isn't there falls back to portrait.*");
+  assert.equal(a.thumb, "X/portrait.webp");
+  assert.equal(a.warnings.length, 3);
+});
+
+test("unknown fields are ignored", () => {
+  const a = R.normaliseArt("X", bare, { format: 1, scale: 0.9, "some-tool": { anything: true } });
+  assert.equal(a.scale, 0.9);
+  assert.deepEqual(a.warnings, []);
+  assert.equal("some-tool" in a, false);
+});
+
+test("a named portrait and avatar in the file are used when they exist", () => {
+  const a = R.normaliseArt("X", { files: ["main.png", "small.png"] }, { format: 1, portrait: "main.png", avatar: "small.png" });
+  assert.equal(a.portrait, "X/main.png");
+  assert.equal(a.thumb, "X/small.png");
+});
+
+test("expression names that match built-in object names are ordinary names", () => {
+  const listing = { files: ["portrait.webp"], expressions: ["constructor.webp", "angry.webp", "toString.png"] };
+  const a = R.normaliseArt("X", listing, { format: 1, expressions: { angry: "Cross" } });
+  assert.deepEqual(Object.keys(a.expressions), ["neutral", "angry", "constructor", "toString"]);
+  assert.equal(a.labels.constructor, "Constructor");
+  assert.equal(a.labels.angry, "Cross");
 });
