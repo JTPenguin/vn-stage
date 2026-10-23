@@ -6,7 +6,7 @@ import { groupMembers, mergeRecent } from "./rules.js";
  * Groups: everything needed to run one scenario, location or arc. A group has a
  * label, any number of background folders and single backgrounds, its characters and its presets
  * (presets name their groups; see presets.js). Members are the characters whose
- * the art's `groups` names it, plus ones added by hand, minus ones removed by
+ * art's `groups` names it, plus ones added by hand, minus ones removed by
  * hand (a removal wins over a name in the art's file). Folders are the ones added by hand plus its
  * automatic folders (the "Group background folders" pattern, and any a module
  * adds with the `vn-stage.groupFolders` hook) that exist, minus ones removed by
