@@ -1,4 +1,4 @@
-import { MODULE, PART, FRAME, LAYOUT } from "./constants.js";
+import { MODULE, PART, FRAME, LAYOUT, faceGuide } from "./constants.js";
 import { getCast, moveEntry, displayName } from "./cast.js";
 import { placements } from "./layout.js";
 import { canChange } from "./expressions.js";
@@ -216,10 +216,10 @@ function hover(event) {
     hoverLabel ??= Object.assign(document.createElement("div"), { className: "vn-hover-name" });
     if (!hoverLabel.isConnected) document.body.append(hoverLabel);
     hoverLabel.textContent = displayName(p.entry);
-    // Centred above the face (or the top of the image), in screen pixels.
+    // Centred above the top of the face guide (or the top of the image, without art), in screen pixels.
     const { sceneX = 0, sceneY = 0 } = canvas.dimensions;
-    const top = p.face ? p.face.y : p.box.y;
-    const cx = p.face ? p.face.x + p.face.width / 2 : p.box.x + p.box.width / 2;
+    const top = p.fallback ? p.box.y : faceGuide(p.size.scale, p.zoom).top * FRAME.height;
+    const cx = p.box.x + p.box.width / 2;
     const screen = canvas.stage.worldTransform.apply({ x: sceneX + cx, y: sceneY + top });
     Object.assign(hoverLabel.style, { left: `${screen.x}px`, top: `${screen.y - 8}px` });
   });

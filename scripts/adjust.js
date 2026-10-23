@@ -8,7 +8,7 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 /**
  * Adjust one character's scale and height on the stage. While it's open, the GM's
  * screen shows the face guide: two lines across the frame where every face should
- * start and end, and a box around this character's face as it stands now.
+ * start and end. It's only a drawing to line art up against.
  * Changes are saved per character, so they apply on every stage.
  */
 export class AdjustWindow extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -55,11 +55,10 @@ export class AdjustWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     const p = characterPrefs(this.key);
     const placed = placements.get(this.entry.id);
     const auto = placed?.size?.auto;
-    const from = { sheet: "from the sheet", manifest: "from the art", default: "default" }[auto?.source] ?? "";
+    const from = { sheet: "from the sheet", art: "from the art", default: "default" }[auto?.source] ?? "";
     return {
       scale: p.scale ?? 1,
       yOffset: Math.round((p.yOffset ?? 0) * 1000) / 10, // % of the frame height
-      measured: !!placed?.face,
       autoLabel: auto ? `Auto: ${SIZE_CHOICES[auto.key] ?? auto.key} (${from})` : "Auto",
       sizes: Object.entries(SIZE_CHOICES).map(([key, label]) => ({ key, label, selected: p.size === key })),
     };
@@ -100,7 +99,7 @@ export class AdjustWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async #onReset() {
-    await setPrefs(this.key, { scale: 1, yOffset: 0 });
+    await setPrefs(this.key, { scale: 1, yOffset: 0 }); // back to the art file's own scale and height
     this.render();
   }
 
@@ -134,11 +133,6 @@ function drawGuide(castId) {
   for (const y of [top, bottom]) {
     g.moveTo(sceneX, y);
     g.lineTo(sceneX + FRAME.width, y);
-  }
-  const face = placed?.face;
-  if (face) {
-    g.lineStyle(3, 0xffc23d, 0.95);
-    g.drawRect(sceneX + face.x, sceneY + face.y, face.width, face.height);
   }
   guide.addChild(g);
 

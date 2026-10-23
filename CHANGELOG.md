@@ -4,8 +4,16 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 
 ## [Unreleased]
 
+### Changed
+- **Art is read from folders and sized by height, not by face.** The module reads `portrait.*`, `expressions/`, `forms/` and an optional `vn-stage.json` (see `docs/art-format.md`) and no longer reads any other art file. The GM's screen scans the art folder and saves the result as the world setting `artIndex`, so players read art without browsing files; the Stage window's refresh button rescans. Characters are sized by the file's `scale` and `yOffset` (Adjust stays relative to them; Reset returns to the file's values), and every character now shows its expressions. Crowded stages zoom around the face guide's centre line.
+- The character menu shows a labelled button per expression instead of face thumbnails.
+- The Adjust window's yellow face box is gone; the blue face guide stays as a drawing.
+
+### Removed
+- Face measurements (`facePx`, `faceBox`, `frame`, `adjust`) and the object-shaped `forms` list.
+
 ### Added
-- The art format, written down (`docs/art-format.md`, with a JSON Schema in `docs/vn-stage.schema.json`): a character is a folder with a portrait, plus an optional `vn-stage.json`. `normaliseArt` in `scripts/rules.js` turns a folder listing and that file into the module's own shape, with tests. Nothing reads art this way yet.
+- The art format, written down (`docs/art-format.md`, with a JSON Schema in `docs/vn-stage.schema.json`): a character is a folder with a portrait, plus an optional `vn-stage.json`. `normaliseArt` in `scripts/rules.js` turns a folder listing and that file into the module's own shape, with tests.
 - Clear the stage (broom button in the Cast heading): everyone off this stage at once. Disabled when the stage is empty.
 - A keyboard shortcut to open the Stage window (GM), set in Configure Controls under VN Stage. No key by default.
 

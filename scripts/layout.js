@@ -1,12 +1,9 @@
-import { MODULE, FRAME, PART, FACE, SIZE, LAYOUT, faceGuide } from "./constants.js";
+import { MODULE, FRAME, PART, SIZE, LAYOUT, faceGuide } from "./constants.js";
 import { arrange, clusterCentres } from "./arrange.js";
 import { characterArt, artKeyOf } from "./art.js";
 import { getCast, characterPrefs } from "./cast.js";
 import { isStage } from "./stage.js";
 import { currentExpression } from "./expressions.js";
-
-/** Every face is drawn this tall (frame pixels), before size and per-character scale. */
-const TARGET_FACE = FACE * FRAME.height;
 
 /** Height of a fallback image (no VN art), as a share of the frame. */
 const FALLBACK_HEIGHT = 0.5 * FRAME.height;
@@ -109,7 +106,11 @@ function shadeTiles(placed) {
   return out;
 }
 
-/** One character's image and size, before they're placed. */
+/**
+ * One character's image and size, before they're placed. Art is sized by
+ * height (docs/art-format.md): the file's scale × the creature size × Adjust's
+ * scale, as a multiple of the frame height; the width follows the image's shape.
+ */
 async function measure(entry) {
   const actor = entry.actorUuid ? fromUuidSync(entry.actorUuid) : null;
   const key = (await artKeyOf(entry)) ?? entry.name;
@@ -118,63 +119,49 @@ async function measure(entry) {
   const size = sizeOf(prefs, actor, art);
   const scale = size.scale * (prefs.scale ?? 1);
 
-  let src, width, height, k = null, fallback = false;
-  if (art?.facePx && art.frame) {
+  let src, width, height, fallback = false;
+  if (art) {
     src = art.expressions[currentExpression(entry)] ?? art.portrait;
-    k = (TARGET_FACE / art.facePx) * (art.adjust ?? 1) * scale;
-    [width, height] = [art.frame[0] * k, art.frame[1] * k];
+    height = FRAME.height * art.scale * scale;
   } else {
     fallback = true;
-    src = art?.portrait ?? actor?.img ?? "icons/svg/mystery-man.svg";
-    const tex = await foundry.canvas.loadTexture(src).catch(() => null);
+    src = actor?.img ?? "icons/svg/mystery-man.svg";
     height = FALLBACK_HEIGHT * scale;
-    width = tex?.width ? (height * tex.width) / tex.height : height * (2 / 3);
   }
+  const tex = await foundry.canvas.loadTexture(src).catch(() => null);
+  width = tex?.width ? (height * tex.width) / tex.height : height * (2 / 3);
 
-  return { entry, key, art, prefs, size, src, width, height, k, fallback };
+  return { entry, key, art, prefs, size, src, width, height, fallback };
 }
 
 /** Where one character stands: box (frame pixels) and draw order; first-placed in front. */
-function finish({ entry, key, art, prefs, size, src, width, height, k, fallback }, cx, i, zoom = 1) {
-  // At full size, start from the head box: the face's top sits on the guide for
-  // this size, unless that would lift the cut-off bottom edge into view; then
-  // (and with no face measurement) the image stands on the bottom edge.
-  const standing = FRAME.height - height;
-  const fb = art?.faceBox && k ? art.faceBox : null;
-  const aligned = fb ? faceGuide(size.scale).top * FRAME.height - fb[1] * k : standing;
-  let y = Math.max(aligned, standing) + (prefs.yOffset ?? 0) * FRAME.height;
+function finish({ entry, key, art, prefs, size, src, width, height, fallback }, cx, i, zoom = 1) {
+  // Standing on the bottom edge, dropped by the file's yOffset and Adjust's height.
+  let y = FRAME.height - height + ((art?.yOffset ?? 0) + (prefs.yOffset ?? 0)) * FRAME.height;
 
   // Zoomed out with everyone else when the stage is crowded (arrange.js): around
-  // the face's centre, so faces stay where they stood and bodies shrink upward
-  // (the bottom shade hides the edges that rise). No face: stay on the ground.
+  // the face guide's centre line, so art lined up on the guide stays on it and
+  // bodies shrink upward (the bottom shade hides the edges that rise). The
+  // fallback image stays on the ground.
   if (zoom !== 1) {
-    const pivot = fb ? y + (fb[1] + fb[3] / 2) * k : y + height;
+    const guide = faceGuide(size.scale);
+    const pivot = fallback ? y + height : ((guide.top + guide.bottom) / 2) * FRAME.height;
     y = pivot - (pivot - y) * zoom;
     width *= zoom;
     height *= zoom;
-    k *= zoom;
   }
   const box = { x: cx - width / 2, y, width, height };
   const flip = !!prefs.flip;
-  return { entry, key, src, box, sort: 100 - i, flip, fallback, size, zoom, face: faceBox(art, box, k, flip) };
+  return { entry, key, src, box, sort: 100 - i, flip, fallback, size, zoom };
 }
 
-/** A character's creature size: the Adjust window's choice, then the sheet, then the manifest. */
+/** A character's creature size: the Adjust window's choice, then the sheet, then the art file. */
 export function sizeOf(prefs, actor, art) {
   const auto = actor?.system?.traits?.size?.value
     ? { key: actor.system.traits.size.value, source: "sheet" }
-    : art?.size ? { key: art.size, source: "manifest" } : { key: "med", source: "default" };
+    : art?.size ? { key: art.size, source: "art" } : { key: "med", source: "default" };
   const chosen = prefs.size ? { key: prefs.size, source: "chosen" } : auto;
   return { ...chosen, scale: SIZE[chosen.key] ?? 1, auto };
-}
-
-/** The face (forehead to chin) in frame pixels, from the manifest's face box, or null. */
-function faceBox(art, box, k, flip) {
-  const fb = art?.faceBox;
-  if (!fb || !k) return null;
-  const [fx, fy, fw, fh] = fb;
-  const x = flip ? box.x + box.width - (fx + fw) * k : box.x + fx * k;
-  return { x, y: box.y + fy * k, width: fw * k, height: fh * k };
 }
 
 function tileData({ entry, key, src, box, sort, flip, fallback }) {

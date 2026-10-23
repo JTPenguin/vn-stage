@@ -107,7 +107,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       emptyCast: selected === ALL
         ? "No characters found. Set the art folder in the module settings."
         : selected === RECENT ? "Nobody yet: characters you put on a stage appear here."
-          : "Nobody in this group yet. Add characters in Manage groups, or tag them in the art pipeline.",
+          : "Nobody in this group yet. Add characters in Manage groups, or name the group in a character's vn-stage.json.",
     };
   }
 

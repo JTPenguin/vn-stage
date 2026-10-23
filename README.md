@@ -1,6 +1,6 @@
 # VN Stage
 
-A private Foundry VTT module for visual-novel scenes on a native Foundry scene: portraits on the left and right, expressions players can change, and swappable static backgrounds. Not tied to any campaign; the Wayfinder Chronicles Landing builds on it.
+A private Foundry VTT module for visual-novel scenes on a native Foundry scene: portraits on the left and right, expressions players can change, and swappable static backgrounds. Not tied to any campaign.
 
 **Private. Not for distribution.**
 
@@ -18,7 +18,7 @@ ln -s "/home/justin/Projects/Wayfinder Chronicles/Module/vn-stage" ~/.local/shar
 
 ## Settings (world)
 
-- **Art folder:** one subfolder per character, named as the character, holding `portrait.webp` (neutral), `expressions/` and `manifest.json`; forms in `forms/<name>/` with their own manifest.
+- **Art folder:** one subfolder per character, with a `portrait` image and, if you like, `expressions/`, `forms/` and a `vn-stage.json`. The whole format, including how art is sized, is in [docs/art-format.md](docs/art-format.md).
 - **Safety-net background:** set once as the scene's own background when it becomes a stage. The background shown during play is a tile above it, because changing a scene's own background redraws the canvas on every screen.
 - **Group background folders:** a folder every group finds its backgrounds in by itself, when it exists; `{group}` stands for the group's name (`strahd/scenes/{group}/`). Other modules can add folders with the `vn-stage.groupFolders` hook.
 
@@ -47,9 +47,10 @@ Change any of these only with a step in `scripts/migrate.js` (bump `SCHEMA`), so
 |---|---|---|
 | World setting | `artRoot`, `safetyBackground`, `groupFolders` | The settings above |
 | World setting | `schema` | The last data upgrade run (migrate.js) |
-| World setting | `groups` | `{ [id]: { label, folders, images, add, remove, hideAuto, deleted } }`; members also come from manifest `groups` tags |
+| World setting | `groups` | `{ [id]: { label, folders, images, add, remove, hideAuto, deleted } }`; members also come from the art's `groups` |
 | World setting | `presets` | `{ [id]: { name, groups, background, cast, saved } }`; cast entries may carry `partyMember` and `form` |
 | World setting | `recent` | `{ names }`: art keys, newest first (24) |
+| World setting | `artIndex` | `{ root, scanned, art: { [key]: art } }`: the art folder as the GM's screen last scanned it (paths relative to `root`), so players read art without browsing files. Rescanned when the world loads and the folder changed, when the Art folder setting changes, and by the Stage window's refresh button |
 | World setting | `characterPrefs` | `{ [art key]: { flip, scale, yOffset, size } }` |
 | Client setting | `collapsed` | Which Stage window sections and folder strips this GM collapsed |
 | Scene flag | `stage` | `{ version }`: the scene is a stage |

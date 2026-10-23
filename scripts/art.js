@@ -1,150 +1,181 @@
 import { MODULE } from "./constants.js";
 import { artRoot } from "./settings.js";
-import { formsOf, familyOf } from "./rules.js";
+import { normaliseArt, familyOf, stable } from "./rules.js";
 
-export { formsOf, familyOf };
+export { familyOf };
 
 /**
- * Character art by convention: `<art root>/<key>/` holds `portrait.webp`
- * (neutral), `expressions/<name>.webp` and `manifest.json`. A key is a folder
- * under the art root: a character ("Rahadin") or one of its forms
- * ("Rahadin/forms/corrupted"). Paths are kept decoded (as Foundry stores them)
- * and encoded only for fetch.
+ * Character art by convention (docs/art-format.md): `<art root>/<key>/` holds
+ * `portrait.*`, an optional `expressions/` folder and `vn-stage.json`. A key is
+ * a folder under the art root: a character ("Mira Voss") or one of its forms
+ * ("Mira Voss/forms/corrupted"). Paths are kept decoded (as Foundry stores
+ * them) and encoded only for fetch.
  *
- * Saved choices (flip, scale, height, size) and group membership belong to the
- * key, not to an actor, so renaming an actor loses nothing.
+ * Only the GM's screen reads folders (`scanArt`). It saves what it finds as the
+ * world setting `artIndex`: { root, scanned, art: { [key]: <normaliseArt shape> } }
+ * with paths relative to `root`. Every screen reads art from that setting, so
+ * players never browse folders. Saved choices (flip, scale, height, size) and
+ * group membership belong to the key, not to an actor, so renaming an actor
+ * loses nothing.
  */
 
-const manifests = new Map(); // name → Promise<object|null>
-let index = null;            // Promise<Art[]>
+let memo = null; // { source: the setting's value, root, byKey: Map, list: Art[] }
 
-/** Forget everything read so far (the art folder changed, or new art arrived). */
+/** Forget what was read from the setting (the index changed). */
 export function clearArtCache() {
-  manifests.clear();
-  index = null;
+  memo = null;
 }
 
-export function artPath(name, file) {
-  return `${artRoot()}${name}/${file}`;
-}
-
-function readManifest(name) {
-  if (!artRoot()) return Promise.resolve(null);
-  if (!manifests.has(name)) {
-    manifests.set(name, fetch(encodeURI(artPath(name, "manifest.json")))
-      .then((r) => (r.ok ? r.json() : null))
-      .catch(() => null));
-  }
-  return manifests.get(name);
+function loaded() {
+  const source = game.settings.get(MODULE, "artIndex");
+  if (memo?.source === source) return memo;
+  const root = source?.root ?? "";
+  const withRoot = (p) => `${root}${p}`;
+  const list = Object.values(source?.art ?? {}).map((a) => ({
+    ...a,
+    portrait: withRoot(a.portrait),
+    thumb: withRoot(a.thumb),
+    expressions: Object.fromEntries(Object.entries(a.expressions).map(([k, p]) => [k, withRoot(p)])),
+  })).sort((a, b) => a.label.localeCompare(b.label));
+  memo = { source, root, byKey: new Map(list.map((a) => [a.key, a])), list };
+  return memo;
 }
 
 /**
- * The art for one character, or null if there's no manifest.
- * @returns {Promise<{name, portrait, thumb, frame, facePx, adjust, size, expressions}|null>}
+ * The art for one character or form, or null if it has none.
+ * @returns {Promise<{name, key, label, formLabel, portrait, thumb, expressions, labels, size, scale, yOffset, groups, forms}|null>}
  */
 export async function characterArt(name) {
-  const m = (await readManifest(name)) ?? (await inlineForm(name));
-  const portrait = m?.files?.portrait;
-  if (!portrait) return null;
-  const vn = m.vn_size ?? {};
-  const expressions = { neutral: artPath(name, portrait) };
-  for (const [key, file] of Object.entries(m.files.expressions ?? {})) expressions[key] = artPath(name, file);
-  const form = m.form_of;
-  return {
-    name,
-    key: name,
-    label: form ? `${form.character} · ${form.label ?? form.form}` : (m.character ?? name),
-    portrait: expressions.neutral,
-    thumb: artPath(name, m.files.avatar ?? portrait),
-    frame: vn.frame ?? null,
-    facePx: vn.face_px ?? null,
-    faceBox: vn.face_box ?? null,
-    adjust: vn.adjust ?? 1,
-    size: vn.size ?? null,
-    groups: Array.isArray(m.groups) ? m.groups : [],
-    expressions,
-  };
+  return loaded().byKey.get(name) ?? null;
+}
+
+/** Every character and form that has a VN portrait, by label. Every screen reads the saved index; `refresh` (GM) scans the folders first. */
+export async function artIndex({ refresh = false } = {}) {
+  if (refresh && game.user.isGM) await scanArt();
+  return loaded().list;
+}
+
+/* -------------------------------------------- */
+/*  Scanning the art folder (GM)                */
+/* -------------------------------------------- */
+
+const decode = (path) => { try { return decodeURIComponent(path); } catch { return path; } };
+const baseName = (path) => decode(path.replace(/\/$/, "")).split("/").pop();
+
+/** The file and folder names directly inside `folder` (an empty listing if it can't be browsed). */
+async function browse(folder) {
+  const FilePicker = foundry.applications.apps.FilePicker.implementation;
+  try {
+    const { files, dirs } = await FilePicker.browse("data", folder);
+    return { files: files.map(baseName), dirs: dirs.map(baseName) };
+  } catch {
+    return { files: [], dirs: [] };
+  }
+}
+
+async function readFile(folder, files) {
+  const name = files.find((f) => f.toLowerCase() === "vn-stage.json");
+  if (!name) return null;
+  try {
+    const response = await fetch(encodeURI(`${folder}${name}`));
+    return response.ok ? await response.json() : null;
+  } catch {
+    return null;
+  }
+}
+
+function warn(art) {
+  for (const w of art.warnings) console.warn(`VN Stage | ${art.key}: ${w}`);
+  const { warnings: _w, ...rest } = art;
+  return rest;
+}
+
+/** One character and its forms, read from its folder: [art, ...forms] (empty with no portrait). */
+async function scanCharacter(root, name) {
+  const folder = `${root}${name}/`;
+  const top = await browse(folder);
+  const file = await readFile(folder, top.files);
+  const expressions = top.dirs.includes("expressions") ? (await browse(`${folder}expressions/`)).files : [];
+  const base = normaliseArt(name, { ...top, expressions }, file);
+  if (!base) return [];
+
+  const forms = [];
+  if (top.dirs.includes("forms")) {
+    for (const form of (await browse(`${folder}forms/`)).dirs.filter((d) => !d.startsWith("_"))) {
+      const formFolder = `${folder}forms/${form}/`;
+      const listing = await browse(formFolder);
+      const formExpressions = listing.dirs.includes("expressions") ? (await browse(`${formFolder}expressions/`)).files : [];
+      const art = normaliseArt(`${name}/forms/${form}`, { ...listing, expressions: formExpressions, parentLabel: base.label }, await readFile(formFolder, listing.files));
+      if (art) forms.push(art);
+    }
+  }
+  const art = normaliseArt(name, { ...top, expressions, forms: forms.map((f) => f.key.split("/").pop()) }, file);
+  return [art, ...forms];
 }
 
 /**
- * A form folder with no manifest of its own: its entry in the parent's
- * `forms` lists the files (relative to the parent), and it shares the parent's
- * VN sizing (a pixel pass over the parent's art keeps the face boxes).
+ * Read the art folder and save the result as the `artIndex` setting (GM only;
+ * one GM writes). Saves nothing when nothing changed.
  */
-async function inlineForm(key) {
-  const i = key.lastIndexOf("/forms/");
-  if (i === -1) return null;
-  const parent = key.slice(0, i);
-  const pm = await readManifest(parent);
-  const folder = key.slice(parent.length + 1);
-  const form = formsOf(pm).find((f) => f.folder === folder);
-  if (!form?.files?.portrait) return null;
-  const local = (file) => (file.startsWith(`${folder}/`) ? file.slice(folder.length + 1) : `../`.repeat(folder.split("/").length) + file);
-  const expressions = Object.fromEntries(Object.entries(form.files.expressions ?? {}).map(([k, f]) => [k, local(f)]));
-  return {
-    character: pm.character,
-    form_of: { character: pm.character ?? parent, label: form.label, form: form.form },
-    files: { portrait: local(form.files.portrait), avatar: form.files.avatar ? local(form.files.avatar) : undefined, expressions },
-    vn_size: form.vn_size ?? pm.vn_size,
-    groups: form.groups ?? pm.groups,
-  };
-}
-
-/** Every character and form in the art folder that has a VN portrait, by key. GM only (it browses the folder). */
-export function artIndex({ refresh = false } = {}) {
-  if (refresh) clearArtCache();
-  index ??= buildIndex();
-  return index;
-}
-
-async function buildIndex() {
+export async function scanArt() {
+  if (!game.user.isGM) return;
   const root = artRoot();
-  if (!root) return [];
-  const FilePicker = foundry.applications.apps.FilePicker.implementation;
-  let dirs = [];
-  try {
-    ({ dirs } = await FilePicker.browse("data", root));
-  } catch (err) {
-    console.warn(`VN Stage | Can't browse the art folder ${root}`, err);
-    return [];
-  }
-  const names = dirs.map((d) => decodeURIComponent(d.replace(/\/$/, "").split("/").pop()))
-    .filter((n) => !n.startsWith("_"));
-  // Each character, and each of its forms that has a VN portrait of its own.
-  const keys = [...names];
-  for (const name of names) {
-    try {
-      for (const f of formsOf(await readManifest(name))) keys.push(`${name}/${f.folder}`);
-    } catch (err) {
-      console.warn(`VN Stage | Can't read the forms of ${name}`, err);
+  const art = {};
+  if (root) {
+    const { dirs } = await browse(root);
+    const names = dirs.filter((d) => !d.startsWith("_")).sort();
+    for (let i = 0; i < names.length; i += 8) {
+      const found = await Promise.all(names.slice(i, i + 8).map((n) => scanCharacter(root, n).catch((err) => {
+        console.warn(`VN Stage | Can't read the art for ${n}`, err);
+        return [];
+      })));
+      for (const a of found.flat()) art[a.key] = warn(a);
     }
   }
-  // One unreadable manifest leaves that character out, never the whole list.
-  const arts = await Promise.all(keys.map((k) => characterArt(k).catch((err) => {
-    console.warn(`VN Stage | Can't read the art for ${k}`, err);
-    return null;
-  })));
-  return arts.filter(Boolean).sort((a, b) => a.label.localeCompare(b.label));
+  const before = game.settings.get(MODULE, "artIndex");
+  if (before?.root === root && stable(before?.art ?? {}) === stable(art)) return;
+  await game.settings.set(MODULE, "artIndex", { root, scanned: Date.now(), art });
 }
 
-function decode(path) {
-  try { return decodeURIComponent(path); } catch { return path; }
+/**
+ * When the world loads (the active GM): scan if the index is empty, was built
+ * from another folder, or the art folder's character folders differ from it.
+ * New expressions in a known folder show up on the Stage window's refresh.
+ */
+export async function scanArtIfStale() {
+  // One GM is enough: the active one.
+  if (!game.user.isGM || (game.users.activeGM ?? game.user) !== game.user) return;
+  const root = artRoot();
+  const index = game.settings.get(MODULE, "artIndex");
+  if (!root) return index?.root ? scanArt() : undefined;
+  if (index?.root !== root || !Object.keys(index.art ?? {}).length) return scanArt();
+  const known = new Set(Object.keys(index.art).map(familyOf));
+  const { dirs } = await browse(root);
+  const now = dirs.filter((d) => !d.startsWith("_"));
+  const missing = now.some((d) => !known.has(d));
+  // A folder that has no portrait is never indexed, so only a vanished one counts here.
+  const gone = [...known].some((k) => !now.includes(k));
+  if (missing || gone) return scanArt();
 }
+
+/* -------------------------------------------- */
+/*  Which art a cast entry or actor uses        */
+/* -------------------------------------------- */
 
 /**
  * The art key an image path belongs to: the deepest folder under the art root,
  * from the image upward, that has a VN portrait. A form with only combat art
- * ("Rahadin/forms/twin-scimitars/token-combat.webp") gives its character's key.
+ * ("Mira Voss/forms/twin-blades/token-combat.webp") gives its character's key.
  */
 export async function artKeyFromPath(path) {
-  const root = artRoot();
+  const { root, byKey } = loaded();
   if (!root || !path) return null;
   const src = decode(path);
   if (!src.startsWith(root)) return null;
   const folders = src.slice(root.length).split("/").slice(0, -1);
   for (let n = folders.length; n > 0; n--) {
     const key = folders.slice(0, n).join("/");
-    if (await characterArt(key)) return key;
+    if (byKey.has(key)) return key;
   }
   return null;
 }
@@ -187,16 +218,16 @@ export function chosenForm(entry) {
 
 /**
  * Every form of `key`'s character that has a VN portrait, the character itself
- * first (labelled "Base"): [{ key, label, thumb }]. A combat-only form has no VN
- * portrait, so it isn't offered.
+ * first (labelled "Base"): [{ key, label, thumb, portrait }].
  */
 export async function formsFor(key) {
   const root = familyOf(key);
-  const keys = [root, ...formsOf(await readManifest(root)).map((f) => `${root}/${f.folder}`)];
-  const out = [];
-  for (const k of keys) {
-    const art = await characterArt(k).catch(() => null);
-    if (art) out.push({ key: k, label: k === root ? "Base" : (art.label.split(" · ").pop() ?? art.label), thumb: art.thumb, portrait: art.portrait });
+  const base = await characterArt(root);
+  if (!base) return [];
+  const out = [{ key: root, label: "Base", thumb: base.thumb, portrait: base.portrait }];
+  for (const k of base.forms) {
+    const art = await characterArt(k);
+    if (art) out.push({ key: k, label: art.formLabel ?? art.label, thumb: art.thumb, portrait: art.portrait });
   }
   return out;
 }
@@ -220,8 +251,8 @@ export async function automaticArt(actor) {
 }
 
 /**
- * `actorArt`'s key without asking the server about names that have no art:
- * `keys` is the set of art index keys. For listing every world actor (GM).
+ * `actorArt`'s key for listing every world actor (GM): `keys` is the set of art
+ * index keys.
  */
 export async function indexedActorKey(actor, keys) {
   const linked = actor.getFlag(MODULE, "art");

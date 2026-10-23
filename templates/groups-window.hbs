@@ -25,7 +25,7 @@
         <li data-name="{{name}}">
           <img src="{{thumb}}" alt="" loading="lazy">
           <span class="vn-name">{{label}}</span>
-          {{#if tagged}}<span class="vn-note" data-tooltip="Tagged in the art pipeline. Removing hides them from this group only.">tag</span>{{/if}}
+          {{#if tagged}}<span class="vn-note" data-tooltip="Named in the character's vn-stage.json. Removing hides them from this group only.">tag</span>{{/if}}
           <button type="button" class="vn-icon vn-remove" data-action="removeMember" data-tooltip="Remove from this group"><i class="fa-solid fa-xmark"></i></button>
         </li>
         {{else}}
@@ -75,7 +75,7 @@
       <button type="button" class="vn-add" data-action="addPresets"><i class="fa-solid fa-plus"></i> Add presets…</button>
     </section>
     {{else}}
-    <p class="vn-empty">Make a group with New group, or tag characters in the art pipeline.</p>
+    <p class="vn-empty">Make a group with New group, or name groups in the characters' vn-stage.json files.</p>
     {{/if}}
   </div>
 </div>

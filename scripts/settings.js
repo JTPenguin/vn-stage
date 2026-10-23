@@ -41,7 +41,15 @@ export function registerSettings({ onArtRootChange = () => {} } = {}) {
     default: 0,
   });
 
-  // Groups: { [id]: { label, folders: [], images: [], add: [], remove: [], hideAuto: [], deleted } }. Members also come from manifest tags.
+  // The scanned art folder (art.js): { root, scanned, art: { [key]: art } }. Only a GM writes it; everyone reads art from it.
+  game.settings.register(MODULE, "artIndex", {
+    scope: "world",
+    config: false,
+    type: Object,
+    default: {},
+  });
+
+  // Groups: { [id]: { label, folders: [], images: [], add: [], remove: [], hideAuto: [], deleted } }. Members also come from the art's `groups`.
   game.settings.register(MODULE, "groups", {
     scope: "world",
     config: false,

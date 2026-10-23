@@ -3,7 +3,7 @@
     "Settings": {
       "ArtRoot": {
         "Name": "Art folder",
-        "Hint": "Folder holding one subfolder per character (portrait.webp, expressions/ and manifest.json). Wayfinder Chronicles: wayfinder-environment/portraits/"
+        "Hint": "Folder holding one subfolder per character (portrait.webp, expressions/ and an optional vn-stage.json). See docs/art-format.md in the module."
       },
       "SafetyBackground": {
         "Name": "Safety-net background",
@@ -11,7 +11,7 @@
       },
       "GroupFolders": {
         "Name": "Group background folders",
-        "Hint": "A folder every group finds its backgrounds in by itself, when it exists. {group} stands for the group's name, for example strahd/scenes/{group}/. Leave blank for none. The Wayfinder Chronicles module adds each scenario's scene art without this."
+        "Hint": "A folder every group finds its backgrounds in by itself, when it exists. {group} stands for the group's name, for example strahd/scenes/{group}/. Leave blank for none."
       }
     },
     "Keybindings": {

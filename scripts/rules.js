@@ -102,18 +102,6 @@ export function stable(value) {
 /*  Art                                         */
 /* -------------------------------------------- */
 
-/**
- * A manifest's forms as a list of { form, label, folder }, whichever way it
- * writes them: a list with `folder` (the pipeline's form tool), or an object
- * keyed by form with `dir` (forms made by hand). Folders lose their trailing slash.
- */
-export function formsOf(m) {
-  const raw = m?.forms;
-  const list = Array.isArray(raw) ? raw
-    : raw && typeof raw === "object" ? Object.entries(raw).map(([form, f]) => ({ form, ...f })) : [];
-  return list.map((f) => ({ ...f, folder: (f.folder ?? f.dir ?? "").replace(/\/$/, "") })).filter((f) => f.folder);
-}
-
 export const ART_FORMAT = 1;
 export const ART_SIZES = ["tiny", "small", "medium", "large", "huge", "gargantuan"];
 const IMAGE_EXTENSIONS = ["webp", "png", "jpg", "jpeg", "avif"]; // in order of preference

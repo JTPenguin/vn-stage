@@ -137,13 +137,6 @@ test("cast entries compare equal whatever their field order, and missing equals 
 /*  Art and groups                              */
 /* -------------------------------------------- */
 
-test("forms read as a list (folder) or an object (dir), without trailing slashes", () => {
-  assert.deepEqual(R.formsOf({ forms: [{ form: "corrupted", folder: "forms/corrupted/" }] }).map((f) => f.folder), ["forms/corrupted"]);
-  assert.deepEqual(R.formsOf({ forms: { ghost: { dir: "forms/ghost" } } }).map((f) => [f.form, f.folder]), [["ghost", "forms/ghost"]]);
-  assert.deepEqual(R.formsOf({}), []);
-  assert.deepEqual(R.formsOf(null), []);
-});
-
 test("a form's family is the character it belongs to", () => {
   assert.equal(R.familyOf("Mira Voss/forms/corrupted"), "Mira Voss");
   assert.equal(R.familyOf("Mira Voss"), "Mira Voss");

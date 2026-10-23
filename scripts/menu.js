@@ -40,7 +40,7 @@ export async function openMenu(entry, clientX, clientY) {
   const key = (await artKeyOf(entry)) ?? entry.name;
   const groupKey = (await baseArtKeyOf(entry)) ?? entry.name;
   const art = await characterArt(key);
-  const expressions = Object.entries(art?.expressions ?? {});
+  const expressions = Object.keys(art?.expressions ?? {});
   const forms = await formsFor(key);
   const name = entry.actorUuid ? displayName(entry) : (await characterArt(groupKey))?.label ?? entry.name;
   const actions = game.user.isGM ? await gmActions(onStage ? entry : null, key, name, groupKey) : [];
@@ -68,12 +68,9 @@ export async function openMenu(entry, clientX, clientY) {
   if (expressions.length >= 2) {
     const list = document.createElement("div");
     list.className = "vn-expression-list";
-    for (const [key, src] of expressions) {
-      const button = menuButton(`vn-expression${key === current ? " current" : ""}`,
-        `<span class="vn-expression-face"></span><span class="vn-expression-label">${esc(label(key))}</span>`,
-        () => chooseExpression(entry, key));
-      faceThumb(button.querySelector(".vn-expression-face"), src, art);
-      list.append(button);
+    for (const key of expressions) {
+      list.append(menuButton(`vn-expression${key === current ? " current" : ""}`,
+        esc(art.labels[key] ?? key), () => chooseExpression(entry, key)));
     }
     el.append(list);
   }
@@ -163,30 +160,4 @@ function onKey(event) {
 
 function esc(text) {
   return foundry.utils.escapeHTML(text);
-}
-
-function label(key) {
-  return key.charAt(0).toUpperCase() + key.slice(1);
-}
-
-/**
- * A head-and-shoulders thumbnail: the face box (the same in every expression,
- * since they're painted on the portrait) zoomed into a square.
- */
-function faceThumb(el, src, art) {
-  const size = 60; // matches .vn-expression-face
-  el.style.backgroundImage = `url("${encodeURI(src)}")`;
-  const [fw, fh] = art.frame ?? [960, 1440];
-  const box = art.faceBox;
-  if (!box) {
-    el.style.backgroundSize = "cover";
-    el.style.backgroundPosition = "center top";
-    return;
-  }
-  const [x, y, w, h] = box;
-  const side = Math.max(w, h) * 1.8;
-  const cx = x + w / 2, cy = y + h / 2;
-  const k = size / side;
-  el.style.backgroundSize = `${fw * k}px ${fh * k}px`;
-  el.style.backgroundPosition = `${-(cx - side / 2) * k}px ${-(cy - side / 2) * k}px`;
 }

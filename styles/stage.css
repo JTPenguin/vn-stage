@@ -78,18 +78,15 @@
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5); color: #eee; font-family: var(--font-body, Signika, sans-serif);
 }
 .vn-character-menu .vn-menu-name { font-size: 12px; opacity: 0.75; margin: 0 0.15rem 0.3rem; }
-.vn-character-menu .vn-expression-list { display: grid; grid-template-columns: repeat(4, 64px); gap: 0.35rem; }
-/* Foundry gives every button a fixed height and a row layout; this one is a 60 px face over a label. */
+.vn-character-menu .vn-expression-list { display: flex; flex-wrap: wrap; gap: 0.35rem; max-width: 280px; }
+/* Foundry gives every button a fixed height; these are plain labelled buttons that wrap. */
 .vn-character-menu button.vn-expression {
-  display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px;
-  width: 64px; height: auto; min-height: 0; max-height: none; padding: 0; margin: 0;
-  border: 2px solid transparent; border-radius: 5px; background: none; box-shadow: none;
-  color: inherit; cursor: pointer; line-height: 1.1; overflow: visible;
+  width: auto; height: auto; min-height: 0; max-height: none; padding: 0.2rem 0.6rem; margin: 0;
+  border: 2px solid rgba(255, 255, 255, 0.15); border-radius: 5px; background: #2a2a2a; box-shadow: none;
+  color: inherit; cursor: pointer; font-size: 12px; line-height: 1.2;
 }
 .vn-character-menu button.vn-expression:hover { border-color: rgba(255, 255, 255, 0.4); }
 .vn-character-menu button.vn-expression.current { border-color: #e0a64a; }
-.vn-character-menu .vn-expression-face { display: block; flex: none; width: 60px; height: 60px; border-radius: 3px; background-color: #333; background-repeat: no-repeat; }
-.vn-character-menu .vn-expression-label { font-size: 11px; padding-bottom: 2px; }
 
 /* The Party and presets */
 .vn-stage .vn-preset-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.25rem; max-height: 6.2rem; overflow-y: auto; }

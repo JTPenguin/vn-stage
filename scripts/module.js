@@ -8,7 +8,7 @@ import { MODULE } from "./constants.js";
 import { registerSettings } from "./settings.js";
 import { isStage, makeStage, unmakeStage, setBackground, currentBackground } from "./stage.js";
 import { getCast, addToCast, addParty, removeParty, partySide, partyEntryIds, setCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip } from "./cast.js";
-import { artIndex, characterArt, clearArtCache } from "./art.js";
+import { artIndex, characterArt, clearArtCache, scanArt, scanArtIfStale } from "./art.js";
 import { layout, lastArrangement } from "./layout.js";
 import { listGroups, getGroup, memberNames, createGroup, addFolder, addMember, groupFolders, stageGroup, setStageGroup } from "./groups.js";
 import { startView, stopView, viewLocked, viewFitted } from "./view.js";
@@ -21,7 +21,7 @@ import { registerFades } from "./fades.js";
 import { migrate, migrationPending } from "./migrate.js";
 
 Hooks.once("init", () => {
-  registerSettings({ onArtRootChange: clearArtCache });
+  registerSettings({ onArtRootChange: () => { if (game.user.isGM && (game.users.activeGM ?? game.user) === game.user) scanArt(); } });
   // Open the Stage window from the keyboard (GM). No key by default; set one in Configure Controls.
   game.keybindings.register(MODULE, "openWindow", {
     name: "VNSTAGE.Keybindings.OpenWindow.Name",
@@ -54,7 +54,10 @@ Hooks.once("init", () => {
 });
 
 // One-time upgrades of stored data (migrate.js), by the active GM once Foundry is ready.
-Hooks.once("ready", () => migrate());
+Hooks.once("ready", async () => {
+  await migrate();
+  await scanArtIfStale();
+});
 
 // The Stage window's button, in the token controls (the GM's usual layer).
 Hooks.on("getSceneControlButtons", (controls) => {
@@ -118,8 +121,13 @@ Hooks.on("createSetting", (setting, _options, userId) => onSettingChanged(settin
 Hooks.on("updateSetting", (setting, _changes, _options, userId) => onSettingChanged(setting, userId));
 
 function onSettingChanged(setting, userId) {
-  const keys = ["characterPrefs", "groups", "recent", "presets", "groupFolders"].map((k) => `${MODULE}.${k}`);
+  const keys = ["characterPrefs", "groups", "recent", "presets", "groupFolders", "artIndex"].map((k) => `${MODULE}.${k}`);
   if (!keys.includes(setting.key)) return;
+  if (setting.key === `${MODULE}.artIndex`) {
+    clearArtCache();
+    preloadStage();
+    if (userId === game.user.id && game.user.isGM && isStage()) layout(canvas.scene);
+  }
   // Flip, size or height changed by this GM: the viewed stage re-lays out.
   if (setting.key === `${MODULE}.characterPrefs` && userId === game.user.id && game.user.isGM && isStage()) layout(canvas.scene);
   StageWindow.refresh();

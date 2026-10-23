@@ -16,7 +16,7 @@ export const GUIDE_TOP = 0.54;
  */
 export const HEADS = 7;
 
-/** Creature size → scale. PF2e codes and the manifests' words both appear. */
+/** Creature size → scale. PF2e's codes and the art format's words both appear. */
 export const SIZE = Object.freeze({
   tiny: 0.7,
   sm: 0.82, small: 0.82,
