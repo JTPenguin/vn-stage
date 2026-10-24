@@ -15,6 +15,7 @@ import { chooseCharacterGroups } from "./groups-window.js";
  */
 
 let menu = null;
+let closes = 0; // counts closeMenu calls, so a menu still being built when it's closed isn't shown
 
 /* -------------------------------------------- */
 /*  The character menu                          */
@@ -36,6 +37,7 @@ export function openCastMenu(row, clientX, clientY) {
  */
 export async function openMenu(entry, clientX, clientY) {
   closeMenu();
+  const mine = closes;
   const onStage = !entry.offstage;
   const key = (await artKeyOf(entry)) ?? entry.name;
   const groupKey = (await baseArtKeyOf(entry)) ?? entry.name;
@@ -46,6 +48,7 @@ export async function openMenu(entry, clientX, clientY) {
   const actions = game.user.isGM ? await gmActions(onStage ? entry : null, key, name, groupKey) : [];
   if (expressions.length < 2 && forms.length < 2 && !actions.length) return;
   const current = currentExpression(entry);
+  if (mine !== closes) return;
 
   const el = document.createElement("div");
   el.className = "vn-character-menu";
@@ -144,6 +147,7 @@ function topZ() {
 }
 
 export function closeMenu() {
+  closes++;
   menu?.remove();
   menu = null;
   document.removeEventListener("pointerdown", onOutside, true);

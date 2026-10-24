@@ -9,14 +9,16 @@ import { openMenu, closeMenu } from "./menu.js";
 /**
  * Working on the stage itself. Dragging a portrait moves the character within
  * its side or to the other one (GM); clicking one opens its character menu
- * (menu.js) for anyone who may change it; hovering shows the GM its name.
+ * (menu.js) for anyone who may change it, double-clicking opens its character sheet; hovering shows the GM its name.
  */
 
 const CLICK_MOVE = 6;   // pixels: more than this is a drag, not a click
 const CLICK_TIME = 600; // ms
+const DOUBLE_TIME = 400; // ms between two clicks on the same portrait
 const ALPHA = 0.5;      // transparent parts of a portrait don't count as a click
 let press = null;       // the press that started on a portrait: { x, y, t, entry, tile, dragging }
 let hoverFrame = null;
+let lastClick = null;   // the previous click on a portrait: { id, t }
 
 /*
  * Foundry's canvas library listens for presses on the canvas in the capture
@@ -80,7 +82,20 @@ async function onUp(event) {
     return;
   }
   if (performance.now() - p.t > CLICK_TIME) return;
+  const now = performance.now();
+  if (lastClick?.id === p.entry.id && now - lastClick.t < DOUBLE_TIME) {
+    lastClick = null;
+    closeMenu();
+    return openSheet(p.entry);
+  }
+  lastClick = { id: p.entry.id, t: now };
   if (canChange(p.entry)) openMenu(p.entry, event.clientX, event.clientY);
+}
+
+/** Double-clicking a portrait opens the character sheet of its actor, for anyone who may see it. */
+async function openSheet(entry) {
+  const actor = entry.actorUuid ? await fromUuid(entry.actorUuid) : null;
+  if (actor?.testUserPermission(game.user, "LIMITED")) actor.sheet.render(true);
 }
 
 /** The front-most portrait whose visible pixels are under the pointer. */
