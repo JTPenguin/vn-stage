@@ -50,7 +50,7 @@ Change any of these only with a step in `scripts/migrate.js` (bump `SCHEMA`), so
 | World setting | `groups` | `{ [id]: { label, folders, images, add, remove, hideAuto, deleted } }`; members also come from the art's `groups` |
 | World setting | `presets` | `{ [id]: { name, groups, background, cast, saved } }`; cast entries may carry `partyMember` and `form` |
 | World setting | `recent` | `{ names }`: art keys, newest first (24) |
-| World setting | `artIndex` | `{ root, scanned, art: { [key]: art } }`: the art folder as the GM's screen last scanned it (paths relative to `root`), so players read art without browsing files. Rescanned when the world loads and the folder changed, when the Art folder setting changes, and by the Stage window's refresh button |
+| World setting | `artIndex` | `{ root, scanned, art: { [key]: art } }`: the art folder as the GM's screen last scanned it (paths relative to `root`), so players read art without browsing files. Rescanned every time the world loads, when the Art folder setting changes, and by the Stage window's refresh button |
 | World setting | `characterPrefs` | `{ [art key]: { flip, scale, yOffset, size } }`. `scale` and `yOffset` are the actual values and replace the art file's; absent means the file's |
 | Client setting | `collapsed` | Which Stage window sections and folder strips this GM collapsed |
 | Scene flag | `stage` | `{ version }`: the scene is a stage |

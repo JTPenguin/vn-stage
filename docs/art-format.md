@@ -107,4 +107,4 @@ She stands at 60% of the frame's height, a little lower than the bottom edge, an
 
 ## How VN Stage reads it
 
-The GM's screen lists the folders and reads each `vn-stage.json`. It saves the result as a world setting, so players get the same art without browsing files. New art shows up after the Stage window's refresh button, or when the Art folder setting changes.
+The GM's screen lists the folders and reads each `vn-stage.json`. It saves the result as a world setting, so players get the same art without browsing files. New art shows up when the world loads, when the Art folder setting changes, or after the Stage window's refresh button.

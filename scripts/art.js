@@ -138,24 +138,17 @@ export async function scanArt() {
 }
 
 /**
- * When the world loads (the active GM): scan if the index is empty, was built
- * from another folder, or the art folder's character folders differ from it.
- * New expressions in a known folder show up on the Stage window's refresh.
+ * When the world loads (the active GM): read the art folder again, so new
+ * characters, forms and expressions show up without a manual refresh. Nothing
+ * is saved when nothing changed.
  */
 export async function scanArtIfStale() {
   // One GM is enough: the active one.
   if (!game.user.isGM || (game.users.activeGM ?? game.user) !== game.user) return;
   const root = artRoot();
   const index = game.settings.get(MODULE, "artIndex");
-  if (!root) return index?.root ? scanArt() : undefined;
-  if (index?.root !== root || !Object.keys(index.art ?? {}).length) return scanArt();
-  const known = new Set(Object.keys(index.art).map(familyOf));
-  const { dirs } = await browse(root);
-  const now = dirs.filter((d) => !d.startsWith("_"));
-  const missing = now.some((d) => !known.has(d));
-  // A folder that has no portrait is never indexed, so only a vanished one counts here.
-  const gone = [...known].some((k) => !now.includes(k));
-  if (missing || gone) return scanArt();
+  if (!root && !index?.root) return;
+  return scanArt();
 }
 
 /* -------------------------------------------- */

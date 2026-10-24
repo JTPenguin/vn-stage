@@ -11,6 +11,7 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 - The Adjust window's yellow face box is gone; the blue face guide stays as a drawing.
 - **Adjust shows the actual scale and height.** It opens at the art file's values, a change replaces them in this world, and Reset goes back to them. Before, Adjust showed a change on top of the file (Scale 1 meant "the file's"). A one-time upgrade (schema 2) converts saved values, so nothing on stage moves.
 
+- **New art shows up on reload.** The GM's screen now rescans the art folder every time the world loads, so a new form or expression appears without pressing refresh. Before, only new or removed character folders were noticed.
 - **Drag markers are steadier.** A drop on a crowded one-sided stage can again reach every position on that side, and the far edge always counts as the other side. A drop on an empty side snaps to one spot, past the other side's end-of-row marker. A drag to the other side shows a dashed marker with an arrow pointing to that side.
 
 ### Removed
