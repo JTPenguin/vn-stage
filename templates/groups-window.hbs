@@ -19,20 +19,19 @@
     </header>
 
     <section class="vn-groups-section">
-      <h3>Characters</h3>
+      <h3>Presets</h3>
       <ul class="vn-groups-items">
-        {{#each members}}
-        <li data-name="{{name}}">
-          <img src="{{thumb}}" alt="" loading="lazy">
-          <span class="vn-name">{{label}}</span>
-          {{#if tagged}}<span class="vn-note" data-tooltip="Named in the character's vn-stage.json. Removing hides them from this group only.">tag</span>{{/if}}
-          <button type="button" class="vn-icon vn-remove" data-action="removeMember" data-tooltip="Remove from this group"><i class="fa-solid fa-xmark"></i></button>
+        {{#each presets}}
+        <li data-preset="{{id}}">
+          <span class="vn-pick-icon"><i class="fa-solid fa-play"></i></span>
+          <span class="vn-name">{{name}}</span>
+          <button type="button" class="vn-icon vn-remove" data-action="removePreset" data-tooltip="Remove from this group (the preset stays)"><i class="fa-solid fa-xmark"></i></button>
         </li>
         {{else}}
-        <li class="vn-empty">No characters yet.</li>
+        <li class="vn-empty">No presets yet.</li>
         {{/each}}
       </ul>
-      <button type="button" class="vn-add" data-action="addMembers"><i class="fa-solid fa-plus"></i> Add characters…</button>
+      <button type="button" class="vn-add" data-action="addPresets"><i class="fa-solid fa-plus"></i> Add presets…</button>
     </section>
 
     <section class="vn-groups-section">
@@ -60,19 +59,20 @@
     </section>
 
     <section class="vn-groups-section">
-      <h3>Presets</h3>
+      <h3>Characters</h3>
       <ul class="vn-groups-items">
-        {{#each presets}}
-        <li data-preset="{{id}}">
-          <span class="vn-pick-icon"><i class="fa-solid fa-play"></i></span>
-          <span class="vn-name">{{name}}</span>
-          <button type="button" class="vn-icon vn-remove" data-action="removePreset" data-tooltip="Remove from this group (the preset stays)"><i class="fa-solid fa-xmark"></i></button>
+        {{#each members}}
+        <li data-name="{{name}}">
+          <img src="{{thumb}}" alt="" loading="lazy">
+          <span class="vn-name">{{label}}</span>
+          {{#if tagged}}<span class="vn-note" data-tooltip="Named in the character's vn-stage.json. Removing hides them from this group only.">tag</span>{{/if}}
+          <button type="button" class="vn-icon vn-remove" data-action="removeMember" data-tooltip="Remove from this group"><i class="fa-solid fa-xmark"></i></button>
         </li>
         {{else}}
-        <li class="vn-empty">No presets yet.</li>
+        <li class="vn-empty">No characters yet.</li>
         {{/each}}
       </ul>
-      <button type="button" class="vn-add" data-action="addPresets"><i class="fa-solid fa-plus"></i> Add presets…</button>
+      <button type="button" class="vn-add" data-action="addMembers"><i class="fa-solid fa-plus"></i> Add characters…</button>
     </section>
     {{else}}
     <p class="vn-empty">Make a group with New group, or name groups in the characters' vn-stage.json files.</p>
