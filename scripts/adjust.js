@@ -1,7 +1,8 @@
-import { artKeyOf } from "./art.js";
+import { artKeyOf, characterArt } from "./art.js";
 import { MODULE, FRAME, SIZE_CHOICES, faceGuide } from "./constants.js";
 import { getCast, characterPrefs, setPrefs, displayName } from "./cast.js";
 import { placements } from "./layout.js";
+import { artDefaults, placementOf } from "./rules.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -9,6 +10,7 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
  * Adjust one character's scale and height on the stage. While it's open, the GM's
  * screen shows the face guide: two lines across the frame where every face should
  * start and end. It's only a drawing to line art up against.
+ * The window shows the actual scale and drop: the art file's own until changed.
  * Changes are saved per character, so they apply on every stage.
  */
 export class AdjustWindow extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -45,6 +47,8 @@ export class AdjustWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   #save;
+  /** The art file's own scale and drop, so a value equal to it saves as no choice. */
+  #own = artDefaults(null);
   #onLayout = null;
 
   get title() {
@@ -53,12 +57,15 @@ export class AdjustWindow extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async _prepareContext() {
     const p = characterPrefs(this.key);
+    const art = await characterArt(this.key);
+    this.#own = artDefaults(art);
+    const place = placementOf(p, art);
     const placed = placements.get(this.entry.id);
     const auto = placed?.size?.auto;
     const from = { sheet: "from the sheet", art: "from the art", default: "default" }[auto?.source] ?? "";
     return {
-      scale: p.scale ?? 1,
-      yOffset: Math.round((p.yOffset ?? 0) * 1000) / 10, // % of the frame height
+      scale: Math.round(place.scale * 10000) / 10000,
+      yOffset: Math.round(place.yOffset * 10000) / 100, // % of the frame height
       autoLabel: auto ? `Auto: ${SIZE_CHOICES[auto.key] ?? auto.key} (${from})` : "Auto",
       sizes: Object.entries(SIZE_CHOICES).map(([key, label]) => ({ key, label, selected: p.size === key })),
     };
@@ -87,7 +94,14 @@ export class AdjustWindow extends HandlebarsApplicationMixin(ApplicationV2) {
 
   #readForm() {
     const val = (name) => Number(this.element.querySelector(`input[type=number][name=${name}]`).value);
-    return { scale: val("scale") || 1, yOffset: (val("yOffset") || 0) / 100 };
+    const scale = val("scale") || this.#own.scale;
+    const yOffset = Math.round((val("yOffset") || 0) * 100) / 10000;
+    // The art's own value is saved as no choice, so a later art file still applies.
+    const same = (a, b) => Math.abs(a - b) < 1e-6;
+    return {
+      scale: same(scale, this.#own.scale) ? null : scale,
+      yOffset: same(yOffset, this.#own.yOffset) ? null : yOffset,
+    };
   }
 
   _onClose(options) {
@@ -99,7 +113,7 @@ export class AdjustWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async #onReset() {
-    await setPrefs(this.key, { scale: 1, yOffset: 0 }); // back to the art file's own scale and height
+    await setPrefs(this.key, { scale: null, yOffset: null }); // back to the art file's own scale and height
     this.render();
   }
 

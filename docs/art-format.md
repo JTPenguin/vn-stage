@@ -70,16 +70,18 @@ The file adds what file names can't say. Every field except `format` is optional
 VN Stage sizes art by height, not by face.
 
 - **Scale 1 means as tall as the frame,** standing on its bottom edge. The image's pixel size doesn't matter, only its shape.
-- **Final height** = the file's `scale` × the creature size × the world's Adjust Scale. Creature size multiplies by Tiny 0.7, Small 0.82, Medium 1, Large and bigger 1.08.
-- **Final drop** = the file's `yOffset` + the world's Adjust Height.
-- **Adjust is relative to the file.** The Adjust window changes a character in this world only. Reset goes back to the file's `scale` and `yOffset`.
+- **The file sets the starting values.** A character's scale and drop are the file's `scale` and `yOffset` until someone changes them in the Adjust window.
+- **Adjust shows the actual values.** It opens at the file's values. A new value replaces the file's in this world only. Reset goes back to the file's values.
+- **Final height** = the scale × the creature size. Creature size multiplies by Tiny 0.7, Small 0.82, Medium 1, Large and bigger 1.08.
+- **Final drop** = the yOffset, as a share of the frame height.
+- **Art with no VN portrait** (the actor's own image) starts at a scale of 0.5.
 - **The face guide** in the Adjust window is two lines where faces should start and end, for the character's size. It's a drawing to line art up against, not a measurement.
 - **Crowded stages** zoom everyone out around the guide's centre line. Art lined up on the guide stays on it while it shrinks.
 
-To find good values, open Adjust on a stage and line the face up with the guide. Then fold the Adjust numbers into the file and reset Adjust:
+To find good values, open Adjust on a stage and line the face up with the guide. To make them the default for every world, copy them into the file and reset Adjust:
 
-- **New file `scale`** = the file's `scale` × Adjust's Scale. A file scale of 0.6 with Adjust Scale 1.1 becomes 0.66.
-- **New file `yOffset`** = the file's `yOffset` + Adjust's Height ÷ 100. Adjust shows Height as a percentage of the frame height, and the file holds a share. A Height of 5.5% adds 0.055.
+- **File `scale`** = Adjust's Scale.
+- **File `yOffset`** = Adjust's Height ÷ 100. Adjust shows Height as a percentage of the frame height, and the file holds a share. A Height of 5.5% is 0.055.
 
 ## Worked example
 

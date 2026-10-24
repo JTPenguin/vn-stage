@@ -4,9 +4,7 @@ import { characterArt, artKeyOf } from "./art.js";
 import { getCast, characterPrefs } from "./cast.js";
 import { isStage } from "./stage.js";
 import { currentExpression } from "./expressions.js";
-
-/** Height of a fallback image (no VN art), as a share of the frame. */
-const FALLBACK_HEIGHT = 0.5 * FRAME.height;
+import { placementOf } from "./rules.js";
 
 
 let queue = Promise.resolve();
@@ -108,8 +106,8 @@ function shadeTiles(placed) {
 
 /**
  * One character's image and size, before they're placed. Art is sized by
- * height (docs/art-format.md): the file's scale × the creature size × Adjust's
- * scale, as a multiple of the frame height; the width follows the image's shape.
+ * height (docs/art-format.md): the scale (Adjust's, else the file's) × the
+ * creature size, as a multiple of the frame height; the width follows the image's shape.
  */
 async function measure(entry) {
   const actor = entry.actorUuid ? fromUuidSync(entry.actorUuid) : null;
@@ -117,27 +115,26 @@ async function measure(entry) {
   const art = await characterArt(key);
   const prefs = characterPrefs(key);
   const size = sizeOf(prefs, actor, art);
-  const scale = size.scale * (prefs.scale ?? 1);
+  const place = placementOf(prefs, art);
+  const height = FRAME.height * place.scale * size.scale;
 
-  let src, width, height, fallback = false;
+  let src, width, fallback = false;
   if (art) {
     src = art.expressions[currentExpression(entry)] ?? art.portrait;
-    height = FRAME.height * art.scale * scale;
   } else {
     fallback = true;
     src = actor?.img ?? "icons/svg/mystery-man.svg";
-    height = FALLBACK_HEIGHT * scale;
   }
   const tex = await foundry.canvas.loadTexture(src).catch(() => null);
   width = tex?.width ? (height * tex.width) / tex.height : height * (2 / 3);
 
-  return { entry, key, art, prefs, size, src, width, height, fallback };
+  return { entry, key, prefs, place, size, src, width, height, fallback };
 }
 
 /** Where one character stands: box (frame pixels) and draw order; first-placed in front. */
-function finish({ entry, key, art, prefs, size, src, width, height, fallback }, cx, i, zoom = 1) {
-  // Standing on the bottom edge, dropped by the file's yOffset and Adjust's height.
-  let y = FRAME.height - height + ((art?.yOffset ?? 0) + (prefs.yOffset ?? 0)) * FRAME.height;
+function finish({ entry, key, prefs, place, size, src, width, height, fallback }, cx, i, zoom = 1) {
+  // Standing on the bottom edge, dropped by the yOffset (Adjust's, else the file's).
+  let y = FRAME.height - height + place.yOffset * FRAME.height;
 
   // Zoomed out with everyone else when the stage is crowded (arrange.js): around
   // the face guide's centre line, so art lined up on the guide stays on it and

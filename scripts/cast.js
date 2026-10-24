@@ -225,13 +225,16 @@ export function setFlip(name, flip) {
 }
 
 /**
- * Change a character's saved choices: `flip`, `scale` (a factor on top of the
- * face sizing) and `yOffset` (share of the frame height; positive is lower).
+ * Change a character's saved choices: `flip`, `size`, `scale` (multiple of the
+ * frame height, before creature size) and `yOffset` (share of the frame height;
+ * positive is lower). Scale and yOffset replace the art file's own; null clears
+ * a choice, so the art's own applies again.
  */
 export async function setPrefs(name, patch) {
   requireGM();
   const all = foundry.utils.deepClone(game.settings.get(MODULE, "characterPrefs"));
   all[name] = { ...all[name], ...patch };
+  for (const [k, v] of Object.entries(patch)) if (v === null) delete all[name][k];
   // The viewed stage re-lays out when the setting lands (module.js); others catch up when next viewed.
   return game.settings.set(MODULE, "characterPrefs", all);
 }

@@ -299,3 +299,27 @@ test("expression names that match built-in object names are ordinary names", () 
   assert.equal(a.labels.constructor, "Constructor");
   assert.equal(a.labels.angry, "Cross");
 });
+
+/* -------------------------------------------- */
+/*  Scale and drop                              */
+/* -------------------------------------------- */
+
+const artAt = (scale, yOffset) => ({ scale, yOffset });
+
+test("placement: Adjust's values win, else the art's own, else the no-art default", () => {
+  assert.deepEqual(R.placementOf({}, artAt(0.54, 0.024)), { scale: 0.54, yOffset: 0.024 });
+  assert.deepEqual(R.placementOf({ scale: 0.6 }, artAt(0.54, 0.024)), { scale: 0.6, yOffset: 0.024 });
+  assert.deepEqual(R.placementOf({ yOffset: 0 }, artAt(0.54, 0.024)), { scale: 0.54, yOffset: 0 }, "a drop of 0 is a choice");
+  assert.deepEqual(R.placementOf({}, null), { scale: R.FALLBACK_SCALE, yOffset: 0 });
+});
+
+test("schema 2: old relative Adjust values become the actual ones", () => {
+  assert.deepEqual(R.absolutePrefs({ scale: 0.5, yOffset: 0.01, flip: true }, artAt(1, 0.02)), { scale: 0.5, yOffset: 0.03, flip: true });
+  assert.deepEqual(R.absolutePrefs({ scale: 1.1 }, artAt(0.6, 0)), { scale: 0.66 });
+  assert.deepEqual(R.absolutePrefs({ scale: 2 }, null), { scale: 1 }, "no art: relative to the fallback height");
+});
+
+test("schema 2: values that match the art's own are dropped", () => {
+  assert.deepEqual(R.absolutePrefs({ scale: 1, yOffset: 0, size: "lg" }, artAt(0.54, 0.024)), { size: "lg" });
+  assert.deepEqual(R.absolutePrefs({ flip: true }, artAt(0.54, 0.024)), { flip: true });
+});

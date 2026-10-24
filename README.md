@@ -51,7 +51,7 @@ Change any of these only with a step in `scripts/migrate.js` (bump `SCHEMA`), so
 | World setting | `presets` | `{ [id]: { name, groups, background, cast, saved } }`; cast entries may carry `partyMember` and `form` |
 | World setting | `recent` | `{ names }`: art keys, newest first (24) |
 | World setting | `artIndex` | `{ root, scanned, art: { [key]: art } }`: the art folder as the GM's screen last scanned it (paths relative to `root`), so players read art without browsing files. Rescanned when the world loads and the folder changed, when the Art folder setting changes, and by the Stage window's refresh button |
-| World setting | `characterPrefs` | `{ [art key]: { flip, scale, yOffset, size } }` |
+| World setting | `characterPrefs` | `{ [art key]: { flip, scale, yOffset, size } }`. `scale` and `yOffset` are the actual values and replace the art file's; absent means the file's |
 | Client setting | `collapsed` | Which Stage window sections and folder strips this GM collapsed |
 | Scene flag | `stage` | `{ version }`: the scene is a stage |
 | Scene flag | `cast` | `[{ id, name, actorUuid, side, expression?, form? }]` in standing order (`expression` and `form` only for art without an actor) |

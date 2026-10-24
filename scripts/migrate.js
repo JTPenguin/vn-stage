@@ -1,6 +1,7 @@
 import { MODULE } from "./constants.js";
 import { partyMembers } from "./cast.js";
-import { upgradeCast } from "./rules.js";
+import { upgradeCast, absolutePrefs } from "./rules.js";
+import { characterArt, scanArtIfStale } from "./art.js";
 import { isStage } from "./stage.js";
 import { layout } from "./layout.js";
 
@@ -15,11 +16,15 @@ import { layout } from "./layout.js";
  *              the same cast changes, members marked `partyMember` (an old
  *              whole-party entry stays when no party is known, and still fills
  *              in when the preset loads).
+ *   2          Character prefs: Adjust's scale and yOffset hold the actual values,
+ *              not a factor on and an addition to the art file's. Values equal to
+ *              the art's own are dropped.
  */
-export const SCHEMA = 1;
+export const SCHEMA = 2;
 
 const STEPS = {
   1: toV1,
+  2: toV2,
 };
 
 /** Is an upgrade still to run in this world? (The GM's screen waits for it before laying out.) */
@@ -68,4 +73,13 @@ async function toV1() {
     if (JSON.stringify(p) !== before) changed = true;
   }
   if (changed) await game.settings.set(MODULE, "presets", presets);
+}
+
+async function toV2() {
+  // The art's own values are needed, so read the art folder first if the index is missing or out of date.
+  await scanArtIfStale();
+  const all = game.settings.get(MODULE, "characterPrefs");
+  const next = {};
+  for (const [key, prefs] of Object.entries(all)) next[key] = absolutePrefs(prefs, await characterArt(key));
+  if (JSON.stringify(next) !== JSON.stringify(all)) await game.settings.set(MODULE, "characterPrefs", next);
 }

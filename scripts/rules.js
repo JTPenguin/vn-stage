@@ -228,6 +228,44 @@ export function familyOf(key) {
 }
 
 /* -------------------------------------------- */
+/*  Scale and drop                              */
+/* -------------------------------------------- */
+
+/** How tall a character with no VN art stands, as a multiple of the frame height. */
+export const FALLBACK_SCALE = 0.5;
+
+/** The art's own scale and drop (`art`: normaliseArt's shape, or null for no art). */
+export function artDefaults(art) {
+  return { scale: art ? art.scale : FALLBACK_SCALE, yOffset: art?.yOffset ?? 0 };
+}
+
+/**
+ * A character's scale and drop on the stage: the world's Adjust values where
+ * set, else the art's own. Adjust holds the actual values, not a change to the art's.
+ */
+export function placementOf(prefs = {}, art = null) {
+  const own = artDefaults(art);
+  return { scale: prefs.scale ?? own.scale, yOffset: prefs.yOffset ?? own.yOffset };
+}
+
+/**
+ * Prefs from before Adjust held the actual values (schema 2): its scale was a
+ * factor on the art's and its drop was added to the art's. Values that come
+ * out the same as the art's own are dropped, so the art's own apply.
+ */
+export function absolutePrefs(prefs, art) {
+  const own = artDefaults(art);
+  const next = { ...prefs };
+  delete next.scale;
+  delete next.yOffset;
+  const scale = Math.round(own.scale * (prefs.scale ?? 1) * 10000) / 10000;
+  const yOffset = Math.round((own.yOffset + (prefs.yOffset ?? 0)) * 10000) / 10000;
+  if (Math.abs(scale - own.scale) > 1e-6) next.scale = scale;
+  if (Math.abs(yOffset - own.yOffset) > 1e-6) next.yOffset = yOffset;
+  return next;
+}
+
+/* -------------------------------------------- */
 /*  Groups                                      */
 /* -------------------------------------------- */
 

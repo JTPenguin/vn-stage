@@ -5,10 +5,11 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 ## [Unreleased]
 
 ### Changed
-- **Art is read from folders and sized by height, not by face.** The module reads `portrait.*`, `expressions/`, `forms/` and an optional `vn-stage.json` (see `docs/art-format.md`) and no longer reads any other art file. The GM's screen scans the art folder and saves the result as the world setting `artIndex`, so players read art without browsing files; the Stage window's refresh button rescans. Characters are sized by the file's `scale` and `yOffset` (Adjust stays relative to them; Reset returns to the file's values), and every character now shows its expressions. Crowded stages zoom around the face guide's centre line.
+- **Art is read from folders and sized by height, not by face.** The module reads `portrait.*`, `expressions/`, `forms/` and an optional `vn-stage.json` (see `docs/art-format.md`) and no longer reads any other art file. The GM's screen scans the art folder and saves the result as the world setting `artIndex`, so players read art without browsing files; the Stage window's refresh button rescans. Characters are sized by the file's `scale` and `yOffset`, and every character now shows its expressions. Crowded stages zoom around the face guide's centre line.
 - Wording: the settings hints, the empty-group text and the Groups window tooltip describe the art format (a group is "named in the character's `vn-stage.json`"), and no tool or campaign is named.
 - The character menu shows a labelled button per expression instead of face thumbnails.
 - The Adjust window's yellow face box is gone; the blue face guide stays as a drawing.
+- **Adjust shows the actual scale and height.** It opens at the art file's values, a change replaces them in this world, and Reset goes back to them. Before, Adjust showed a change on top of the file (Scale 1 meant "the file's"). A one-time upgrade (schema 2) converts saved values, so nothing on stage moves.
 
 ### Removed
 - Face measurements (`facePx`, `faceBox`, `frame`, `adjust`) and the object-shaped `forms` list.
