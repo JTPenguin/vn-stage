@@ -170,6 +170,34 @@ test("on an empty stage a drop's side is by the middle of the usable width", () 
   assert.equal(R.dropSlot(middle + 1, [], [], FRAME.width, LAYOUT.sidebar).side, "right");
 });
 
+test("a drop on an empty side snaps to the mirror of the other side's outermost character", () => {
+  const usable = FRAME.width * (1 - LAYOUT.sidebar);
+  const left = [300, 600];
+  const r = R.dropSlot(usable - 100, left, [], FRAME.width, LAYOUT.sidebar);
+  assert.deepEqual(r, { side: "right", index: 0, x: usable - 300 });
+  const a = R.dropSlot(usable - 100, left, [], FRAME.width, LAYOUT.sidebar).x;
+  const b = R.dropSlot(usable - 400, left, [], FRAME.width, LAYOUT.sidebar).x;
+  assert.equal(a, b);
+  assert.equal(R.dropSlot(1, [], [], FRAME.width, LAYOUT.sidebar).x, usable * 0.25);
+});
+
+test("a full one-sided stage still lets a drop reach the far edge as the other side", () => {
+  const usable = FRAME.width * (1 - LAYOUT.sidebar);
+  const left = [150, 350, 550, 750, 950, 1150, 1350, usable - 150];
+  const across = R.dropSlot(usable - 20, left, [], FRAME.width, LAYOUT.sidebar);
+  assert.equal(across.side, "right");
+  assert.ok(across.x >= Math.max(...left));
+});
+
+test("a crowded side with the other empty keeps drops beyond the middle", () => {
+  const middle = (FRAME.width * (1 - LAYOUT.sidebar)) / 2;
+  const left = [200, 500, middle + 200, middle + 400];
+  const inside = R.dropSlot(middle + 500, left, [], FRAME.width, LAYOUT.sidebar);
+  assert.equal(inside.side, "left");
+  assert.equal(inside.index, 4);
+  assert.equal(R.dropSlot(middle + 400 + 0.07 * FRAME.width, left, [], FRAME.width, LAYOUT.sidebar).side, "right");
+});
+
 /* -------------------------------------------- */
 /*  Art folders                                 */
 /* -------------------------------------------- */

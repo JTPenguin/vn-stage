@@ -293,20 +293,43 @@ export function mergeRecent(used, before, max) {
  * Where a drop at frame x would put a character, given each side's centres in
  * standing order (frame pixels): { side, index, x } with x where the marker goes.
  * The sides divide halfway between the two clusters, or in the middle of the
- * usable width (the frame less the sidebar share) when one side is empty.
+ * usable width (the frame less the sidebar share) when one side is empty, or
+ * past the last character of a crowded side if that lies beyond the middle.
  */
 export function dropSlot(x, left, right, frameWidth, sidebar) {
-  const boundary = left.length && right.length
-    ? (Math.max(...left) + Math.min(...right)) / 2
-    : (frameWidth * (1 - sidebar)) / 2;
+  const gap = 0.06 * frameWidth;
+  const middle = (frameWidth * (1 - sidebar)) / 2;
+  // A lone crowded side keeps its territory: the divide moves out past its last character.
+  // The far edge always stays reachable as the other side.
+  const reach = (b) => Math.min(Math.max(b, 0.5 * gap), 2 * middle - 0.5 * gap);
+  const boundary = reach(left.length && right.length ? (Math.max(...left) + Math.min(...right)) / 2
+    : left.length ? Math.max(middle, Math.max(...left) + gap)
+    : right.length ? Math.min(middle, Math.min(...right) - gap)
+    : middle);
   const side = x < boundary ? "left" : "right";
   const list = side === "left" ? left : right;
   // Standing order runs from the outer edge: left to right on the left, right to left on the right.
   const inward = side === "left" ? (c) => c < x : (c) => c > x;
   const index = list.filter(inward).length;
   const prev = list[index - 1], next = list[index];
-  const gap = 0.06 * frameWidth * (side === "left" ? 1 : -1);
+  const step = side === "left" ? gap : -gap;
   const mx = prev !== undefined && next !== undefined ? (prev + next) / 2
-    : prev !== undefined ? prev + gap : next !== undefined ? next - gap : x;
+    : prev !== undefined ? prev + step : next !== undefined ? next - step
+    : emptySideX(side, side === "left" ? right : left, middle * 2, boundary, gap);
   return { side, index, x: mx };
+}
+
+/**
+ * Where the marker sits for a drop on an empty side: the mirror of the other
+ * side's outermost character (else a quarter in from that edge of the usable
+ * width), kept clear of the divide so it never lies short of the other side's
+ * own end-of-row marker.
+ */
+function emptySideX(side, other, usable, boundary, gap) {
+  const mirror = other.length
+    ? usable - (side === "left" ? Math.max(...other) : Math.min(...other))
+    : usable * (side === "left" ? 0.25 : 0.75);
+  return side === "left"
+    ? Math.max(0, Math.min(mirror, boundary - gap))
+    : Math.min(usable, Math.max(mirror, boundary + gap));
 }

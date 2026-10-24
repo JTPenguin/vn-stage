@@ -161,7 +161,10 @@ export function dropTarget(clientX, clientY, ignore = null) {
   }
   const order = getCast().filter((e) => centres.has(e.id));
   const sideOf = (s) => order.filter((e) => e.side === s).map((e) => centres.get(e.id));
-  return dropSlot(x, sideOf("left"), sideOf("right"), FRAME.width, LAYOUT.sidebar);
+  const slot = dropSlot(x, sideOf("left"), sideOf("right"), FRAME.width, LAYOUT.sidebar);
+  // Moving someone to the other side of the stage gets its own marker.
+  const moving = getCast().filter((e) => skip.has(e.id));
+  return { ...slot, crosses: moving.some((e) => e.side !== slot.side) };
 }
 
 /** A vertical line on the GM's screen where a drop would land. */
@@ -174,9 +177,24 @@ function showMarker(target) {
   }
   const { sceneX = 0, sceneY = 0 } = canvas.dimensions;
   marker.clear();
+  const top = sceneY + 0.4 * FRAME.height, bottom = sceneY + FRAME.height;
+  const mx = sceneX + target.x;
   marker.lineStyle(8, 0xe0a64a, 0.9);
-  marker.moveTo(sceneX + target.x, sceneY + 0.4 * FRAME.height);
-  marker.lineTo(sceneX + target.x, sceneY + FRAME.height);
+  if (!target.crosses) {
+    marker.moveTo(mx, top);
+    marker.lineTo(mx, bottom);
+    return;
+  }
+  // Across the stage: a dashed line with an arrow at the top pointing to the side it goes to.
+  const dash = 36, space = 24;
+  for (let y = top; y < bottom; y += dash + space) {
+    marker.moveTo(mx, y);
+    marker.lineTo(mx, Math.min(y + dash, bottom));
+  }
+  const dir = target.side === "right" ? 1 : -1, head = 44;
+  marker.moveTo(mx - dir * head * 0.6, top - head);
+  marker.lineTo(mx + dir * head * 0.6, top);
+  marker.lineTo(mx - dir * head * 0.6, top + head);
 }
 
 function clearMarker() {
