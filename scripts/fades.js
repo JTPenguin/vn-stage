@@ -82,6 +82,9 @@ export function registerFades() {
   Hooks.on("deleteTile", guarded((doc) => {
     pending.delete(doc.id);
     fadingIn.delete(doc.id);
+    // A form-switch ghost waiting for this tile to redraw never gets its turn (the tile is gone): let it fade now.
+    drawn.get(doc.id)?.();
+    drawn.delete(doc.id);
     const mesh = doc.object?.mesh;
     if (!mesh || !FADES_IN.has(part(doc)) || reduced()) return;
     fadeOut(ghostOf(mesh), PORTRAIT_MS);
