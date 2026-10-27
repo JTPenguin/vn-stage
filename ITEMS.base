@@ -1,0 +1,35 @@
+views:
+  - type: table
+    name: Everything
+    filters:
+      and:
+        - file.inFolder("items")
+    order:
+      - file.name
+      - kind
+      - title
+      - priority
+      - source
+      - status
+      - updated
+      - waits_on
+      - blocked_by
+      - added
+  - type: table
+    name: Open Items
+    filters:
+      and:
+        - file.inFolder("items")
+        - status != "done"
+        - file.name != "README"
+    order:
+      - file.name
+      - kind
+      - title
+      - priority
+      - source
+      - status
+      - updated
+      - waits_on
+      - blocked_by
+      - added
