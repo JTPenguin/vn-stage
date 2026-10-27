@@ -19,6 +19,8 @@ import { MODULE, PART } from "./constants.js";
 
 const PORTRAIT_MS = 350;
 const BACKGROUND_MS = 600;
+// Foundry scales a tile's `sort` down by a million (the cast's 100, 99, 98… become 0.000100, 0.000099…), so a stand-in goes half a step above its tile.
+const JUST_ABOVE = 5e-7;
 
 const FADES_IN = new Set([PART.PORTRAIT, PART.SHADE]);
 const pending = new Set(); // tile ids created, waiting to be drawn
@@ -98,7 +100,7 @@ export function registerFades() {
     if (!background && !newForm) return;
     const mesh = doc.object?.mesh;
     if (!mesh?.texture || mesh.texture === PIXI.Texture.EMPTY) return;
-    const ghost = ghostOf(mesh, background ? 1 : 0.5);
+    const ghost = ghostOf(mesh, JUST_ABOVE);
     const ready = new Promise((resolve) => {
       drawn.set(doc.id, resolve);
       setTimeout(resolve, 5000); // never leave the old image up if the new one fails to load
@@ -131,7 +133,7 @@ function fadeIn(tile) {
   });
 }
 
-/** A stand-in for a mesh that's about to go: same image, place and depth (`sortBump` puts it just above). */
+/** A stand-in for a mesh that's about to go: same image, place and depth (`sortBump` puts it just above, in Foundry's scaled sort units). */
 function ghostOf(mesh, sortBump = 0) {
   const { PrimarySpriteMesh } = foundry.canvas.primary;
   const ghost = new PrimarySpriteMesh({ texture: mesh.texture, name: `${MODULE}.fade` });

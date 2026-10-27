@@ -68,9 +68,10 @@ async function doLayout(scene) {
   }
   create.push(...shadeWanted.values());
 
-  if (remove.length) await scene.deleteEmbeddedDocuments("Tile", remove);
-  if (update.length) await scene.updateEmbeddedDocuments("Tile", update);
+  // Create before deleting, so a replaced portrait fades out while its successor fades in, with no empty stage between.
   if (create.length) await scene.createEmbeddedDocuments("Tile", create);
+  if (update.length) await scene.updateEmbeddedDocuments("Tile", update);
+  if (remove.length) await scene.deleteEmbeddedDocuments("Tile", remove);
 
   Hooks.callAll(`${MODULE}.layout`, scene, placed.map(({ entry, box, fallback }) => ({
     id: entry.id, name: entry.name, actorUuid: entry.actorUuid, side: entry.side, box, fallback,

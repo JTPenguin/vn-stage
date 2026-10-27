@@ -173,10 +173,17 @@ export async function moveEntry(id, side, index, { scene = canvas.scene } = {}) 
   return saveCast(scene, cast);
 }
 
-/** Replace the whole cast (a preset). Entries get new ids. */
+/** Replace the whole cast (a preset). New characters get new ids; ones already on stage keep theirs. */
 export async function setCast(entries, { scene = canvas.scene } = {}) {
   requireGM();
-  const cast = entries.map((e) => ({ ...foundry.utils.deepClone(e), id: foundry.utils.randomID() }));
+  // A character already on stage keeps their id, so their tile is updated in place instead of replaced (no fade out and in).
+  const spare = getCast(scene);
+  const same = (a, b) => (a.actorUuid ? a.actorUuid === b.actorUuid : !b.actorUuid && a.name === b.name);
+  const cast = entries.map((e) => {
+    const old = spare.findIndex((o) => same(o, e));
+    const id = old >= 0 ? spare.splice(old, 1)[0].id : foundry.utils.randomID();
+    return { ...foundry.utils.deepClone(e), id };
+  });
   return saveCast(scene, cast);
 }
 
