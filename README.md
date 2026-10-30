@@ -1,12 +1,18 @@
 # VN Stage
 
-A private Foundry VTT module for visual-novel scenes on a native Foundry scene: portraits on the left and right, expressions players can change, and swappable static backgrounds. Not tied to any campaign.
+A Foundry VTT module for visual-novel scenes on a native Foundry scene: portraits on the left and right, expressions players can change, and swappable static backgrounds. Not tied to any campaign.
 
-**Private. Not for distribution.**
+Shared privately with friends' tables; not published.
 
 ## Requirements
 
 - Foundry VTT 14
+
+## Install from a zip
+
+1. Unzip `vn-stage-<version>.zip` into `<Foundry data folder>/Data/modules/`. You should end up with `Data/modules/vn-stage/module.json`.
+2. Restart Foundry, then turn on **VN Stage** under **Manage Modules** in your world.
+3. In **Configure Settings → VN Stage**, set the **Art folder** to the folder that holds your character folders. [docs/art-format.md](docs/art-format.md) explains the layout.
 
 ## Install (development)
 
