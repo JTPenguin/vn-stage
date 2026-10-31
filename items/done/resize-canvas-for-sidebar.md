@@ -1,13 +1,14 @@
 ---
 title: "Resize the canvas when the sidebar shows or hides"
 kind: feature
-status: ready
-waits_on: Claude
+status: done
+waits_on: none
 priority: ⏫
 blocked_by: []
 source: "Justin's request, 2026-10-27"
 added: 2026-10-27
 updated: 2026-10-30
+outcome: "Built in 65b6b54 and 62426da: the shared sidebar gap is gone, and a locked view fits the frame left of the sidebar panel when it is open and covers the window when it is closed. Justin checked it in Foundry on 2026-10-30."
 ---
 # Resize the canvas when the sidebar shows or hides
 

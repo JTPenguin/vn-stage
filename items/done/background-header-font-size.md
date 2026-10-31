@@ -1,13 +1,14 @@
 ---
 title: "Bigger folder and section headers in the Background section"
 kind: work
-status: ready
-waits_on: Claude
+status: done
+waits_on: none
 priority: ⏫
 blocked_by: []
 source: "Justin's list, 2026-10-30"
 added: 2026-10-30
 updated: 2026-10-30
+outcome: "Built in 1c7301f, 62426da and 6b2555b: the Background folder headings use the section titles' font at 12px instead of Foundry's small-caps h4 face; section titles unchanged. Justin checked it in Foundry on 2026-10-30."
 ---
 # Bigger folder and section headers in the Background section
 
