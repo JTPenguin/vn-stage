@@ -1,15 +1,21 @@
 ---
 title: "Reorder backgrounds in the VN Stage window"
-kind: idea
-status: proposed
-waits_on: Justin
+kind: feature
+status: ready
+waits_on: Claude
+priority: 🔽
 blocked_by: []
 source: "Justin's request, 2026-10-26"
 added: 2026-10-26
-updated: 2026-10-26
+updated: 2026-10-30
 ---
 # Reorder backgrounds in the VN Stage window
 
-Let Justin change the order of the backgrounds in the VN Stage window, for example by dragging them up and down in the list.
+Let Justin change the order of the backgrounds in the VN Stage window by dragging thumbnails.
 
-Open question: how the order should be used once it is set. Does it only change how the list looks, or does it also decide which background comes next when the scene changes?
+**Decisions (Justin, 2026-10-30):**
+- **List only.** The order changes how the strips look and nothing else.
+- **Drag within a strip:** a thumbnail moves within its own folder strip or the "Single backgrounds" strip, not between strips.
+- **Saved per group.** New files that aren't in the saved order go at the end, sorted as now.
+
+**Where:** `backgroundStrips` in `window-data.js` builds the strips. A new stored field (on the group, or a new world setting for the built-in "All" view) needs a README stored-data row.

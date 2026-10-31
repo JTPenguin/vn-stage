@@ -1,12 +1,13 @@
 ---
 title: "Character clustering"
-kind: idea
-status: in-progress
-waits_on: Justin
+kind: work
+status: done
+waits_on: none
+outcome: "Built in 400f695 and 9b9282c; Justin confirmed it finished on 2026-10-30. The sidebar gap it added goes away with resize-canvas-for-sidebar."
 blocked_by: []
 source: "Justin's ideas backlog, 2026-10-21 (moved here 2026-10-24)"
 added: 2026-10-24
-updated: 2026-10-24
+updated: 2026-10-30
 ---
 # Character clustering
 

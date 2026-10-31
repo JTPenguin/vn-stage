@@ -1,8 +1,9 @@
 ---
 title: "Let the GM lock their canvas like the players"
-kind: idea
-status: proposed
-waits_on: Justin
+kind: feature
+status: ready
+waits_on: Claude
+priority: ⏫
 blocked_by: []
 source: "Justin's list, 2026-10-30"
 added: 2026-10-30
@@ -10,6 +11,13 @@ updated: 2026-10-30
 ---
 # Let the GM lock their canvas like the players
 
-Add a toggle that lets the GM lock their own canvas, the same way the players' canvases are locked. A locked canvas keeps its zoom and position and ignores drags, so the GM can work on the scene without moving the stage by accident.
+A toggle that locks the GM's own canvas, the same way players' canvases are locked: the view stays fitted to the stage frame and ignores pans, drags and zooms. The GM can then work on the stage without moving the view by accident.
 
-Open question: should the GM's lock be shared with the players' lock setting, or be a separate toggle?
+**Decisions (Justin, 2026-10-30):**
+- **A separate toggle** for the GM only. Players stay always locked, as now.
+- **Two ways to toggle it:** a lock button in the VN Stage window header, and a keybinding (registered beside `openWindow` in `module.js`). Show a short notification when the key toggles it.
+- **Remembered per GM:** a client setting.
+
+**Where:** `view.js` already shadows `canvas.pan` and `canvas.animatePan` for players and re-fits on window resize. Apply the same lock to the GM while the toggle is on, and lift it when it goes off. Turning it on re-fits the view at once.
+
+**Related:** [[resize-canvas-for-sidebar]] re-fits the GM on sidebar toggles only while this lock is on.

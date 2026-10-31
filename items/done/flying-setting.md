@@ -1,8 +1,9 @@
 ---
 title: "Flying setting in the Adjust window"
-kind: idea
-status: in-progress
-waits_on: Justin
+kind: work
+status: done
+waits_on: none
+outcome: "Built in 8b882e8 (saved per form in characterPrefs.flying); Justin confirmed it finished on 2026-10-30."
 blocked_by: []
 source: "Justin's list, 2026-10-30"
 added: 2026-10-30
