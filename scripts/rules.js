@@ -54,7 +54,8 @@ export function orderMembers(members, order = []) {
  * its order, skipping members standing alone, with ids "<entry id>.<actor id>".
  * For presets, `preset` marks members `partyMember: true`, and with no members
  * known keeps the old entry as it is, so it can still fill in when loaded. On a
- * stage an empty party has nobody to show, so the entry goes.
+ * stage an empty party has nobody to show, so the entry goes. Entries still
+ * have sides here; the schema 3 step (clustersFromSides) runs after it.
  */
 export function upgradeCast(cast, members, { preset = false } = {}) {
   const sides = ["left", "right"];
@@ -86,14 +87,14 @@ export function fitPartyCast(saved, members) {
   const here = new Set(members.map((a) => a.uuid));
   // Members the preset already places (marked, or standing alone in an older preset).
   const placed = new Set(saved.filter((e) => !isOldPartyEntry(e) && here.has(e.actorUuid)).map((e) => e.actorUuid));
-  const entryOf = (a, side) => ({ name: a.name, actorUuid: a.uuid, side });
+  const entryOf = (a, cluster) => ({ name: a.name, actorUuid: a.uuid, cluster });
   const out = [];
-  let anchor = null; // where newcomers go: { at (index in out), side }
+  let anchor = null; // where newcomers go: { at (index in out), cluster }
   for (const e of saved) {
     if (isOldPartyEntry(e)) {
       for (const a of orderMembers(members, e.order)) {
         if (placed.has(a.uuid)) continue;
-        out.push(entryOf(a, e.side));
+        out.push(entryOf(a, e.cluster));
         placed.add(a.uuid);
       }
       continue;
@@ -102,10 +103,10 @@ export function fitPartyCast(saved, members) {
     if (here.has(e.actorUuid)) {
       const { partyMember: _p, ...rest } = e;
       out.push(rest);
-      anchor = { at: out.length, side: e.side };
-    } else anchor ??= { at: out.length, side: e.side };
+      anchor = { at: out.length, cluster: e.cluster };
+    } else anchor ??= { at: out.length, cluster: e.cluster };
   }
-  if (anchor) out.splice(anchor.at, 0, ...members.filter((a) => !placed.has(a.uuid)).map((a) => entryOf(a, anchor.side)));
+  if (anchor) out.splice(anchor.at, 0, ...members.filter((a) => !placed.has(a.uuid)).map((a) => entryOf(a, anchor.cluster)));
   return out;
 }
 
@@ -321,52 +322,206 @@ export function mergeRecent(used, before, max) {
 }
 
 /* -------------------------------------------- */
-/*  Dropping on the stage                       */
+/*  Clusters and dropping on the stage          */
 /* -------------------------------------------- */
 
-/**
- * Where a drop at frame x would put a character, given each side's centres in
- * standing order (frame pixels): { side, index, x } with x where the marker goes.
- * The sides divide halfway between the two clusters, or in the middle of the
- * frame when one side is empty, or
- * past the last character of a crowded side if that lies beyond the middle.
+/*
+ * Each cast entry stands in a cluster: `cluster` counts from 0, left to right,
+ * with no gaps, and each cluster's members are stored left to right. A cluster
+ * exists only while someone stands in it: when its last member leaves it goes,
+ * and the clusters to its right move down one.
  */
-export function dropSlot(x, left, right, frameWidth) {
-  const gap = 0.06 * frameWidth;
-  const middle = frameWidth / 2;
-  // A lone crowded side keeps its territory: the divide moves out past its last character.
-  // The far edge always stays reachable as the other side.
-  const reach = (b) => Math.min(Math.max(b, 0.5 * gap), 2 * middle - 0.5 * gap);
-  const boundary = reach(left.length && right.length ? (Math.max(...left) + Math.min(...right)) / 2
-    : left.length ? Math.max(middle, Math.max(...left) + gap)
-    : right.length ? Math.min(middle, Math.min(...right) - gap)
-    : middle);
-  const side = x < boundary ? "left" : "right";
-  const list = side === "left" ? left : right;
-  // Standing order runs from the outer edge: left to right on the left, right to left on the right.
-  const inward = side === "left" ? (c) => c < x : (c) => c > x;
-  const index = list.filter(inward).length;
-  const prev = list[index - 1], next = list[index];
-  const step = side === "left" ? gap : -gap;
-  const mx = prev !== undefined && next !== undefined ? (prev + next) / 2
-    : prev !== undefined ? prev + step : next !== undefined ? next - step
-    : emptySideX(side, side === "left" ? right : left, middle * 2, boundary, gap);
-  return { side, index, x: mx };
+
+/** The cast with its clusters numbered 0, 1, 2… in their order, and grouped by cluster (a new array; order within a cluster kept). */
+export function compactClusters(cast) {
+  const numbers = [...new Set(cast.map((e) => e.cluster ?? 0))].sort((a, b) => a - b);
+  return cast.map((e) => ({ ...e, cluster: numbers.indexOf(e.cluster ?? 0) })).sort((a, b) => a.cluster - b.cluster);
+}
+
+/** How many clusters a compacted cast has. */
+export function clusterCount(cast) {
+  return new Set(cast.map((e) => e.cluster)).size;
 }
 
 /**
- * Where the marker sits for a drop on an empty side: the mirror of the other
- * side's outermost character (else a quarter in from that edge of the usable
- * width), kept clear of the divide so it never lies short of the other side's
- * own end-of-row marker.
+ * The cast without the entries being moved (`ids`: one id or a list),
+ * compacted. Drop targets and moves are counted on this, so where a marker
+ * shows and where the character lands always agree.
  */
-function emptySideX(side, other, usable, boundary, gap) {
-  const mirror = other.length
-    ? usable - (side === "left" ? Math.max(...other) : Math.min(...other))
-    : usable * (side === "left" ? 0.25 : 0.75);
-  return side === "left"
-    ? Math.max(0, Math.min(mirror, boundary - gap))
-    : Math.min(usable, Math.max(mirror, boundary + gap));
+export function castWithout(cast, ids) {
+  const skip = new Set([ids ?? []].flat());
+  return compactClusters(cast.filter((e) => !skip.has(e.id)));
+}
+
+/**
+ * The cast with `entries` (in order) placed at a target: { cluster, index,
+ * newCluster }, counted without them (castWithout). `index` is the place in
+ * the cluster, from the left; null puts them at its right end. `newCluster`
+ * starts a cluster at that number, moving the ones from there on up one.
+ * `cluster` equal to the count starts a cluster at the right edge.
+ */
+export function placeEntries(cast, entries, { cluster, index = null, newCluster = false }) {
+  let rest = castWithout(cast, entries.map((e) => e.id));
+  const count = clusterCount(rest);
+  if (!Number.isInteger(cluster) || cluster < 0 || cluster > count) {
+    throw new Error(`VN Stage | There's no cluster ${cluster} (there are ${count}, counted from 0).`);
+  }
+  if (newCluster) rest = rest.map((e) => (e.cluster >= cluster ? { ...e, cluster: e.cluster + 1 } : e));
+  const members = rest.filter((e) => e.cluster === cluster);
+  const before = index === null ? null : members[index];
+  const at = before ? rest.indexOf(before)
+    : members.length ? rest.indexOf(members.at(-1)) + 1
+      : rest.filter((e) => e.cluster < cluster).length;
+  rest.splice(at, 0, ...entries.map((e) => ({ ...e, cluster })));
+  return compactClusters(rest);
+}
+
+/**
+ * A cluster number from the console API's `cluster` or its older `side`:
+ * "left" is the leftmost cluster, "right" the rightmost (with `newCluster`, a
+ * new one past it). `count` is the number of clusters.
+ */
+export function resolveCluster({ cluster = null, side = null, newCluster = false }, count) {
+  if (cluster != null && side != null) throw new Error("VN Stage | Give a cluster or a side, not both.");
+  if (side === "left") return 0;
+  if (side === "right") return newCluster ? count : Math.max(count - 1, 0);
+  if (side != null) throw new Error(`VN Stage | Unknown side "${side}".`);
+  return cluster ?? 0;
+}
+
+/**
+ * Where to join a cluster from the Cast list: at its end nearest the middle of
+ * the stage. null is the right end (for a cluster left of the middle, or in
+ * it), 0 the left end.
+ */
+export function innerIndex(cluster, count) {
+  return cluster <= (count - 1) / 2 ? null : 0;
+}
+
+/**
+ * Where the Cast list's Left or Right joins a stage of `count` clusters: the
+ * leftmost or rightmost cluster at its end nearest the middle; with one
+ * cluster, Left at its left end and Right at its right end.
+ */
+export function joinIndex(side, count) {
+  if (count === 1) return side === "left" ? 0 : null;
+  return innerIndex(side === "left" ? 0 : count - 1, count);
+}
+
+/**
+ * A target in the numbers the cast shows (getCast, status(): every entry
+ * counted, the movers too) turned into the one placeEntries takes, counted
+ * without the entries `ids`. Clusters only the movers stand in go while they
+ * move, so later ones move down; a mover's own cluster, asked for again, is
+ * a new one in its place. `index` is the place the movers end up at, from
+ * the left.
+ */
+export function targetFromShown(cast, ids, { cluster, index = null, newCluster = false }) {
+  const skip = new Set([ids ?? []].flat());
+  const all = compactClusters(cast);
+  const count = clusterCount(all);
+  if (!Number.isInteger(cluster) || cluster < 0 || cluster > count) {
+    throw new Error(`VN Stage | There's no cluster ${cluster} (there are ${count}, counted from 0).`);
+  }
+  const stays = (e) => !skip.has(e.id);
+  let gone = 0;
+  for (let c = 0; c < cluster; c++) if (!all.some((e) => e.cluster === c && stays(e))) gone++;
+  const members = all.filter((e) => e.cluster === cluster);
+  if (newCluster || !members.some(stays)) return { cluster: cluster - gone, index: null, newCluster: true };
+  return { cluster: cluster - gone, index, newCluster: false };
+}
+
+/**
+ * Where the Cast list's ‹ or › (`dir` -1 or 1) moves the entries `ids` (one
+ * cluster's members): into the neighbouring cluster, at its near end; past the
+ * edge, into a new cluster there. Alone at the edge, there's nowhere to go: null.
+ * The target is counted without them, as placeEntries wants.
+ */
+export function neighbourTarget(cast, ids, dir) {
+  const skip = new Set([ids].flat());
+  const all = compactClusters(cast);
+  const moving = all.filter((e) => skip.has(e.id));
+  if (!moving.length) return null;
+  const c = moving[0].cluster;
+  const count = clusterCount(all);
+  const others = all.some((e) => e.cluster === c && !skip.has(e.id));
+  const near = (n) => ({ cluster: n, index: dir > 0 ? 0 : null, newCluster: false });
+  if (others) {
+    // Their cluster stays where it is.
+    if (c + dir < 0) return { cluster: 0, index: null, newCluster: true };
+    if (c + dir >= count) return { cluster: count, index: null, newCluster: true };
+    return near(c + dir);
+  }
+  // Their cluster goes with them, so the clusters to its right move down one.
+  if (dir < 0) return c === 0 ? null : near(c - 1);
+  return c === count - 1 ? null : near(c);
+}
+
+/**
+ * Draw order within a cluster: 0 stands in front. A cluster left of the
+ * middle puts its leftmost member in front, one right of the middle its
+ * rightmost; the cluster in the exact middle (a lone one, say) its leftmost.
+ */
+export function frontRank(i, n, cluster, count) {
+  return cluster > (count - 1) / 2 ? n - 1 - i : i;
+}
+
+/**
+ * A cast from before schema 3, with sides, in clusters: the left side is
+ * cluster 0 and the right side cluster 1. The right side stood from the right
+ * edge inward, so its entries are reversed to run left to right. A right side
+ * alone becomes cluster 0. Entries that already have a cluster keep it.
+ */
+export function clustersFromSides(cast) {
+  if (!cast.some((e) => "side" in e || !("cluster" in e))) return cast;
+  const toCluster = (e) => {
+    if ("cluster" in e) return e;
+    const n = e.side === "right" ? 1 : 0;
+    const out = Object.fromEntries(Object.entries(e).map(([k, v]) => (k === "side" ? ["cluster", n] : [k, v])));
+    out.cluster = n;
+    return out;
+  };
+  const right = cast.filter((e) => !("cluster" in e) && e.side === "right");
+  const rest = cast.filter((e) => !right.includes(e));
+  return compactClusters([...rest, ...right.reverse()].map(toCluster));
+}
+
+/**
+ * Where a drop at frame x would put a character, given each cluster's centres
+ * left to right (frame pixels; counted without whoever is being moved, and no
+ * cluster empty): { cluster, index, newCluster, x }, as placeEntries takes it,
+ * with x where the marker goes.
+ *
+ *   Near a cluster or inside it, the drop joins it. Well clear of every
+ *   cluster, between two or past the outermost (at least `EDGE` from the frame
+ *   edge, always reachable), it starts a new cluster there.
+ */
+export function dropSlot(x, clusters, frameWidth) {
+  const gap = 0.06 * frameWidth;
+  const EDGE = 0.05 * frameWidth;
+  if (!clusters.length) return { cluster: 0, index: 0, newCluster: true, x: frameWidth / 2 };
+  const k = clusters.length;
+  const first = clusters[0][0], last = clusters.at(-1).at(-1);
+  const leftCut = Math.max(first - gap, EDGE), rightCut = Math.min(last + gap, frameWidth - EDGE);
+  if (x < leftCut) return { cluster: 0, index: 0, newCluster: true, x: leftCut / 2 };
+  if (x > rightCut) return { cluster: k, index: 0, newCluster: true, x: (rightCut + frameWidth) / 2 };
+  if (x < first) return { cluster: 0, index: 0, newCluster: false, x: (leftCut + first) / 2 };
+  if (x > last) return { cluster: k - 1, index: clusters.at(-1).length, newCluster: false, x: (last + rightCut) / 2 };
+  for (let c = 0; c < k; c++) {
+    const list = clusters[c];
+    if (x <= list.at(-1)) {
+      const index = list.filter((v) => v < x).length;
+      const prev = list[index - 1], next = list[index];
+      return { cluster: c, index, newCluster: false, x: prev !== undefined ? (prev + next) / 2 : next };
+    }
+    const a = list.at(-1), b = clusters[c + 1][0];
+    if (x >= b) continue;
+    const j = Math.min(gap, (b - a) / 3);
+    if (x <= a + j) return { cluster: c, index: list.length, newCluster: false, x: a + j / 2 };
+    if (x >= b - j) return { cluster: c + 1, index: 0, newCluster: false, x: b - j / 2 };
+    return { cluster: c + 1, index: 0, newCluster: true, x: (a + b) / 2 };
+  }
+  return { cluster: k - 1, index: clusters.at(-1).length, newCluster: false, x: last }; // not reached
 }
 
 /* -------------------------------------------- */

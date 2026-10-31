@@ -5,7 +5,7 @@ import { currentBackground, setBackground, decodePath } from "./stage.js";
 import { getGroup, stageGroup, setStageGroup } from "./groups.js";
 
 /**
- * Presets: a saved background and cast (sides and order), loaded onto a stage in
+ * Presets: a saved background and cast (clusters and order), loaded onto a stage in
  * one click. Party members are saved marked as such (`partyMember`), so a
  * preset fits whoever is in the party when it loads: members still in it stand
  * where they were saved, new members join next to them, and members who've left

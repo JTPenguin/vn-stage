@@ -37,36 +37,116 @@ test("a cluster's width: half of each end plus a step per neighbour", () => {
   assert.equal(clusterWidth([W, W], 0.5), W + 0.5 * W);
 });
 
-test("one side alone is centred in the full frame width, at full size", () => {
-  const { zoom, regions } = arrange({ left: [W, W], right: [] }, FRAME.width, LAYOUT);
+/** Every cluster's centres, as layout.js places them. */
+const placeAll = (widths) => {
+  const a = arrange(widths, FRAME.width, LAYOUT);
+  return { ...a, centres: widths.map((w, c) => clusterCentres(w.map((x) => x * a.zoom), a.regions[c], LAYOUT.step, LAYOUT.roomyStep)) };
+};
+const close = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-6, `${msg}: ${a} vs ${b}`);
+
+/*
+ * Two clusters must stand exactly where the left and right sides stood. These
+ * numbers came from the side-based arrange and clusterCentres (before
+ * clusters), with the right side's centres sorted left to right and its
+ * widths reversed to match (it stood from the right edge inward).
+ */
+const BEFORE_CLUSTERS = {
+  "1 + 3": {
+    widths: [[W], [W, W, W]], zoom: 1, crowding: 0.564375, buffers: 1,
+    regions: [{ from: 51.2, to: 810.9419354838709, anchor: "start" }, { from: 913.3419354838711, to: 2508.8, anchor: "end" }],
+    centres: [[251.2], [1708.8000000000002, 2008.8000000000002, 2308.8]],
+  },
+  "mixed widths": {
+    widths: [[300, 500], [300, 450]], zoom: 1, crowding: 0.54923828125, buffers: 1,
+    regions: [{ from: 51.2, to: 1266.7870967741935, anchor: "start" }, { from: 1369.1870967741938, to: 2508.8, anchor: "end" }],
+    centres: [[201.2, 501.2], [2002.5500000000002, 2283.8]],
+  },
+  "7 + 7, packed": {
+    widths: [Array(7).fill(W), Array(7).fill(W)], zoom: 0.75, crowding: 1.42375, buffers: 0.25,
+    regions: [{ from: 12.8, to: 1267.2, anchor: "start" }, { from: 1292.7999999999997, to: 2547.2, anchor: "end" }],
+    centres: [
+      [162.8, 321.86666666666673, 480.93333333333345, 640.0000000000001, 799.0666666666668, 958.1333333333336, 1117.2000000000003],
+      [1442.7999999999995, 1601.8666666666663, 1760.933333333333, 1919.9999999999995, 2079.0666666666666, 2238.133333333333, 2397.2],
+    ],
+  },
+  // A side alone (left or right gave the same numbers): one centred cluster.
+  "2 alone": {
+    widths: [[W, W]], zoom: 1, crowding: 0.2821875, buffers: 1,
+    regions: [{ from: 51.2, to: 2508.8, anchor: "centre" }],
+    centres: [[1130, 1430]],
+  },
+};
+
+for (const [name, want] of Object.entries(BEFORE_CLUSTERS)) {
+  test(`clusters stand exactly where the sides stood: ${name}`, () => {
+    const got = placeAll(want.widths);
+    for (const k of ["zoom", "crowding", "buffers"]) close(got[k], want[k], k);
+    assert.equal(got.regions.length, want.regions.length);
+    got.regions.forEach((r, i) => {
+      close(r.from, want.regions[i].from, `region ${i} from`);
+      close(r.to, want.regions[i].to, `region ${i} to`);
+      assert.equal(r.anchor, want.regions[i].anchor);
+    });
+    want.centres.forEach((list, c) => {
+      assert.equal(got.centres[c].length, list.length);
+      list.forEach((x, i) => close(got.centres[c][i], x, `cluster ${c}, centre ${i}`));
+    });
+  });
+}
+
+test("a lone cluster is centred in the full frame width, at full size", () => {
+  const { zoom, regions } = arrange([[W, W]], FRAME.width, LAYOUT);
   assert.equal(zoom, 1);
-  assert.equal(regions.right, null);
-  assert.equal(regions.left.anchor, "centre");
-  assert.equal(regions.left.to, FRAME.width * (1 - LAYOUT.pad), "runs to the outer pad on the right");
+  assert.equal(regions.length, 1);
+  assert.equal(regions[0].anchor, "centre");
+  assert.equal(regions[0].to, FRAME.width * (1 - LAYOUT.pad), "runs to the outer pad on the right");
 });
 
-test("two sides share the width in proportion to what each needs", () => {
-  const { regions } = arrange({ left: [W], right: [W, W, W] }, FRAME.width, LAYOUT);
-  const l = regions.left.to - regions.left.from, r = regions.right.to - regions.right.from;
-  const needL = clusterWidth([W], LAYOUT.step), needR = clusterWidth([W, W, W], LAYOUT.step);
-  assert.ok(Math.abs(l / r - needL / needR) < 1e-9);
-  assert.ok(regions.left.to < regions.right.from, "a gap between the sides");
+test("three lone characters: one at each pad, one in the middle, none overlapping", () => {
+  const { centres } = placeAll([[W], [W], [W]]);
+  const pad = LAYOUT.pad * FRAME.width;
+  close(centres[0][0], pad + W / 2, "left");
+  close(centres[1][0], FRAME.width / 2, "middle");
+  close(centres[2][0], FRAME.width - pad - W / 2, "right");
+  assert.ok(centres[0][0] + W / 2 < centres[1][0] - W / 2 && centres[1][0] + W / 2 < centres[2][0] - W / 2);
+});
+
+test("clusters share the width in proportion to what each needs, with a gap between neighbours", () => {
+  const widths = [[W], [W, W, W], [W, W]];
+  const { regions } = arrange(widths, FRAME.width, LAYOUT);
+  const room = regions.map((r) => r.to - r.from);
+  const need = widths.map((w) => clusterWidth(w, LAYOUT.step));
+  close(room[0] / room[1], need[0] / need[1], "first to second");
+  close(room[1] / room[2], need[1] / need[2], "second to third");
+  close(regions[1].from - regions[0].to, LAYOUT.clusterGap * FRAME.width, "gap");
+  assert.deepEqual(regions.map((r) => r.anchor), ["start", "centre", "end"]);
+});
+
+test("crowding counts a gap between each pair of neighbours", () => {
+  const { crowding } = arrange([[W], [W], [W]], FRAME.width, LAYOUT);
+  close(crowding, (3 * W + (2 * LAYOUT.pad + 2 * LAYOUT.clusterGap) * FRAME.width) / FRAME.width, "crowding");
 });
 
 test("a crowded stage shrinks buffers, then zooms, never below the floor", () => {
-  const calm = arrange({ left: [W, W], right: [W] }, FRAME.width, LAYOUT);
-  const packed = arrange({ left: Array(7).fill(W), right: Array(7).fill(W) }, FRAME.width, LAYOUT);
+  const calm = arrange([[W, W], [W]], FRAME.width, LAYOUT);
+  const packed = arrange([Array(7).fill(W), Array(7).fill(W)], FRAME.width, LAYOUT);
+  const many = arrange([Array(4).fill(W), Array(4).fill(W), Array(4).fill(W), Array(4).fill(W)], FRAME.width, LAYOUT);
   assert.equal(calm.buffers, 1);
   assert.ok(packed.crowding > LAYOUT.crowdEnd);
   assert.equal(packed.buffers, LAYOUT.minBuffer);
   assert.equal(packed.zoom, LAYOUT.minZoom);
+  assert.equal(many.buffers, LAYOUT.minBuffer);
+  assert.ok(many.zoom >= LAYOUT.minZoom);
 });
 
-test("the right side stands right to left; a roomy cluster spreads no further than roomyStep", () => {
-  const region = { from: 0, to: 2000, anchor: "end" };
-  const [first, second] = clusterCentres("right", [W, W], region, LAYOUT.step, LAYOUT.roomyStep);
-  assert.ok(first > second, "first-placed stands at the outer (right) edge");
-  assert.ok(Math.abs(first - second - LAYOUT.roomyStep * W) < 1e-9);
+test("a cluster runs left to right: hugging the end, centred, or from the start; a roomy one spreads no further than roomyStep", () => {
+  const at = (anchor) => clusterCentres([W, W], { from: 0, to: 2000, anchor }, LAYOUT.step, LAYOUT.roomyStep);
+  const end = at("end"), centre = at("centre"), start = at("start");
+  for (const list of [end, centre, start]) assert.ok(list[0] < list[1], "left to right");
+  close(end[1], 2000 - W / 2, "end hugs the region's right edge");
+  close(start[0], W / 2, "start hugs the region's left edge");
+  close((centre[0] + centre[1]) / 2, 1000, "centre is centred");
+  close(end[1] - end[0], LAYOUT.roomyStep * W, "roomy spread");
 });
 
 test("a zoomed face keeps its centre on the guide", () => {
@@ -100,35 +180,35 @@ test("the bottom shade: fallback images are still ignored", () => {
 /* -------------------------------------------- */
 
 const A = { id: "a", uuid: "A", name: "Ana" }, B = { id: "b", uuid: "B", name: "Bo" }, C = { id: "c", uuid: "C", name: "Cy" };
-const names = (cast) => cast.map((e) => `${e.name}:${e.side}`);
+const names = (cast) => cast.map((e) => `${e.name}:${e.cluster}`);
 const saved = [
-  { name: "Vane", side: "right" },
-  { name: "Ana", actorUuid: "A", side: "left", partyMember: true },
-  { name: "Bo", actorUuid: "B", side: "right", partyMember: true },
-  { name: "Pell", side: "left" },
+  { name: "Vane", cluster: 1 },
+  { name: "Ana", actorUuid: "A", cluster: 0, partyMember: true },
+  { name: "Bo", actorUuid: "B", cluster: 1, partyMember: true },
+  { name: "Pell", cluster: 0 },
 ];
 
 test("a preset loads the same party exactly as saved, without the party marks", () => {
   const out = R.fitPartyCast(saved, [A, B]);
-  assert.deepEqual(names(out), ["Vane:right", "Ana:left", "Bo:right", "Pell:left"]);
+  assert.deepEqual(names(out), ["Vane:1", "Ana:0", "Bo:1", "Pell:0"]);
   assert.ok(out.every((e) => !("partyMember" in e)));
 });
 
 test("members who left stay off; new members join after the last saved member still here", () => {
-  assert.deepEqual(names(R.fitPartyCast(saved, [A, C])), ["Vane:right", "Ana:left", "Cy:left", "Pell:left"]);
+  assert.deepEqual(names(R.fitPartyCast(saved, [A, C])), ["Vane:1", "Ana:0", "Cy:0", "Pell:0"]);
 });
 
 test("an all-new party stands where the first saved member stood", () => {
-  assert.deepEqual(names(R.fitPartyCast(saved, [C])), ["Vane:right", "Cy:left", "Pell:left"]);
+  assert.deepEqual(names(R.fitPartyCast(saved, [C])), ["Vane:1", "Cy:0", "Pell:0"]);
 });
 
 test("an old whole-party entry becomes every member, in its order, skipping members standing alone", () => {
-  const old = [{ name: "Bo", actorUuid: "B", side: "right" }, { id: "x", party: true, side: "left", order: ["c", "a"] }];
-  assert.deepEqual(names(R.fitPartyCast(old, [A, B, C])), ["Bo:right", "Cy:left", "Ana:left"]);
+  const old = [{ name: "Bo", actorUuid: "B", cluster: 1 }, { id: "x", party: true, cluster: 0, order: ["c", "a"] }];
+  assert.deepEqual(names(R.fitPartyCast(old, [A, B, C])), ["Bo:1", "Cy:0", "Ana:0"]);
 });
 
 test("a preset with no party members adds nobody", () => {
-  assert.deepEqual(names(R.fitPartyCast([{ name: "Vane", side: "right" }], [A, B])), ["Vane:right"]);
+  assert.deepEqual(names(R.fitPartyCast([{ name: "Vane", cluster: 1 }], [A, B])), ["Vane:1"]);
 });
 
 test("upgrading an old cast: Full reads as left; the party entry becomes its members, keeping ids", () => {
@@ -149,8 +229,8 @@ test("remembered order first, then the rest as given", () => {
 });
 
 test("cast entries compare equal whatever their field order, and missing equals null", () => {
-  assert.equal(R.stable([{ side: "left", name: "A", actorUuid: null }]), R.stable([{ name: "A", side: "left" }]));
-  assert.notEqual(R.stable([{ name: "A", side: "left" }]), R.stable([{ name: "A", side: "right" }]));
+  assert.equal(R.stable([{ cluster: 0, name: "A", actorUuid: null }]), R.stable([{ name: "A", cluster: 0 }]));
+  assert.notEqual(R.stable([{ name: "A", cluster: 0 }]), R.stable([{ name: "A", cluster: 1 }]));
 });
 
 /* -------------------------------------------- */
@@ -190,49 +270,234 @@ test("Recent puts the newest first, without repeats, up to its limit", () => {
 });
 
 /* -------------------------------------------- */
+/*  Clusters                                    */
+/* -------------------------------------------- */
+
+/** A cast from cluster strings, left to right: castOf("ab", "c") is a and b in cluster 0, c in cluster 1. */
+const castOf = (...clusters) => clusters.flatMap((ids, c) => [...ids].map((id) => ({ id, cluster: c })));
+/** A cast back as cluster strings: "ab|c". */
+const shape = (cast) => {
+  const out = [];
+  for (const e of cast) out[e.cluster] = (out[e.cluster] ?? "") + e.id;
+  return out.join("|");
+};
+const pick = (cast, ids) => [...ids].map((id) => cast.find((e) => e.id === id));
+
+test("compacting numbers clusters without gaps, in order, and groups the cast by cluster", () => {
+  const cast = [{ id: "a", cluster: 2 }, { id: "b", cluster: 0 }, { id: "c", cluster: 5 }, { id: "d", cluster: 2 }];
+  const out = R.compactClusters(cast);
+  assert.deepEqual(out.map((e) => `${e.id}${e.cluster}`), ["b0", "a1", "d1", "c2"]);
+  assert.equal(R.clusterCount(out), 3);
+  assert.equal(cast[0].cluster, 2, "the input is left alone");
+});
+
+test("placing: leaving a cluster alone removes it, and the clusters to its right move down", () => {
+  const cast = castOf("ab", "c", "de");
+  assert.equal(shape(R.placeEntries(cast, pick(cast, "c"), { cluster: 0 })), "abc|de");
+  assert.equal(shape(R.placeEntries(cast, pick(cast, "c"), { cluster: 1, index: 0 })), "ab|cde", "cluster 1 counted without c is d and e");
+});
+
+test("placing: a place in the cluster counts from the left; null is the right end", () => {
+  const cast = castOf("abc");
+  assert.equal(shape(R.placeEntries(cast, pick(cast, "a"), { cluster: 0, index: 1 })), "bac");
+  assert.equal(shape(R.placeEntries(cast, pick(cast, "a"), { cluster: 0, index: null })), "bca");
+  assert.equal(shape(R.placeEntries(cast, pick(cast, "a"), { cluster: 0, index: 9 })), "bca");
+});
+
+test("placing: a new cluster between two moves the right one up; a new one at the left edge moves them all", () => {
+  const cast = castOf("ab", "cd");
+  assert.equal(shape(R.placeEntries(cast, pick(cast, "a"), { cluster: 1, newCluster: true })), "b|a|cd");
+  assert.equal(shape(R.placeEntries(cast, pick(cast, "d"), { cluster: 0, newCluster: true })), "d|ab|c");
+});
+
+test("placing: cluster equal to the count starts one at the right edge; past it is an error", () => {
+  const cast = castOf("ab", "cd");
+  assert.equal(shape(R.placeEntries(cast, pick(cast, "a"), { cluster: 2 })), "b|cd|a");
+  assert.throws(() => R.placeEntries(cast, pick(cast, "a"), { cluster: 3 }), /no cluster 3/);
+  assert.equal(shape(R.placeEntries([], [{ id: "x" }], { cluster: 0 })), "x", "an empty stage");
+});
+
+test("placing: the party lands as one block, in the order given", () => {
+  const cast = castOf("ab", "cd");
+  assert.equal(shape(R.placeEntries(cast, pick(cast, "da"), { cluster: 1, index: 0 })), "b|dac");
+  assert.equal(shape(R.placeEntries(cast, pick(cast, "da"), { cluster: 1, newCluster: true })), "b|da|c");
+});
+
+test("cluster or side: left is the first, right the last (or a new one past it); both is an error", () => {
+  assert.equal(R.resolveCluster({ side: "left" }, 3), 0);
+  assert.equal(R.resolveCluster({ side: "right" }, 3), 2);
+  assert.equal(R.resolveCluster({ side: "right" }, 0), 0);
+  assert.equal(R.resolveCluster({ side: "right", newCluster: true }, 3), 3);
+  assert.equal(R.resolveCluster({ cluster: 1 }, 3), 1);
+  assert.equal(R.resolveCluster({}, 3), 0);
+  assert.throws(() => R.resolveCluster({ cluster: 1, side: "left" }, 3));
+  assert.throws(() => R.resolveCluster({ side: "full" }, 3));
+});
+
+test("joining from the Cast list: at the end nearest the middle", () => {
+  assert.equal(R.innerIndex(0, 2), null);
+  assert.equal(R.innerIndex(1, 2), 0);
+  assert.equal(R.innerIndex(0, 1), null, "a lone cluster: its right end");
+  assert.equal(R.innerIndex(1, 3), null, "the middle cluster: its right end");
+});
+
+test("Left and Right from the Cast list: with one cluster, Left joins its left end and Right its right end", () => {
+  assert.equal(R.joinIndex("left", 1), 0);
+  assert.equal(R.joinIndex("right", 1), null);
+  assert.equal(R.joinIndex("left", 2), null, "the leftmost cluster's inner end");
+  assert.equal(R.joinIndex("right", 2), 0, "the rightmost cluster's inner end");
+  assert.equal(R.joinIndex("right", 0), null);
+});
+
+test("the console's cluster numbers are the ones the cast shows, turned into a move's", () => {
+  const cast = castOf("a", "bc");
+  const into = R.targetFromShown(cast, "a", { cluster: 1 });
+  assert.deepEqual(into, { cluster: 0, index: null, newCluster: false }, "counted without a, b and c are cluster 0");
+  assert.equal(shape(R.placeEntries(cast, pick(cast, "a"), into)), "bca");
+  assert.equal(shape(R.placeEntries(cast, pick(cast, "a"), R.targetFromShown(cast, "a", { cluster: 1, index: 1 }))), "bac");
+  assert.equal(shape(R.placeEntries(cast, pick(cast, "a"), R.targetFromShown(cast, "a", { cluster: 0 }))), "a|bc", "their own cluster: they stay");
+  assert.equal(shape(R.placeEntries(cast, pick(cast, "a"), R.targetFromShown(cast, "a", { cluster: 2 }))), "bc|a");
+  assert.equal(shape(R.placeEntries(cast, pick(cast, "b"), R.targetFromShown(cast, "b", { cluster: 1, index: 1 }))), "a|cb", "index is the place they end up at");
+  assert.equal(shape(R.placeEntries(cast, pick(cast, "c"), R.targetFromShown(cast, "c", { cluster: 1, index: 0 }))), "a|cb");
+  const three = castOf("ab", "c", "de");
+  assert.equal(shape(R.placeEntries(three, pick(three, "c"), R.targetFromShown(three, "c", { cluster: 2, index: 0 }))), "ab|cde");
+  assert.equal(shape(R.placeEntries(three, pick(three, "a"), R.targetFromShown(three, "a", { cluster: 2, newCluster: true }))), "b|c|a|de");
+  assert.deepEqual(R.targetFromShown([], [], { cluster: 0 }), { cluster: 0, index: null, newCluster: true }, "an empty stage");
+  assert.throws(() => R.targetFromShown(cast, "a", { cluster: 3 }), /no cluster 3/);
+});
+
+test("‹ and ›: with others in the cluster, into the neighbour's near end, or a new cluster past the edge", () => {
+  const cast = castOf("a", "bc", "d");
+  const right = R.neighbourTarget(cast, "b", 1);
+  assert.deepEqual(right, { cluster: 2, index: 0, newCluster: false });
+  assert.equal(shape(R.placeEntries(cast, pick(cast, "b"), right)), "a|c|bd");
+  const left = R.neighbourTarget(cast, "b", -1);
+  assert.deepEqual(left, { cluster: 0, index: null, newCluster: false });
+  assert.equal(shape(R.placeEntries(cast, pick(cast, "b"), left)), "ab|c|d");
+  const edge = castOf("ab", "cd");
+  assert.deepEqual(R.neighbourTarget(edge, "a", -1), { cluster: 0, index: null, newCluster: true });
+  assert.equal(shape(R.placeEntries(edge, pick(edge, "a"), R.neighbourTarget(edge, "a", -1))), "a|b|cd");
+  assert.deepEqual(R.neighbourTarget(edge, "d", 1), { cluster: 2, index: null, newCluster: true });
+  assert.equal(shape(R.placeEntries(edge, pick(edge, "d"), R.neighbourTarget(edge, "d", 1))), "ab|c|d");
+});
+
+test("‹ and ›: alone, into the neighbour's near end, and nowhere past the edge", () => {
+  const cast = castOf("a", "b", "cd");
+  const right = R.neighbourTarget(cast, "b", 1);
+  assert.deepEqual(right, { cluster: 1, index: 0, newCluster: false }, "counted without b, cd is cluster 1");
+  assert.equal(shape(R.placeEntries(cast, pick(cast, "b"), right)), "a|bcd");
+  const left = R.neighbourTarget(cast, "b", -1);
+  assert.deepEqual(left, { cluster: 0, index: null, newCluster: false });
+  assert.equal(shape(R.placeEntries(cast, pick(cast, "b"), left)), "ab|cd");
+  assert.equal(R.neighbourTarget(cast, "a", -1), null);
+  assert.equal(R.neighbourTarget(castOf("ab", "c"), "c", 1), null);
+  assert.equal(R.neighbourTarget(castOf("a"), "a", 1), null);
+});
+
+test("‹ and › move the party together", () => {
+  const cast = castOf("a", "bc");
+  assert.equal(shape(R.placeEntries(cast, pick(cast, "bc"), R.neighbourTarget(cast, ["b", "c"], -1))), "abc");
+});
+
+test("who stands in front: the leftmost left of the middle and in it, the rightmost right of it", () => {
+  assert.equal(R.frontRank(0, 3, 0, 2), 0);
+  assert.equal(R.frontRank(2, 3, 1, 2), 0, "the right cluster's rightmost");
+  assert.equal(R.frontRank(0, 3, 1, 2), 2);
+  assert.equal(R.frontRank(0, 2, 0, 1), 0, "a lone cluster: its leftmost");
+  assert.equal(R.frontRank(0, 2, 1, 3), 0, "the exact middle: its leftmost");
+  assert.equal(R.frontRank(1, 2, 2, 4), 0);
+  assert.equal(R.frontRank(0, 2, 1, 4), 0);
+});
+
+test("schema 3: a stage's left side is cluster 0, its right side cluster 1, reversed to run left to right", () => {
+  const before = [
+    { id: "a", name: "Ana", actorUuid: "Actor.A", side: "left" },
+    { id: "b", name: "Bo", actorUuid: null, side: "left", expression: "smile" },
+    { id: "v", name: "Vane", actorUuid: null, side: "right" },
+    { id: "p", name: "Pell", actorUuid: null, side: "right" },
+  ];
+  const after = [
+    { id: "a", name: "Ana", actorUuid: "Actor.A", cluster: 0 },
+    { id: "b", name: "Bo", actorUuid: null, cluster: 0, expression: "smile" },
+    { id: "p", name: "Pell", actorUuid: null, cluster: 1 },
+    { id: "v", name: "Vane", actorUuid: null, cluster: 1 },
+  ];
+  assert.deepEqual(R.clustersFromSides(before), after);
+  assert.deepEqual(R.clustersFromSides(after), after, "running it again changes nothing");
+});
+
+test("schema 3: a right side alone becomes cluster 0", () => {
+  const before = [{ id: "v", name: "Vane", actorUuid: null, side: "right" }, { id: "p", name: "Pell", actorUuid: null, side: "right" }];
+  assert.deepEqual(R.clustersFromSides(before), [{ id: "p", name: "Pell", actorUuid: null, cluster: 0 }, { id: "v", name: "Vane", actorUuid: null, cluster: 0 }]);
+});
+
+test("schema 3: a preset's cast, an old party entry keeping its order", () => {
+  const before = [
+    { name: "Ana", actorUuid: "Actor.A", side: "left", partyMember: true, form: null },
+    { party: true, side: "right", order: ["c", "a"] },
+    { name: "Vane", actorUuid: null, side: "right" },
+  ];
+  assert.deepEqual(R.clustersFromSides(before), [
+    { name: "Ana", actorUuid: "Actor.A", cluster: 0, partyMember: true, form: null },
+    { name: "Vane", actorUuid: null, cluster: 1 },
+    { party: true, cluster: 1, order: ["c", "a"] },
+  ]);
+});
+
+/* -------------------------------------------- */
 /*  Dropping on the stage                       */
 /* -------------------------------------------- */
 
-test("a drop picks the side by the gap between the clusters, and counts from the outer edge", () => {
-  const left = [300, 600], right = [1900, 1600]; // standing order: outer edge first
-  assert.deepEqual(R.dropSlot(450, left, right, FRAME.width), { side: "left", index: 1, x: 450 });
-  const r = R.dropSlot(1750, left, right, FRAME.width);
-  assert.equal(r.side, "right");
-  assert.equal(r.index, 1);
+const FW = FRAME.width;
+
+test("a drop on an empty stage starts cluster 0, marked in the middle", () => {
+  assert.deepEqual(R.dropSlot(300, [], FW), { cluster: 0, index: 0, newCluster: true, x: FW / 2 });
 });
 
-test("on an empty stage a drop's side is by the middle of the frame", () => {
-  const middle = FRAME.width / 2;
-  assert.equal(R.dropSlot(middle - 1, [], [], FRAME.width).side, "left");
-  assert.equal(R.dropSlot(middle + 1, [], [], FRAME.width).side, "right");
+test("a drop inside a cluster joins it, counted from the left, marked between the neighbours", () => {
+  const clusters = [[300, 600], [1600, 1900]];
+  assert.deepEqual(R.dropSlot(450, clusters, FW), { cluster: 0, index: 1, newCluster: false, x: 450 });
+  assert.deepEqual(R.dropSlot(1750, clusters, FW), { cluster: 1, index: 1, newCluster: false, x: 1750 });
 });
 
-test("a drop on an empty side snaps to the mirror of the other side's outermost character", () => {
-  const usable = FRAME.width;
-  const left = [300, 600];
-  const r = R.dropSlot(usable - 100, left, [], FRAME.width);
-  assert.deepEqual(r, { side: "right", index: 0, x: usable - 300 });
-  const a = R.dropSlot(usable - 100, left, [], FRAME.width).x;
-  const b = R.dropSlot(usable - 400, left, [], FRAME.width).x;
-  assert.equal(a, b);
-  assert.equal(R.dropSlot(1, [], [], FRAME.width).x, usable * 0.25);
+test("a drop between two clusters: near one joins it; in the middle starts a new cluster there", () => {
+  const clusters = [[300, 600], [1600, 1900]];
+  const j = 0.06 * FW;
+  assert.deepEqual(R.dropSlot(650, clusters, FW), { cluster: 0, index: 2, newCluster: false, x: 600 + j / 2 });
+  assert.deepEqual(R.dropSlot(1550, clusters, FW), { cluster: 1, index: 0, newCluster: false, x: 1600 - j / 2 });
+  assert.deepEqual(R.dropSlot(1100, clusters, FW), { cluster: 1, index: 0, newCluster: true, x: 1100 });
 });
 
-test("a full one-sided stage still lets a drop reach the far edge as the other side", () => {
-  const usable = FRAME.width;
-  const left = [150, 350, 550, 750, 950, 1150, 1350, usable - 150];
-  const across = R.dropSlot(usable - 20, left, [], FRAME.width);
-  assert.equal(across.side, "right");
-  assert.ok(across.x >= Math.max(...left));
+test("a drop at the far edge of a crowded stage starts a new cluster there", () => {
+  const clusters = [[100, 400, 700], [1800, 2100, 2450]];
+  const left = R.dropSlot(50, clusters, FW);
+  assert.equal(left.newCluster, true);
+  assert.equal(left.cluster, 0);
+  assert.ok(left.x >= 0.025 * FW, "the marker stays clear of the edge");
+  const right = R.dropSlot(FW - 50, clusters, FW);
+  assert.equal(right.newCluster, true);
+  assert.equal(right.cluster, 2);
+  assert.ok(right.x <= FW - 0.025 * FW);
+  assert.equal(R.dropSlot(0.05 * FW + 1, clusters, FW).newCluster, false, "just past the edge zone joins");
 });
 
-test("a crowded side with the other empty keeps drops beyond the middle", () => {
-  const middle = FRAME.width / 2;
-  const left = [200, 500, middle + 200, middle + 400];
-  const inside = R.dropSlot(middle + 500, left, [], FRAME.width);
-  assert.equal(inside.side, "left");
-  assert.equal(inside.index, 4);
-  assert.equal(R.dropSlot(middle + 400 + 0.07 * FRAME.width, left, [], FRAME.width).side, "right");
+test("one centred cluster: well past its last character starts a new cluster; near it joins", () => {
+  const clusters = [[1130, 1430]];
+  assert.deepEqual(R.dropSlot(1600, clusters, FW), { cluster: 1, index: 0, newCluster: true, x: (1430 + 0.06 * FW + FW) / 2 });
+  const join = R.dropSlot(1550, clusters, FW);
+  assert.equal(join.newCluster, false);
+  assert.equal(join.cluster, 0);
+  assert.equal(join.index, 2);
+  assert.equal(R.dropSlot(900, clusters, FW).newCluster, true);
+});
+
+test("a drop and the move count the same way: a lone character dropped back in their gap stays put", () => {
+  const cast = castOf("ab", "c", "de");
+  const centre = { a: 300, b: 600, c: 1100, d: 1600, e: 1900 };
+  const clusters = [];
+  for (const e of R.castWithout(cast, "c")) (clusters[e.cluster] ??= []).push(centre[e.id]);
+  const slot = R.dropSlot(1100, clusters, FW);
+  assert.equal(shape(R.placeEntries(cast, pick(cast, "c"), slot)), "ab|c|de");
 });
 
 /* -------------------------------------------- */

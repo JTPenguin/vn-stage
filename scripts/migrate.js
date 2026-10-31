@@ -1,6 +1,6 @@
 import { MODULE } from "./constants.js";
 import { partyMembers } from "./cast.js";
-import { upgradeCast, absolutePrefs } from "./rules.js";
+import { upgradeCast, absolutePrefs, clustersFromSides } from "./rules.js";
 import { characterArt, scanArtIfStale } from "./art.js";
 import { isStage } from "./stage.js";
 import { layout } from "./layout.js";
@@ -19,12 +19,16 @@ import { layout } from "./layout.js";
  *   2          Character prefs: Adjust's scale and yOffset hold the actual values,
  *              not a factor on and an addition to the art file's. Values equal to
  *              the art's own are dropped.
+ *   3          Stage and preset casts: sides become clusters. Left is cluster 0,
+ *              right cluster 1, its entries reversed to run left to right
+ *              (clustersFromSides).
  */
-export const SCHEMA = 2;
+export const SCHEMA = 3;
 
 const STEPS = {
   1: toV1,
   2: toV2,
+  3: toV3,
 };
 
 /** Is an upgrade still to run in this world? (The GM's screen waits for it before laying out.) */
@@ -82,4 +86,21 @@ async function toV2() {
   const next = {};
   for (const [key, prefs] of Object.entries(all)) next[key] = absolutePrefs(prefs, await characterArt(key));
   if (JSON.stringify(next) !== JSON.stringify(all)) await game.settings.set(MODULE, "characterPrefs", next);
+}
+
+async function toV3() {
+  for (const scene of game.scenes) {
+    const cast = scene.getFlag(MODULE, "cast");
+    if (!Array.isArray(cast)) continue;
+    const next = clustersFromSides(cast);
+    if (JSON.stringify(next) !== JSON.stringify(cast)) await scene.setFlag(MODULE, "cast", next);
+  }
+  const presets = foundry.utils.deepClone(game.settings.get(MODULE, "presets"));
+  let changed = false;
+  for (const p of Object.values(presets)) {
+    if (!Array.isArray(p.cast)) continue;
+    const next = clustersFromSides(p.cast);
+    if (JSON.stringify(next) !== JSON.stringify(p.cast)) { p.cast = next; changed = true; }
+  }
+  if (changed) await game.settings.set(MODULE, "presets", presets);
 }

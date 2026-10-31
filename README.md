@@ -1,6 +1,6 @@
 # VN Stage
 
-A Foundry VTT module for visual-novel scenes on a native Foundry scene: portraits on the left and right, expressions players can change, and swappable static backgrounds. Not tied to any campaign.
+A Foundry VTT module for visual-novel scenes on a native Foundry scene: portraits in one or more clusters across the stage, expressions players can change, and swappable static backgrounds. Not tied to any campaign.
 
 Shared privately with friends' tables; not published.
 
@@ -36,7 +36,7 @@ ln -s "<path to this folder>" "<Foundry data folder>/Data/modules/vn-stage"
 | Area | Functions |
 |---|---|
 | Stage | `isStage`, `makeStage`, `unmakeStage`, `setBackground(src)`, `currentBackground` |
-| Cast | `getCast`, `addToCast({ name, actorUuid, side, index })`, `addParty(side, { index })`, `removeParty`, `partySide`, `setCast`, `removeFromCast(id)`, `switchSide`, `moveInSide`, `clearCast`, `setFlip`, `layout` |
+| Cast | `getCast`, `addToCast({ name, actorUuid, cluster, index, newCluster })`, `addParty(cluster, { index, newCluster })`, `removeParty`, `partyCluster`, `setCast`, `removeFromCast(id)`, `moveToCluster(id, cluster, { index, newCluster })`, `switchSide(id)`, `moveInCluster(id, step)`, `clearCast`, `setFlip`, `layout` |
 | Art | `artIndex`, `characterArt(key)`, `clearArtCache` |
 | Expressions and forms | `setExpression(castId, key)`, `setForm(castId, artKey)` (refused for players when the form is locked), `resetAllExpressions`, `currentExpression` |
 | Presets | `listPresets(groupId)`, `savePreset(name)`, `loadPreset(id)`, `deletePreset`, `updatePreset`, `renamePreset`, `setPresetGroups` |
@@ -45,7 +45,9 @@ ln -s "<path to this folder>" "<Foundry data folder>/Data/modules/vn-stage"
 | View | `toggleViewLock()` (GM only: lock your view to the stage), `viewLocked()` |
 | Debugging | `status()`: what the module sees on this screen |
 
-**Hooks it calls:** `vn-stage.layout(scene, placements)` after each layout (each portrait's box, for other modules); `vn-stage.groupFolders(group, folders)` to let modules add a group's automatic folders.
+**Clusters in the API:** `cluster` counts from 0, left to right, as `getCast` and `status()` show it. A number equal to the count starts a new cluster at the right edge, and `newCluster: true` starts one at that number, moving the rest up. `index` is the place in the cluster from the left (leave it out for the right end). `side: "left"` or `"right"` still works in place of `cluster`, for the leftmost or rightmost cluster. `partySide` and `moveInSide` are the old names of `partyCluster` and `moveInCluster`; `partySide` now returns a number. `switchSide` moves a character from the leftmost cluster to the rightmost, and from any other to the leftmost.
+
+**Hooks it calls:** `vn-stage.layout(scene, placements)` after each layout (each portrait's box and `cluster`, for other modules); `vn-stage.groupFolders(group, folders)` to let modules add a group's automatic folders.
 
 ## Stored data
 
@@ -57,14 +59,14 @@ Change any of these only with a step in `scripts/migrate.js` (bump `SCHEMA`), so
 | World setting | `portraitShadow`, `portraitShadowStrength` | The shadow settings above: on or off, and how dark (0 to 1) |
 | World setting | `schema` | The last data upgrade run (migrate.js) |
 | World setting | `groups` | `{ [id]: { label, folders, images, add, remove, hideAuto, deleted } }`; members also come from the art's `groups` |
-| World setting | `presets` | `{ [id]: { name, groups, background, cast, saved } }`; cast entries may carry `partyMember` and `form` |
+| World setting | `presets` | `{ [id]: { name, groups, background, cast, saved } }`; cast entries carry `cluster` like the scene's, and may carry `partyMember` and `form` |
 | World setting | `recent` | `{ names }`: art keys, newest first (24) |
 | World setting | `artIndex` | `{ root, scanned, art: { [key]: art } }`: the art folder as the GM's screen last scanned it (paths relative to `root`), so players read art without browsing files. Rescanned every time the world loads, when the Art folder setting changes, and by the Stage window's refresh button |
 | World setting | `characterPrefs` | `{ [art key]: { flip, scale, yOffset, size, flying } }`. `scale` and `yOffset` are the actual values and replace the art file's; absent means the file's |
 | Client setting | `collapsed` | Which Stage window sections and folder strips this GM collapsed |
 | Client setting | `gmViewLock` | Whether this GM's view is locked to the stage like the players' |
 | Scene flag | `stage` | `{ version }`: the scene is a stage |
-| Scene flag | `cast` | `[{ id, name, actorUuid, side, expression?, form? }]` in standing order (`expression` and `form` only for art without an actor) |
+| Scene flag | `cast` | `[{ id, name, actorUuid, cluster, expression?, form? }]` by cluster (from 0, no gaps), each cluster left to right (`expression` and `form` only for art without an actor) |
 | Scene flag | `partyOrder` | Actor ids, the order the party last stood in |
 | Scene flag | `group`, `backgroundFolder`, `preset` | The stage's group, its last-browsed folder, and the preset last loaded or saved |
 | Actor flag | `expression`, `form`, `art`, `lockedForms` | The actor's expression and form (follow them to every stage), its VN art… link, and the forms players can't switch to (art keys; the GM still can) |

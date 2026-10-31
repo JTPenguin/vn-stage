@@ -3,7 +3,13 @@
   <span class="vn-name">{{label}}</span>
   {{#if note}}<span class="vn-note" data-tooltip="The art this actor uses">{{note}}</span>{{/if}}
   <span class="vn-toggles">
-    <button type="button" class="vn-toggle {{#if left}}active{{/if}}" data-action="add" data-side="left" aria-pressed="{{left}}">Left</button>
-    <button type="button" class="vn-toggle {{#if right}}active{{/if}}" data-action="add" data-side="right" aria-pressed="{{right}}">Right</button>
+    {{#if onStage}}
+    <button type="button" class="vn-toggle vn-step" data-action="move" data-dir="-1" aria-label="Move left" data-tooltip="Move into the cluster to the left, or a new one at the edge" {{#unless canLeft}}disabled{{/unless}}>‹</button>
+    <button type="button" class="vn-toggle vn-cluster active" data-action="remove" aria-pressed="true" data-tooltip="Cluster {{cluster}}, counted from the left. Click to take them off">{{cluster}}</button>
+    <button type="button" class="vn-toggle vn-step" data-action="move" data-dir="1" aria-label="Move right" data-tooltip="Move into the cluster to the right, or a new one at the edge" {{#unless canRight}}disabled{{/unless}}>›</button>
+    {{else}}
+    <button type="button" class="vn-toggle" data-action="add" data-side="left" aria-pressed="false" data-tooltip="Join the leftmost cluster. Shift-click: a new cluster at the left edge">Left</button>
+    <button type="button" class="vn-toggle" data-action="add" data-side="right" aria-pressed="false" data-tooltip="Join the rightmost cluster. Shift-click: a new cluster at the right edge">Right</button>
+    {{/if}}
   </span>
 </li>

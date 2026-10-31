@@ -3,12 +3,12 @@ import { getCast, moveEntry, displayName } from "./cast.js";
 import { placements } from "./layout.js";
 import { canChange } from "./expressions.js";
 import { isStage } from "./stage.js";
-import { dropSlot } from "./rules.js";
+import { dropSlot, castWithout } from "./rules.js";
 import { openMenu, closeMenu } from "./menu.js";
 
 /**
  * Working on the stage itself. Dragging a portrait moves the character within
- * its side or to the other one (GM); clicking one opens its character menu
+ * its cluster, to another one or into a new one (GM); clicking one opens its character menu
  * (menu.js) for anyone who may change it, double-clicking opens its character sheet; hovering shows the GM its name.
  */
 
@@ -78,7 +78,7 @@ async function onUp(event) {
   if (p.dragging) {
     const target = dropTarget(event.clientX, event.clientY, p.entry.id);
     endDrag(p);
-    if (target) await moveEntry(p.entry.id, target.side, target.index);
+    if (target) await moveEntry(p.entry.id, target);
     return;
   }
   if (performance.now() - p.t > CLICK_TIME) return;
@@ -158,9 +158,13 @@ function onDragKey(event) {
 }
 
 /**
- * Where a drop at this point would put a character: { side, index, x } (x is
- * where the marker goes, in frame pixels), or null outside the frame. `ignore`
- * is the cast entry being moved (or a list of them, for the party), left out of the count.
+ * Where a drop at this point would put a character: { cluster, index,
+ * newCluster, x, kind, dir }, or null outside the frame. The first three are
+ * what moveEntry takes, counted without whoever is moved; x is where the marker
+ * goes, in frame pixels. `kind` is "same" (staying in their cluster, or joining
+ * one from outside the stage), "other" (into another cluster, `dir` -1 or 1
+ * pointing there) or "new" (starting a cluster). `ignore` is the cast entry
+ * being moved (or a list of them, for the party).
  */
 export function dropTarget(clientX, clientY, ignore = null) {
   const point = canvas.canvasCoordinatesFromClient({ x: clientX, y: clientY });
@@ -168,21 +172,33 @@ export function dropTarget(clientX, clientY, ignore = null) {
   const x = point.x - sceneX, y = point.y - sceneY;
   if (x < 0 || y < 0 || x > FRAME.width || y > FRAME.height) return null;
 
-  // Each character's centre on the stage.
+  // Each character's centre on the stage, by cluster, counted without whoever is moved (as the move is).
   const skip = new Set([ignore ?? []].flat());
-  const centres = new Map();
-  for (const p of placements.values()) {
-    if (!skip.has(p.entry.id)) centres.set(p.entry.id, p.box.x + p.box.width / 2);
+  const centreOf = new Map([...placements.values()].map((p) => [p.entry.id, p.box.x + p.box.width / 2]));
+  const cast = getCast();
+  const clusters = [];
+  for (const e of castWithout(cast, [...skip])) {
+    if (centreOf.has(e.id)) (clusters[e.cluster] ??= []).push(centreOf.get(e.id));
   }
-  const order = getCast().filter((e) => centres.has(e.id));
-  const sideOf = (s) => order.filter((e) => e.side === s).map((e) => centres.get(e.id));
-  const slot = dropSlot(x, sideOf("left"), sideOf("right"), FRAME.width);
-  // Moving someone to the other side of the stage gets its own marker.
-  const moving = getCast().filter((e) => skip.has(e.id));
-  return { ...slot, crosses: moving.some((e) => e.side !== slot.side) };
+  const slot = dropSlot(x, clusters.filter(Boolean), FRAME.width);
+
+  // Back where they stand (a lone character's cluster goes while they're moved, so a new one in its place is the same).
+  const moving = cast.filter((e) => skip.has(e.id));
+  const from = moving[0]?.cluster;
+  const together = moving.length > 0 && moving.every((e) => e.cluster === from);
+  const alone = together && !cast.some((e) => e.cluster === from && !skip.has(e.id));
+  const same = !moving.length ? !slot.newCluster
+    : together && slot.cluster === from && slot.newCluster === alone;
+  const kind = same ? "same" : slot.newCluster ? "new" : "other";
+  const now = moving.map((e) => centreOf.get(e.id)).filter((c) => c !== undefined);
+  const dir = now.length && slot.x < now.reduce((a, b) => a + b, 0) / now.length ? -1 : 1;
+  return { ...slot, kind, dir };
 }
 
-/** A vertical line on the GM's screen where a drop would land. */
+/**
+ * A vertical line on the GM's screen where a drop would land: solid within the
+ * same cluster, dashed with an arrow into another, dashed with a "+" for a new one.
+ */
 function showMarker(target) {
   if (!target) return clearMarker();
   if (!marker || marker.destroyed) {
@@ -195,18 +211,26 @@ function showMarker(target) {
   const top = sceneY + 0.4 * FRAME.height, bottom = sceneY + FRAME.height;
   const mx = sceneX + target.x;
   marker.lineStyle(8, 0xe0a64a, 0.9);
-  if (!target.crosses) {
+  if (target.kind === "same") {
     marker.moveTo(mx, top);
     marker.lineTo(mx, bottom);
     return;
   }
-  // Across the stage: a dashed line with an arrow at the top pointing to the side it goes to.
-  const dash = 36, space = 24;
+  const dash = 36, space = 24, head = 44;
   for (let y = top; y < bottom; y += dash + space) {
     marker.moveTo(mx, y);
     marker.lineTo(mx, Math.min(y + dash, bottom));
   }
-  const dir = target.side === "right" ? 1 : -1, head = 44;
+  if (target.kind === "new") {
+    // A new cluster: a "+" above the line.
+    marker.moveTo(mx - head * 0.6, top - head);
+    marker.lineTo(mx + head * 0.6, top - head);
+    marker.moveTo(mx, top - head * 1.6);
+    marker.lineTo(mx, top - head * 0.4);
+    return;
+  }
+  // Into another cluster: an arrow at the top pointing the way they go.
+  const dir = target.dir;
   marker.moveTo(mx - dir * head * 0.6, top - head);
   marker.lineTo(mx + dir * head * 0.6, top);
   marker.lineTo(mx - dir * head * 0.6, top + head);

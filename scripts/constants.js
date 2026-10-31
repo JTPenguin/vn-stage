@@ -47,9 +47,9 @@ export function faceGuide(scale = 1, zoom = 1) {
  */
 export const LAYOUT = Object.freeze({
   pad: 0.02,       // share of the frame width kept clear at each outer edge
-  centreGap: 0.04, // between the two sides' clusters
+  clusterGap: 0.04, // between neighbouring clusters
   step: 0.55,      // a neighbour stands this share of the pair's average width further in (used for crowding)
-  roomyStep: 0.75, // ...and up to this share when the cluster has room to spare (a lone side)
+  roomyStep: 0.75, // ...and up to this share when the cluster has room to spare (a lone cluster, say)
   // Crowding = width needed at full size (with full buffers) / width available (see arrange.js).
   crowdStart: 1.0, // buffers start shrinking here...
   crowdEnd: 1.2,   // ...and reach minBuffer here

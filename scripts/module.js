@@ -7,7 +7,7 @@
 import { MODULE } from "./constants.js";
 import { registerSettings } from "./settings.js";
 import { isStage, makeStage, unmakeStage, setBackground, currentBackground } from "./stage.js";
-import { getCast, addToCast, addParty, removeParty, partySide, partyEntryIds, setCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip } from "./cast.js";
+import { getCast, findEntry, addToCast, addParty, removeParty, partyCluster, partyEntryIds, setCast, removeFromCast, moveToCluster, switchSide, moveInCluster, clearCast, setFlip } from "./cast.js";
 import { artIndex, characterArt, clearArtCache, scanArt, scanArtIfStale } from "./art.js";
 import { layout, lastArrangement } from "./layout.js";
 import { listGroups, getGroup, memberNames, createGroup, addFolder, addMember, groupFolders, stageGroup, setStageGroup } from "./groups.js";
@@ -59,7 +59,8 @@ Hooks.once("init", () => {
   });
   const api = {
     isStage, makeStage, unmakeStage, setBackground, currentBackground,
-    getCast, addToCast, addParty, removeParty, partySide, setCast, removeFromCast, switchSide, moveInSide, clearCast, setFlip,
+    getCast, addToCast, addParty, removeParty, partyCluster, setCast, removeFromCast, moveToCluster, switchSide, moveInCluster, clearCast, setFlip,
+    partySide: partyCluster, moveInSide: moveInCluster, // the names from before clusters
     artIndex, characterArt, clearArtCache, layout,
     setExpression, setForm, resetAllExpressions, currentExpression,
     listPresets, savePreset, loadPreset, deletePreset, updatePreset, renamePreset, setPresetGroups,
@@ -175,22 +176,28 @@ function onSettingChanged(setting, userId) {
   GroupsWindow.refresh();
 }
 
-// GM shortcut: drop an actor on the left or right half of a stage.
-// GM: drop an actor or the party (sidebar), a Cast row or The Party (Stage window) where it should stand.
+// GM: drop an actor or the party (sidebar), a Cast row or The Party (Stage window) where it should stand:
+// into a cluster, or between clusters or past the outermost to start a new one.
 Hooks.on("dropCanvasData", (_canvas, data, event) => {
   if (!game.user.isGM || !isStage() || !["Actor", "VNStageCast", "VNStageParty"].includes(data.type)) return;
   const actor = data.type === "Actor" ? fromUuidSync(data.uuid) : null;
   const isPartyActor = actor?.isOfType?.("party") || actor?.type === "party";
-  // The party (from the window or the sidebar) leaves its members on stage out when working out the drop point.
-  const target = dropTarget(event.clientX, event.clientY, isPartyActor ? partyEntryIds() : data.ignore ?? null);
+  // Whoever is dropped is left out when working out the drop point, as the move counts without them:
+  // the party's members on stage (from the window or the sidebar), or the character.
+  const who = actor ? { name: actor.name, actorUuid: actor.uuid } : { name: data.name, actorUuid: data.actorUuid ?? null };
+  const party = isPartyActor || data.type === "VNStageParty";
+  const ignore = party ? partyEntryIds() : findEntry(getCast(), who)?.id ?? null;
+  const target = dropTarget(event.clientX, event.clientY, ignore);
   setWindowDrag(null);
   if (!target) return false;
-  const { side, index } = target;
-  if (data.type === "VNStageParty") addParty(side, { index });
-  else if (data.type === "VNStageCast") addToCast({ name: data.name, actorUuid: data.actorUuid ?? null, side, index });
   // The party actor itself (PF2e) puts every member there, not a token or a character.
-  else if (isPartyActor) addParty(side, { index });
-  else if (actor) addToCast({ name: actor.name, actorUuid: actor.uuid, side, index });
+  const done = party ? addParty(null, { target })
+    : data.type === "VNStageCast" || actor ? addToCast({ ...who, target })
+      : null;
+  done?.catch((err) => {
+    console.error("VN Stage | Drop failed", err);
+    ui.notifications.warn("VN Stage | Couldn't put them there. See the console.");
+  });
   return false; // no token
 });
 

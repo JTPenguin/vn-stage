@@ -50,6 +50,9 @@
 .vn-stage .vn-toggles .vn-toggle + .vn-toggle { border-left-width: 0; }
 .vn-stage .vn-toggles .vn-toggle.active { background: var(--color-warm-2, #c9593f); border-color: var(--color-warm-2, #c9593f); color: #fff; }
 .vn-stage .vn-toggles .vn-toggle:disabled { opacity: 0.45; }
+/* On stage, ‹ n › takes the same width as Left / Right, so rows don't shift. */
+.vn-stage .vn-toggles .vn-toggle.vn-step { min-width: 1.55rem; width: 1.55rem; padding: 0; }
+.vn-stage .vn-toggles .vn-toggle.vn-cluster { width: 3.1rem; }
 
 /* Adjust window */
 .vn-adjust .vn-adjust-body { padding: 0.5rem 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }

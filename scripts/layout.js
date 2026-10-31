@@ -4,7 +4,7 @@ import { characterArt, artKeyOf } from "./art.js";
 import { getCast, characterPrefs } from "./cast.js";
 import { isStage } from "./stage.js";
 import { currentExpression } from "./expressions.js";
-import { placementOf } from "./rules.js";
+import { placementOf, frontRank } from "./rules.js";
 
 
 let queue = Promise.resolve();
@@ -29,17 +29,15 @@ export function layout(scene = canvas.scene, { instant = false } = {}) {
 async function doLayout(scene, instant) {
   if (!game.user.isGM || !isStage(scene)) return;
   const cast = getCast(scene);
-  const sides = {};
-  for (const side of ["left", "right"]) {
-    sides[side] = await Promise.all(cast.filter((e) => e.side === side).map(measure));
-  }
-  const widths = Object.fromEntries(Object.entries(sides).map(([k, items]) => [k, items.map((m) => m.width)]));
-  const { zoom, crowding, buffers, regions } = arrange(widths, FRAME.width, LAYOUT);
+  const groups = [];
+  for (const e of cast) (groups[e.cluster] ??= []).push(e);
+  const clusters = await Promise.all(groups.filter(Boolean).map((g) => Promise.all(g.map(measure))));
+  const { zoom, crowding, buffers, regions } = arrange(clusters.map((items) => items.map((m) => m.width)), FRAME.width, LAYOUT);
   const placed = [];
-  for (const [side, items] of Object.entries(sides)) {
-    const centres = clusterCentres(side, items.map((m) => m.width * zoom), regions[side], LAYOUT.step, LAYOUT.roomyStep);
-    items.forEach((m, i) => placed.push(finish(m, centres[i], i, zoom)));
-  }
+  clusters.forEach((items, c) => {
+    const centres = clusterCentres(items.map((m) => m.width * zoom), regions[c], LAYOUT.step, LAYOUT.roomyStep);
+    items.forEach((m, i) => placed.push(finish(m, centres[i], frontRank(i, items.length, c, clusters.length), zoom)));
+  });
   if (scene.id === canvas.scene?.id) {
     placements.clear();
     for (const p of placed) placements.set(p.entry.id, p);
@@ -75,7 +73,7 @@ async function doLayout(scene, instant) {
   if (remove.length) await scene.deleteEmbeddedDocuments("Tile", remove);
 
   Hooks.callAll(`${MODULE}.layout`, scene, placed.map(({ entry, box, fallback }) => ({
-    id: entry.id, name: entry.name, actorUuid: entry.actorUuid, side: entry.side, box, fallback,
+    id: entry.id, name: entry.name, actorUuid: entry.actorUuid, cluster: entry.cluster, box, fallback,
   })));
 }
 
@@ -133,8 +131,8 @@ async function measure(entry) {
   return { entry, key, prefs, place, size, src, width, height, fallback };
 }
 
-/** Where one character stands: box (frame pixels) and draw order; first-placed in front. */
-function finish({ entry, key, prefs, place, size, src, width, height, fallback }, cx, i, zoom = 1) {
+/** Where one character stands: box (frame pixels) and draw order; rank 0 in front (frontRank in rules.js). */
+function finish({ entry, key, prefs, place, size, src, width, height, fallback }, cx, rank, zoom = 1) {
   // Standing on the bottom edge, dropped by the yOffset (Adjust's, else the file's).
   let y = FRAME.height - height + place.yOffset * FRAME.height;
 
@@ -152,7 +150,7 @@ function finish({ entry, key, prefs, place, size, src, width, height, fallback }
   const box = { x: cx - width / 2, y, width, height };
   const flip = !!prefs.flip;
   const flying = !!prefs.flying;
-  return { entry, key, src, box, sort: 100 - i, flip, fallback, flying, size, zoom };
+  return { entry, key, src, box, sort: 100 - rank, flip, fallback, flying, size, zoom };
 }
 
 /** A character's creature size: the Adjust window's choice, then the sheet, then the art file. */

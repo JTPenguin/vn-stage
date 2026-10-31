@@ -1,11 +1,12 @@
 import { indexedActorKey } from "./art.js";
-import { getCast, partyEntryIds } from "./cast.js";
+import { getCast, partyEntryIds, partyCluster, PARTY_LABEL } from "./cast.js";
 import { listPresets, stagePreset } from "./presets.js";
 import { currentBackground, backgroundFolder, folderImages, backgroundLabel, decodePath, isVideo } from "./stage.js";
 import { ALL, RECENT, getGroup, groupFolders, memberNames } from "./groups.js";
 import { folderLabel } from "./groups-window.js";
 import { esc } from "./dialogs.js";
 import { safetyBackground } from "./settings.js";
+import { neighbourTarget } from "./rules.js";
 
 /**
  * What the Stage window shows, worked out from the stage, the art and the
@@ -40,9 +41,21 @@ export function castEntryFor(row) {
   return getCast().find((e) => isRowEntry(row, e)) ?? null;
 }
 
-/** Is any party member on stage? (The Party's row lights up a little, even when they're split.) */
-export function partyOnStage(scene) {
-  return partyEntryIds(scene).length > 0;
+/**
+ * The Party's row: its cluster (from 1) when every member stands in one, and
+ * whether ‹ and › can move them. `onStage`: is any member on stage? (The row
+ * lights up a little, even when they're split.)
+ */
+export function partyRow(scene) {
+  const cluster = partyCluster(scene);
+  const cast = getCast(scene), ids = partyEntryIds(scene);
+  return {
+    label: PARTY_LABEL,
+    cluster: cluster === null ? null : cluster + 1,
+    onStage: ids.length > 0,
+    canLeft: cluster !== null && !!neighbourTarget(cast, ids, -1),
+    canRight: cluster !== null && !!neighbourTarget(cast, ids, 1),
+  };
 }
 
 /**
@@ -50,7 +63,7 @@ export function partyOnStage(scene) {
  * goes on stage linked, and its owners control its expression; several actors
  * can share one character's art), and one per character no actor uses (or that
  * stands on stage without an actor); forms have no rows of their own. Each row
- * knows its cast entry on stage.
+ * knows its cast entry on stage, its cluster, and whether ‹ and › can move it.
  */
 export async function castRows(index, cast) {
   const byKey = new Map(index.map((a) => [a.key, a]));
@@ -74,7 +87,9 @@ export async function castRows(index, cast) {
   }
   for (const r of rows) {
     r.entry = cast.find((e) => isRowEntry(r, e)) ?? null;
-    r.side = r.entry?.side ?? null;
+    r.cluster = r.entry?.cluster ?? null;
+    r.canLeft = !!r.entry && !!neighbourTarget(cast, r.entry.id, -1);
+    r.canRight = !!r.entry && !!neighbourTarget(cast, r.entry.id, 1);
   }
   return rows;
 }
@@ -84,7 +99,7 @@ export function rowContext(r) {
     row: r.row, label: r.label, note: r.note, thumb: r.thumb,
     onStage: !!r.entry,
     search: `${r.label} ${r.note ?? ""} ${r.key}`.toLowerCase(),
-    left: r.side === "left", right: r.side === "right",
+    cluster: r.cluster === null ? null : r.cluster + 1, canLeft: r.canLeft, canRight: r.canRight,
   };
 }
 
