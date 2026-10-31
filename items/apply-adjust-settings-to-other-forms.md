@@ -1,12 +1,13 @@
 ---
-title: "Apply a form's adjust settings to other forms"
+title: Apply a form's adjust settings to other forms
 kind: idea
 status: proposed
 waits_on: Justin
 blocked_by: []
-source: "Justin's words, 2026-10-30"
+source: Justin's words, 2026-10-30
 added: 2026-10-30
 updated: 2026-10-30
+priority: 🔽
 ---
 # Apply a form's adjust settings to other forms
 
