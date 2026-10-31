@@ -14,7 +14,6 @@
 .vn-stage h3 .vn-icon { margin-left: auto; }
 .vn-stage h3 .vn-icon.vn-icon-tight { margin-left: 0; }
 .vn-stage .vn-section h3[data-action=toggleSection] { cursor: pointer; user-select: none; }
-.vn-stage .vn-background h3 { font-size: var(--font-size-16, 16px); }
 .vn-stage .vn-chevron { font-size: 0.75em; width: 0.9em; transition: transform 0.15s ease; }
 .vn-stage .vn-section.collapsed .vn-chevron { transform: rotate(-90deg); }
 .vn-stage .vn-section.collapsed > :not(h3) { display: none; }
@@ -66,7 +65,7 @@
 .vn-stage .vn-groupbar { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--color-border, #0003); }
 .vn-stage .vn-groupbar select { flex: 1; }
 .vn-stage .vn-bg-folder-group { margin-top: 0.4rem; }
-.vn-stage .vn-bg-folder-group h4 { cursor: pointer; user-select: none; text-transform: none; font-size: var(--font-size-14, 14px); opacity: 0.85; }
+.vn-stage .vn-bg-folder-group h4 { cursor: pointer; user-select: none; text-transform: none; font-size: var(--font-size-18, 18px); opacity: 0.85; }
 .vn-stage .vn-bg-folder-group.collapsed .vn-chevron { transform: rotate(-90deg); }
 .vn-stage .vn-bg-folder-group.collapsed .vn-bg-strip { display: none; }
 .vn-stage .vn-cast-tools { display: flex; gap: 0.4rem; margin-bottom: 0.4rem; }
@@ -149,7 +148,6 @@
 .vn-groups .vn-groups-section { padding: 0.4rem 0 0.6rem; border-bottom: 1px solid var(--color-border, #0003); }
 .vn-groups .vn-groups-section:last-child { border-bottom: none; }
 .vn-groups .vn-groups-section h3 { margin: 0 0 0.3rem; font-size: var(--font-size-14, 14px); border: none; }
-.vn-groups .vn-groups-backgrounds h3 { font-size: var(--font-size-16, 16px); }
 .vn-groups .vn-groups-items { list-style: none; margin: 0 0 0.3rem; padding: 0; display: flex; flex-direction: column; gap: 0.15rem; }
 .vn-groups .vn-groups-items li { display: flex; align-items: center; gap: 0.4rem; padding: 0.1rem 0.2rem; border-radius: 4px; }
 .vn-groups .vn-groups-items li:hover { background: color-mix(in srgb, var(--color-warm-2, #c9593f) 10%, transparent); }

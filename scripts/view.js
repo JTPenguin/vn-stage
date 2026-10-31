@@ -57,9 +57,12 @@ export function refitView() {
   if (canvas.ready) canvas.pan();
 }
 
-/** Width of Foundry's sidebar on screen (tabs included), or 0 while it is collapsed. */
+/**
+ * Width of Foundry's sidebar panel on screen, or 0 while it is collapsed. The tab strip beside
+ * it is left out, so it overlaps the frame like the controls on the left.
+ */
 function sidebarWidth() {
-  const el = ui.sidebar?.expanded ? ui.sidebar.element : null;
+  const el = ui.sidebar?.expanded ? document.getElementById("sidebar-content") : null;
   const rect = el?.isConnected ? el.getBoundingClientRect() : null;
   if (!rect?.width) return 0;
   return Math.max(0, window.innerWidth - rect.left);

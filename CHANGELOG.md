@@ -9,7 +9,7 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 
 ### Changed
 - **The view re-fits when the sidebar opens or closes.** With the sidebar open, the whole stage fits in the space left of it, with Foundry's canvas showing above and below. With it closed, the stage fills the window as before. This applies to players, and to the GM while their view is locked. The layout no longer keeps the right 17% of the stage clear for the sidebar, so a side alone can use the full width.
-- **Bigger Background headers.** The Background section title and its folder headings are larger, in both the Stage window and the Groups window.
+- **Bigger folder headings in the Background section** of the Stage window, so they stand apart from the images under them.
 - **Art is read from folders and sized by height, not by face.** The module reads `portrait.*`, `expressions/`, `forms/` and an optional `vn-stage.json` (see `docs/art-format.md`) and no longer reads any other art file. The GM's screen scans the art folder and saves the result as the world setting `artIndex`, so players read art without browsing files; the Stage window's refresh button rescans. Characters are sized by the file's `scale` and `yOffset`, and every character now shows its expressions. Crowded stages zoom around the face guide's centre line.
 - Wording: the settings hints, the empty-group text and the Groups window tooltip describe the art format (a group is "named in the character's `vn-stage.json`"), and no tool or campaign is named.
 - The character menu shows a labelled button per expression instead of face thumbnails.
