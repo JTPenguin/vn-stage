@@ -162,6 +162,23 @@ test("a form's family is the character it belongs to", () => {
   assert.equal(R.familyOf("Mira Voss"), "Mira Voss");
 });
 
+test("form locks: the GM sees every form, players only the open ones", () => {
+  const forms = [{ key: "A" }, { key: "A/forms/cursed" }];
+  assert.deepEqual(R.visibleForms(forms, ["A"], { isGM: true }).map((f) => f.key), ["A", "A/forms/cursed"]);
+  assert.deepEqual(R.visibleForms(forms, ["A"], { isGM: false }).map((f) => f.key), ["A/forms/cursed"]);
+  assert.equal(R.visibleForms(forms, undefined).length, 2);
+  assert.equal(R.visibleForms(forms, []).length, 2);
+});
+
+test("form locks: locking adds once, opening removes, a missing list counts as empty", () => {
+  assert.deepEqual(R.toggleLock(undefined, "A", true), ["A"]);
+  assert.deepEqual(R.toggleLock(["A"], "A", true), ["A"]);
+  const list = ["A", "B"];
+  assert.deepEqual(R.toggleLock(list, "A", false), ["B"]);
+  assert.deepEqual(list, ["A", "B"]);
+  assert.deepEqual(R.toggleLock(null, "A", false), []);
+});
+
 test("group members: tags plus hand additions, and a hand removal wins over a tag", () => {
   const index = [{ name: "Ezren", groups: ["The Crew"] }, { name: "Valeros", groups: ["The Crew"] }, { name: "Merisiel", groups: [] }];
   const members = R.groupMembers("The Crew", index, { add: ["Merisiel"], remove: ["Valeros"] });

@@ -251,6 +251,17 @@ export function familyOf(key) {
   return i === -1 ? key : key.slice(0, i);
 }
 
+/** The forms a user may see in the menu: all of them for the GM, for others only those not locked (`forms`: [{ key, … }], `locked`: art keys). */
+export function visibleForms(forms, locked, { isGM = false } = {}) {
+  return isGM ? forms : forms.filter((f) => !(locked ?? []).includes(f.key));
+}
+
+/** `locked` (art keys) with `key` locked or opened, as a new array; a missing list counts as empty. */
+export function toggleLock(locked, key, on) {
+  const rest = (locked ?? []).filter((k) => k !== key);
+  return on ? [...rest, key] : rest;
+}
+
 /* -------------------------------------------- */
 /*  Scale and drop                              */
 /* -------------------------------------------- */

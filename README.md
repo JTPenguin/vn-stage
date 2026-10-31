@@ -37,7 +37,7 @@ ln -s "<path to this folder>" "<Foundry data folder>/Data/modules/vn-stage"
 | Stage | `isStage`, `makeStage`, `unmakeStage`, `setBackground(src)`, `currentBackground` |
 | Cast | `getCast`, `addToCast({ name, actorUuid, side, index })`, `addParty(side, { index })`, `removeParty`, `partySide`, `setCast`, `removeFromCast(id)`, `switchSide`, `moveInSide`, `clearCast`, `setFlip`, `layout` |
 | Art | `artIndex`, `characterArt(key)`, `clearArtCache` |
-| Expressions and forms | `setExpression(castId, key)`, `setForm(castId, artKey)`, `resetAllExpressions`, `currentExpression` |
+| Expressions and forms | `setExpression(castId, key)`, `setForm(castId, artKey)` (refused for players when the form is locked), `resetAllExpressions`, `currentExpression` |
 | Presets | `listPresets(groupId)`, `savePreset(name)`, `loadPreset(id)`, `deletePreset`, `updatePreset`, `renamePreset`, `setPresetGroups` |
 | Groups | `listGroups`, `getGroup`, `memberNames`, `createGroup`, `addFolder`, `addMember`, `groupFolders`, `stageGroup`, `setStageGroup` |
 | Windows | `openWindow()`, `openGroups(groupId)` |
@@ -65,7 +65,7 @@ Change any of these only with a step in `scripts/migrate.js` (bump `SCHEMA`), so
 | Scene flag | `cast` | `[{ id, name, actorUuid, side, expression?, form? }]` in standing order (`expression` and `form` only for art without an actor) |
 | Scene flag | `partyOrder` | Actor ids, the order the party last stood in |
 | Scene flag | `group`, `backgroundFolder`, `preset` | The stage's group, its last-browsed folder, and the preset last loaded or saved |
-| Actor flag | `expression`, `form`, `art` | The actor's expression and form (follow them to every stage), and its VN art… link |
+| Actor flag | `expression`, `form`, `art`, `lockedForms` | The actor's expression and form (follow them to every stage), its VN art… link, and the forms players can't switch to (art keys; the GM still can) |
 | Tile flag | `part`, and for portraits `castId`, `name`, `key`, `fallback`; for the shade `shade` | What the module drew (`background`, `portrait`, `shade`) |
 
 ## Checks
@@ -100,7 +100,7 @@ These rely on Foundry or PIXI behaviour that isn't a promised API. Check each on
 
 ## Keys to keep stable
 
-Saved choices (Flip, size, height), group memberships, Recent and VN art… links are keyed by the art folder's name under the art root (`Rahadin`, `Rahadin/forms/corrupted`). **Renaming a character's art folder loses them**; renaming actors is safe.
+Saved choices (Flip, size, height), group memberships, Recent and VN art… links are keyed by the art folder's name under the art root (`Rahadin`, `Rahadin/forms/corrupted`). Form locks too. **Renaming a character's art folder loses them**; renaming actors is safe.
 
 ## Conventions
 

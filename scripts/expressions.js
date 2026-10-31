@@ -1,5 +1,6 @@
 import { MODULE } from "./constants.js";
-import { characterArt, artKeyOf, baseArtKeyOf, formsFor } from "./art.js";
+import { characterArt, artKeyOf, baseArtKeyOf, formsFor, lockedForms } from "./art.js";
+import { toggleLock } from "./rules.js";
 import { getCast } from "./cast.js";
 import { isStage } from "./stage.js";
 import { pendingFor, setPending } from "./pending.js";
@@ -49,11 +50,17 @@ export async function setExpression(castId, key, { scene = canvas.scene } = {}) 
  * way as expressions: on the actor when there is one (its owners may), else on
  * the cast entry (GM). Choosing the entry's base art clears the choice. The
  * expression carries over when the form has it, otherwise it shows neutral.
+ * Players can't pick a form the GM has locked.
  */
 export async function setForm(castId, key, { scene = canvas.scene } = {}) {
   const entry = getCast(scene).find((e) => e.id === castId);
   if (!entry || !canChange(entry)) return;
   const base = (await baseArtKeyOf(entry)) ?? entry.name;
+  if (!game.user.isGM) {
+    // Players: a real form of this character, not a locked one. Checked on the key asked for (null is Base), as a locked Base is stored as no flag.
+    const asked = key ?? base;
+    if (!(await formsFor(base)).some((f) => f.key === asked) || lockedForms(entry).includes(asked)) return;
+  }
   const value = key === base ? null : key;
   const actor = entry.actorUuid ? fromUuidSync(entry.actorUuid) : null;
   if (actor) return value ? actor.setFlag(MODULE, "form", value) : actor.unsetFlag(MODULE, "form");
@@ -84,6 +91,15 @@ export async function chooseForm(entry, key) {
   const actor = entry.actorUuid ? fromUuidSync(entry.actorUuid) : null;
   if (actor) return value ? actor.setFlag(MODULE, "form", value) : actor.unsetFlag(MODULE, "form");
   setPending(entry.name, { form: value });
+}
+
+/** Lock a form (an art key) of an actor's character, or open it again. GM. */
+export async function setFormLocked(actorUuid, key, locked) {
+  if (!game.user.isGM) return;
+  const actor = fromUuidSync(actorUuid);
+  if (!actor) return;
+  const next = toggleLock(actor.getFlag(MODULE, "lockedForms"), key, locked);
+  return next.length ? actor.setFlag(MODULE, "lockedForms", next) : actor.unsetFlag(MODULE, "lockedForms");
 }
 
 /** The menu's expression choice, on stage or off. */

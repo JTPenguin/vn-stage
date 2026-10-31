@@ -209,6 +209,13 @@ export function chosenForm(entry) {
   return (actor ? actor.getFlag(MODULE, "form") : entry.form) ?? null;
 }
 
+/** The art keys the GM has locked on the entry's actor: players can't switch to these forms. None without an actor. */
+export function lockedForms(entry) {
+  const actor = entry.actorUuid ? fromUuidSync(entry.actorUuid) : null;
+  const locked = actor?.getFlag(MODULE, "lockedForms");
+  return Array.isArray(locked) ? locked.filter((k) => typeof k === "string") : [];
+}
+
 /**
  * Every form of `key`'s character that has a VN portrait, the character itself
  * first (labelled "Base"): [{ key, label, thumb, portrait }].

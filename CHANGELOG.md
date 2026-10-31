@@ -5,6 +5,7 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 ## [Unreleased]
 
 ### Added
+- **The GM can lock a character's forms.** In the character menu, each form of an actor-linked character has a lock button. Players don't see locked forms and can't switch to them; the GM still can. Locks are saved on the actor, so they follow it to every stage.
 - **The GM can lock their own view to the stage, like the players'.** A lock button in the Stage window header, or the Lock my view keybinding (no key by default), keeps the view fitted to the stage frame and ignores pans, drags and zooms. Each GM's choice is remembered on their machine.
 
 ### Changed
