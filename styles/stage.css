@@ -65,7 +65,7 @@
 .vn-stage .vn-groupbar { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--color-border, #0003); }
 .vn-stage .vn-groupbar select { flex: 1; }
 .vn-stage .vn-bg-folder-group { margin-top: 0.4rem; }
-.vn-stage .vn-bg-folder-group h4 { cursor: pointer; user-select: none; text-transform: none; font-size: var(--font-size-18, 18px); opacity: 0.85; }
+.vn-stage .vn-bg-folder-group h4 { cursor: pointer; user-select: none; text-transform: none; font-family: var(--font-h3); font-size: var(--font-size-12, 12px); opacity: 0.85; }
 .vn-stage .vn-bg-folder-group.collapsed .vn-chevron { transform: rotate(-90deg); }
 .vn-stage .vn-bg-folder-group.collapsed .vn-bg-strip { display: none; }
 .vn-stage .vn-cast-tools { display: flex; gap: 0.4rem; margin-bottom: 0.4rem; }
