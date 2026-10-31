@@ -21,7 +21,7 @@ const load = async (name) => {
   return import(pathToFileURL(path.join(tmp, `${name}.mjs`)).href);
 };
 const { LAYOUT, FRAME, faceGuide, GUIDE_TOP } = await load("constants");
-const { arrange, clusterCentres, clusterWidth } = await load("arrange");
+const { arrange, clusterCentres, clusterWidth, shadeCut } = await load("arrange");
 const R = await load("rules");
 process.on("exit", () => fs.rmSync(tmp, { recursive: true, force: true }));
 
@@ -73,6 +73,26 @@ test("a zoomed face keeps its centre on the guide", () => {
   const full = faceGuide(1, 1), zoomed = faceGuide(1, 0.75);
   assert.equal(full.top, GUIDE_TOP);
   assert.ok(Math.abs((full.top + full.bottom) / 2 - (zoomed.top + zoomed.bottom) / 2) < 1e-12);
+});
+
+const H = FRAME.height;
+const at = (bottom, extra = {}) => ({ box: { y: bottom - 800, height: 800 }, ...extra });
+
+test("the bottom shade: a raised flyer alone brings up none", () => {
+  assert.equal(shadeCut([at(H - 200, { flying: true })], H), H);
+});
+
+test("the bottom shade: a flyer beside a raised non-flyer starts at the non-flyer's edge", () => {
+  assert.equal(shadeCut([at(H - 500, { flying: true }), at(H - 200)], H), H - 200);
+});
+
+test("the bottom shade: everyone flying brings up none", () => {
+  assert.equal(shadeCut([at(H - 300, { flying: true }), at(H - 100, { flying: true })], H), H);
+});
+
+test("the bottom shade: fallback images are still ignored", () => {
+  assert.equal(shadeCut([at(H - 300, { fallback: true })], H), H);
+  assert.equal(shadeCut([at(H - 300, { fallback: true }), at(H - 150)], H), H - 150);
 });
 
 /* -------------------------------------------- */

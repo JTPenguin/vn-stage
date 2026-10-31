@@ -1,5 +1,5 @@
 import { MODULE, FRAME, PART, SIZE, LAYOUT, faceGuide } from "./constants.js";
-import { arrange, clusterCentres } from "./arrange.js";
+import { arrange, clusterCentres, shadeCut } from "./arrange.js";
 import { characterArt, artKeyOf } from "./art.js";
 import { getCast, characterPrefs } from "./cast.js";
 import { isStage } from "./stage.js";
@@ -85,7 +85,7 @@ async function doLayout(scene) {
  */
 function shadeTiles(placed) {
   const out = new Map();
-  const cut = Math.min(FRAME.height, ...placed.filter((p) => !p.fallback).map((p) => p.box.y + p.box.height));
+  const cut = shadeCut(placed, FRAME.height);
   if (cut >= FRAME.height - 1) return out;
   const { sceneX = 0, sceneY = 0 } = canvas.dimensions ?? {};
   const fade = LAYOUT.shadeFade * FRAME.height;
@@ -150,7 +150,8 @@ function finish({ entry, key, prefs, place, size, src, width, height, fallback }
   }
   const box = { x: cx - width / 2, y, width, height };
   const flip = !!prefs.flip;
-  return { entry, key, src, box, sort: 100 - i, flip, fallback, size, zoom };
+  const flying = !!prefs.flying;
+  return { entry, key, src, box, sort: 100 - i, flip, fallback, flying, size, zoom };
 }
 
 /** A character's creature size: the Adjust window's choice, then the sheet, then the art file. */

@@ -232,10 +232,11 @@ export function setFlip(name, flip) {
 }
 
 /**
- * Change a character's saved choices: `flip`, `size`, `scale` (multiple of the
+ * Change a character's saved choices: `flip`, `size`, `flying`, `scale` (multiple of the
  * frame height, before creature size) and `yOffset` (share of the frame height;
  * positive is lower). Scale and yOffset replace the art file's own; null clears
- * a choice, so the art's own applies again.
+ * a choice, so the art's own applies again. `flying` keeps the character from
+ * bringing up the bottom shade.
  */
 export async function setPrefs(name, patch) {
   requireGM();

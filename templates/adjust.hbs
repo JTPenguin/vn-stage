@@ -21,6 +21,10 @@
       <input type="number" name="yOffset" min="-100" max="150" step="0.5" value="{{yOffset}}">
     </div>
   </div>
+  <div class="form-group vn-check">
+    <label><input type="checkbox" name="flying" {{#if flying}}checked{{/if}}> Flying</label>
+    <p class="hint">A flying character doesn't bring up the bottom shade.</p>
+  </div>
   <footer class="vn-adjust-buttons">
     <button type="button" data-action="reset"><i class="fa-solid fa-rotate-left"></i> Reset</button>
     <button type="button" data-action="done"><i class="fa-solid fa-check"></i> Done</button>

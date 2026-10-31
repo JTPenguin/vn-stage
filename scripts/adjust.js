@@ -67,6 +67,7 @@ export class AdjustWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       scale: Math.round(place.scale * 10000) / 10000,
       yOffset: Math.round(place.yOffset * 10000) / 100, // % of the frame height
       autoLabel: auto ? `Auto: ${SIZE_CHOICES[auto.key] ?? auto.key} (${from})` : "Auto",
+      flying: !!p.flying,
       sizes: Object.entries(SIZE_CHOICES).map(([key, label]) => ({ key, label, selected: p.size === key })),
     };
   }
@@ -85,6 +86,9 @@ export class AdjustWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     this.element.querySelector("select[name=size]")?.addEventListener("change", (event) => {
       setPrefs(this.key, { size: event.target.value || null });
+    });
+    this.element.querySelector("input[name=flying]")?.addEventListener("change", (event) => {
+      setPrefs(this.key, { flying: event.target.checked || null });
     });
     if (!this.#onLayout) {
       this.#onLayout = Hooks.on(`${MODULE}.layout`, () => drawGuide(this.entry.id));

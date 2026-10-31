@@ -15,6 +15,15 @@
  * The right `sidebar` share of the frame is never used.
  */
 
+/**
+ * The highest bottom edge showing in the frame, where the bottom shade starts:
+ * the top of the portraits' bottom edges, capped at the frame height (which
+ * means no shade). Fallback images and flying characters don't count.
+ */
+export function shadeCut(placed, frameHeight) {
+  return Math.min(frameHeight, ...placed.filter((p) => !p.fallback && !p.flying).map((p) => p.box.y + p.box.height));
+}
+
 /** Width of one cluster: the first and last half-widths plus each step between neighbours. */
 export function clusterWidth(widths, factor) {
   if (!widths.length) return 0;
