@@ -1,6 +1,6 @@
 import { MODULE, FRAME } from "./constants.js";
 import { isStage } from "./stage.js";
-import { locksView } from "./rules.js";
+import { locksView, fitFrame } from "./rules.js";
 
 /**
  * Fit every screen to the stage frame. Players can't pan or zoom away from it:
@@ -57,10 +57,21 @@ export function refitView() {
   if (canvas.ready) canvas.pan();
 }
 
-/** Cover the screen with the frame, centred. */
+/** Width of Foundry's sidebar on screen (tabs included), or 0 while it is collapsed. */
+function sidebarWidth() {
+  const el = ui.sidebar?.expanded ? ui.sidebar.element : null;
+  const rect = el?.isConnected ? el.getBoundingClientRect() : null;
+  if (!rect?.width) return 0;
+  return Math.max(0, window.innerWidth - rect.left);
+}
+
+/** Cover the screen with the frame, or fit it beside an open sidebar (see fitFrame). */
 function fitView() {
   const [sw, sh] = canvas.screenDimensions;
   const { sceneX = 0, sceneY = 0 } = canvas.dimensions;
-  const scale = Math.max(sw / FRAME.width, sh / FRAME.height);
-  return { x: sceneX + FRAME.width / 2, y: sceneY + FRAME.height / 2, scale };
+  const { x, y, scale } = fitFrame(sw, sh, sidebarWidth(), FRAME.width, FRAME.height);
+  // Foundry clamps the zoom to its minimum, which can sit above the fit beside an open sidebar.
+  // canvas.dimensions is rebuilt on every window resize, so this lasts until the next one.
+  canvas.dimensions.scale.min = Math.min(canvas.dimensions.scale.min, scale);
+  return { x: sceneX + x, y: sceneY + y, scale };
 }

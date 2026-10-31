@@ -11,8 +11,6 @@
  *   Zoom     whatever still doesn't fit scales every portrait down alike, to no
  *            less than `minZoom`.
  *   Overlap  only what's left past the zoom floor squeezes the clusters tighter.
- *
- * The right `sidebar` share of the frame is never used.
  */
 
 /**
@@ -41,7 +39,7 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
  * @returns {{zoom, crowding, buffers, regions: {left, right}}}  regions: { from, to, anchor } or null
  */
 export function arrange(widths, frameWidth, L) {
-  const end = frameWidth * (1 - L.sidebar);
+  const end = frameWidth;
   const shrink = (crowding) => 1 - clamp((crowding - L.crowdStart) / (L.crowdEnd - L.crowdStart), 0, 1) * (1 - L.minBuffer);
 
   // The main row: left and right.

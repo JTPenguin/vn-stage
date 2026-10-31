@@ -11,7 +11,7 @@ import { getCast, addToCast, addParty, removeParty, partySide, partyEntryIds, se
 import { artIndex, characterArt, clearArtCache, scanArt, scanArtIfStale } from "./art.js";
 import { layout, lastArrangement } from "./layout.js";
 import { listGroups, getGroup, memberNames, createGroup, addFolder, addMember, groupFolders, stageGroup, setStageGroup } from "./groups.js";
-import { startView, stopView, viewLocked, viewFitted, toggleGmViewLock } from "./view.js";
+import { startView, stopView, viewLocked, viewFitted, toggleGmViewLock, refitView } from "./view.js";
 import { StageWindow } from "./window.js";
 import { GroupsWindow } from "./groups-window.js";
 import { listPresets, savePreset, loadPreset, deletePreset, updatePreset, renamePreset, setPresetGroups } from "./presets.js";
@@ -101,6 +101,27 @@ Hooks.on("canvasReady", () => {
 Hooks.on("canvasTearDown", () => {
   stopView();
   stopClicks();
+});
+
+// The sidebar opened or closed: once it has finished sliding, re-fit a locked view to the space left.
+Hooks.on("collapseSidebar", () => {
+  const content = document.getElementById("sidebar-content");
+  const refit = () => { if (viewLocked()) refitView(); };
+  const stop = () => {
+    content?.removeEventListener("transitionend", done);
+    clearTimeout(early);
+    clearTimeout(cap);
+  };
+  const done = (event) => {
+    if (event.propertyName !== "margin-right") return;
+    stop();
+    refit();
+  };
+  content?.addEventListener("transitionend", done);
+  // In case the slide doesn't run (no transition, hidden window). A slow slide still ends
+  // with a refit, so the listener stays until it does or the cap runs out.
+  const early = setTimeout(refit, 300);
+  const cap = setTimeout(stop, 1000);
 });
 
 // Stage or cast flags changed. A cast change is laid out by the GM who made it

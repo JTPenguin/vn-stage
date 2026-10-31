@@ -42,11 +42,10 @@ export function faceGuide(scale = 1, zoom = 1) {
 
 /**
  * Clustering. Portraits are shared tiles, so the layout is the same on every
- * screen: it keeps the right side clear for Foundry's sidebar (300 px plus its
- * tabs, about 17% of the frame on a 1920 px screen).
+ * screen and uses the whole frame width. Each screen fits its view around its
+ * own sidebar instead (see fitFrame in rules.js).
  */
 export const LAYOUT = Object.freeze({
-  sidebar: 0.17,   // share of the frame width kept clear on the right
   pad: 0.02,       // share of the frame width kept clear at each outer edge
   centreGap: 0.04, // between the two sides' clusters
   step: 0.55,      // a neighbour stands this share of the pair's average width further in (used for crowding)

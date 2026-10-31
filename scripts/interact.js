@@ -1,4 +1,4 @@
-import { MODULE, PART, FRAME, LAYOUT, faceGuide } from "./constants.js";
+import { MODULE, PART, FRAME, faceGuide } from "./constants.js";
 import { getCast, moveEntry, displayName } from "./cast.js";
 import { placements } from "./layout.js";
 import { canChange } from "./expressions.js";
@@ -176,7 +176,7 @@ export function dropTarget(clientX, clientY, ignore = null) {
   }
   const order = getCast().filter((e) => centres.has(e.id));
   const sideOf = (s) => order.filter((e) => e.side === s).map((e) => centres.get(e.id));
-  const slot = dropSlot(x, sideOf("left"), sideOf("right"), FRAME.width, LAYOUT.sidebar);
+  const slot = dropSlot(x, sideOf("left"), sideOf("right"), FRAME.width);
   // Moving someone to the other side of the stage gets its own marker.
   const moving = getCast().filter((e) => skip.has(e.id));
   return { ...slot, crosses: moving.some((e) => e.side !== slot.side) };

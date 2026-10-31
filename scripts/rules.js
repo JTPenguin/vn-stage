@@ -14,6 +14,21 @@ export function locksView({ isGM, gmLock }) {
   return !isGM || !!gmLock;
 }
 
+/**
+ * Where to centre the view (frame coordinates) and at what scale. With the
+ * sidebar closed, the frame covers the screen. With it open, the whole frame
+ * fits in the area left of it, centred there; Foundry's canvas shows in the
+ * bands. A sidebar wider than half the screen counts as closed.
+ */
+export function fitFrame(screenW, screenH, sidebarW, frameW, frameH) {
+  const free = screenW - sidebarW;
+  if (sidebarW <= 0 || free < screenW / 2) {
+    return { x: frameW / 2, y: frameH / 2, scale: Math.max(screenW / frameW, screenH / frameH) };
+  }
+  const scale = Math.min(free / frameW, screenH / frameH);
+  return { x: frameW / 2 + sidebarW / (2 * scale), y: frameH / 2, scale };
+}
+
 /* -------------------------------------------- */
 /*  The party                                   */
 /* -------------------------------------------- */
@@ -302,12 +317,12 @@ export function mergeRecent(used, before, max) {
  * Where a drop at frame x would put a character, given each side's centres in
  * standing order (frame pixels): { side, index, x } with x where the marker goes.
  * The sides divide halfway between the two clusters, or in the middle of the
- * usable width (the frame less the sidebar share) when one side is empty, or
+ * frame when one side is empty, or
  * past the last character of a crowded side if that lies beyond the middle.
  */
-export function dropSlot(x, left, right, frameWidth, sidebar) {
+export function dropSlot(x, left, right, frameWidth) {
   const gap = 0.06 * frameWidth;
-  const middle = (frameWidth * (1 - sidebar)) / 2;
+  const middle = frameWidth / 2;
   // A lone crowded side keeps its territory: the divide moves out past its last character.
   // The far edge always stays reachable as the other side.
   const reach = (b) => Math.min(Math.max(b, 0.5 * gap), 2 * middle - 0.5 * gap);

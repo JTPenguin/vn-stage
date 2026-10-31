@@ -37,12 +37,12 @@ test("a cluster's width: half of each end plus a step per neighbour", () => {
   assert.equal(clusterWidth([W, W], 0.5), W + 0.5 * W);
 });
 
-test("one side alone is centred in the usable width, at full size", () => {
+test("one side alone is centred in the full frame width, at full size", () => {
   const { zoom, regions } = arrange({ left: [W, W], right: [] }, FRAME.width, LAYOUT);
   assert.equal(zoom, 1);
   assert.equal(regions.right, null);
   assert.equal(regions.left.anchor, "centre");
-  assert.ok(regions.left.to <= FRAME.width * (1 - LAYOUT.sidebar), "never uses the sidebar's share");
+  assert.equal(regions.left.to, FRAME.width * (1 - LAYOUT.pad), "runs to the outer pad on the right");
 });
 
 test("two sides share the width in proportion to what each needs", () => {
@@ -55,7 +55,7 @@ test("two sides share the width in proportion to what each needs", () => {
 
 test("a crowded stage shrinks buffers, then zooms, never below the floor", () => {
   const calm = arrange({ left: [W, W], right: [W] }, FRAME.width, LAYOUT);
-  const packed = arrange({ left: Array(6).fill(W), right: Array(6).fill(W) }, FRAME.width, LAYOUT);
+  const packed = arrange({ left: Array(7).fill(W), right: Array(7).fill(W) }, FRAME.width, LAYOUT);
   assert.equal(calm.buffers, 1);
   assert.ok(packed.crowding > LAYOUT.crowdEnd);
   assert.equal(packed.buffers, LAYOUT.minBuffer);
@@ -178,44 +178,44 @@ test("Recent puts the newest first, without repeats, up to its limit", () => {
 
 test("a drop picks the side by the gap between the clusters, and counts from the outer edge", () => {
   const left = [300, 600], right = [1900, 1600]; // standing order: outer edge first
-  assert.deepEqual(R.dropSlot(450, left, right, FRAME.width, LAYOUT.sidebar), { side: "left", index: 1, x: 450 });
-  const r = R.dropSlot(1750, left, right, FRAME.width, LAYOUT.sidebar);
+  assert.deepEqual(R.dropSlot(450, left, right, FRAME.width), { side: "left", index: 1, x: 450 });
+  const r = R.dropSlot(1750, left, right, FRAME.width);
   assert.equal(r.side, "right");
   assert.equal(r.index, 1);
 });
 
-test("on an empty stage a drop's side is by the middle of the usable width", () => {
-  const middle = (FRAME.width * (1 - LAYOUT.sidebar)) / 2;
-  assert.equal(R.dropSlot(middle - 1, [], [], FRAME.width, LAYOUT.sidebar).side, "left");
-  assert.equal(R.dropSlot(middle + 1, [], [], FRAME.width, LAYOUT.sidebar).side, "right");
+test("on an empty stage a drop's side is by the middle of the frame", () => {
+  const middle = FRAME.width / 2;
+  assert.equal(R.dropSlot(middle - 1, [], [], FRAME.width).side, "left");
+  assert.equal(R.dropSlot(middle + 1, [], [], FRAME.width).side, "right");
 });
 
 test("a drop on an empty side snaps to the mirror of the other side's outermost character", () => {
-  const usable = FRAME.width * (1 - LAYOUT.sidebar);
+  const usable = FRAME.width;
   const left = [300, 600];
-  const r = R.dropSlot(usable - 100, left, [], FRAME.width, LAYOUT.sidebar);
+  const r = R.dropSlot(usable - 100, left, [], FRAME.width);
   assert.deepEqual(r, { side: "right", index: 0, x: usable - 300 });
-  const a = R.dropSlot(usable - 100, left, [], FRAME.width, LAYOUT.sidebar).x;
-  const b = R.dropSlot(usable - 400, left, [], FRAME.width, LAYOUT.sidebar).x;
+  const a = R.dropSlot(usable - 100, left, [], FRAME.width).x;
+  const b = R.dropSlot(usable - 400, left, [], FRAME.width).x;
   assert.equal(a, b);
-  assert.equal(R.dropSlot(1, [], [], FRAME.width, LAYOUT.sidebar).x, usable * 0.25);
+  assert.equal(R.dropSlot(1, [], [], FRAME.width).x, usable * 0.25);
 });
 
 test("a full one-sided stage still lets a drop reach the far edge as the other side", () => {
-  const usable = FRAME.width * (1 - LAYOUT.sidebar);
+  const usable = FRAME.width;
   const left = [150, 350, 550, 750, 950, 1150, 1350, usable - 150];
-  const across = R.dropSlot(usable - 20, left, [], FRAME.width, LAYOUT.sidebar);
+  const across = R.dropSlot(usable - 20, left, [], FRAME.width);
   assert.equal(across.side, "right");
   assert.ok(across.x >= Math.max(...left));
 });
 
 test("a crowded side with the other empty keeps drops beyond the middle", () => {
-  const middle = (FRAME.width * (1 - LAYOUT.sidebar)) / 2;
+  const middle = FRAME.width / 2;
   const left = [200, 500, middle + 200, middle + 400];
-  const inside = R.dropSlot(middle + 500, left, [], FRAME.width, LAYOUT.sidebar);
+  const inside = R.dropSlot(middle + 500, left, [], FRAME.width);
   assert.equal(inside.side, "left");
   assert.equal(inside.index, 4);
-  assert.equal(R.dropSlot(middle + 400 + 0.07 * FRAME.width, left, [], FRAME.width, LAYOUT.sidebar).side, "right");
+  assert.equal(R.dropSlot(middle + 400 + 0.07 * FRAME.width, left, [], FRAME.width).side, "right");
 });
 
 /* -------------------------------------------- */
@@ -377,4 +377,55 @@ test("view lock: players are always locked; the GM only when they chose to", () 
   assert.equal(R.locksView({ isGM: false, gmLock: true }), true);
   assert.equal(R.locksView({ isGM: true, gmLock: false }), false);
   assert.equal(R.locksView({ isGM: true, gmLock: true }), true);
+});
+
+/** Where the frame's edges land on screen for a fit, in screen pixels. */
+const onScreen = (f, screenW, screenH) => ({
+  left: screenW / 2 - f.x * f.scale,
+  right: screenW / 2 + (FRAME.width - f.x) * f.scale,
+  top: screenH / 2 - f.y * f.scale,
+  bottom: screenH / 2 + (FRAME.height - f.y) * f.scale,
+});
+const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-6, `${msg}: ${a} vs ${b}`);
+
+test("view fit, sidebar closed: the frame covers the screen, centred", () => {
+  const exact = R.fitFrame(1920, 1080, 0, FRAME.width, FRAME.height);
+  assert.deepEqual(exact, { x: FRAME.width / 2, y: FRAME.height / 2, scale: 1920 / FRAME.width });
+  const tall = onScreen(R.fitFrame(1920, 1200, 0, FRAME.width, FRAME.height), 1920, 1200); // 16:10 crops the sides
+  near(tall.top, 0, "16:10 top");
+  near(tall.bottom, 1200, "16:10 bottom");
+  assert.ok(tall.left < 0 && tall.right > 1920, "16:10 crops the sides");
+  near(tall.left, 1920 - tall.right, "16:10 centred");
+  const wide = onScreen(R.fitFrame(2560, 1080, 0, FRAME.width, FRAME.height), 2560, 1080); // 21:9 crops top and bottom
+  near(wide.left, 0, "21:9 left");
+  near(wide.right, 2560, "21:9 right");
+  assert.ok(wide.top < 0 && wide.bottom > 1080, "21:9 crops top and bottom");
+  near(wide.top, 1080 - wide.bottom, "21:9 centred");
+});
+
+test("view fit, sidebar open: the whole frame fits left of the sidebar, centred there", () => {
+  const sw = 1920, sh = 1080, side = 360, free = sw - side;
+  const f = R.fitFrame(sw, sh, side, FRAME.width, FRAME.height);
+  assert.ok(f.scale * FRAME.width <= free + 1e-9 && f.scale * FRAME.height <= sh + 1e-9, "fits");
+  assert.ok(Math.abs(f.scale * FRAME.width - free) < 1e-9 || Math.abs(f.scale * FRAME.height - sh) < 1e-9, "touches one way");
+  const e = onScreen(f, sw, sh);
+  near(e.right, sw - side, "right edge meets the sidebar");
+  near(e.left, free - e.right, "centred across the free width");
+  near(e.top, sh - e.bottom, "centred top to bottom");
+  assert.ok(e.top > 0, "bands above and below");
+});
+
+test("view fit, sidebar open on an ultrawide: height-limited, bands at both sides", () => {
+  const sw = 3440, sh = 1440, side = 360, free = sw - side;
+  const f = R.fitFrame(sw, sh, side, FRAME.width, FRAME.height);
+  near(f.scale * FRAME.height, sh, "fills the height");
+  const e = onScreen(f, sw, sh);
+  assert.ok(e.left > 0 && e.right < free, "bands at both sides");
+  near(e.left, free - e.right, "centred left of the sidebar");
+});
+
+test("view fit: a sidebar wider than half the screen, or none, means cover", () => {
+  const cover = R.fitFrame(1920, 1080, 0, FRAME.width, FRAME.height);
+  assert.deepEqual(R.fitFrame(1920, 1080, 1000, FRAME.width, FRAME.height), cover);
+  assert.deepEqual(R.fitFrame(1920, 1080, -50, FRAME.width, FRAME.height), cover);
 });
