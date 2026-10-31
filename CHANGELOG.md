@@ -7,6 +7,7 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 ### Added
 - **The GM can lock a character's forms.** In the character menu, each form of an actor-linked character has a lock button. Players don't see locked forms and can't switch to them; the GM still can. Locks are saved on the actor, so they follow it to every stage.
 - **The GM can lock their own view to the stage, like the players'.** A lock button in the Stage window header, or the Lock my view keybinding (no key by default), keeps the view fitted to the stage frame and ignores pans, drags and zooms. Each GM's choice is remembered on their machine.
+- **Characters slide to their new places.** When a side switch, an added or removed character, or a preset load moves or resizes portraits, they slide and scale there over about 0.4 seconds instead of jumping. The bottom shade moves with them. Changes made in the Adjust window still jump, since Adjust is for setting up. Off for viewers who ask their system for reduced motion.
 
 ### Changed
 - **The view re-fits when the sidebar opens or closes.** With the sidebar open, the whole stage fits in the space left of it, with Foundry's canvas showing above and below. With it closed, the stage fills the window as before. This applies to players, and to the GM while their view is locked. The layout no longer keeps the right 17% of the stage clear for the sidebar, so a side alone can use the full width.

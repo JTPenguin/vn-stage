@@ -19,13 +19,14 @@ export const lastArrangement = { zoom: 1, crowding: 0, buffers: 1 };
  * Draw the stage's cast as portrait tiles: create, update or delete tiles so
  * they match the cast flag. GM only; Foundry syncs the tiles to everyone.
  * Calls run one at a time so quick clicks can't race each other.
+ * `instant`: tiles jump to their new places instead of sliding (fades.js), for Adjust's changes.
  */
-export function layout(scene = canvas.scene) {
-  queue = queue.then(() => doLayout(scene)).catch((err) => console.error("VN Stage | Layout failed", err));
+export function layout(scene = canvas.scene, { instant = false } = {}) {
+  queue = queue.then(() => doLayout(scene, instant)).catch((err) => console.error("VN Stage | Layout failed", err));
   return queue;
 }
 
-async function doLayout(scene) {
+async function doLayout(scene, instant) {
   if (!game.user.isGM || !isStage(scene)) return;
   const cast = getCast(scene);
   const sides = {};
@@ -70,7 +71,7 @@ async function doLayout(scene) {
 
   // Create before deleting, so a replaced portrait fades out while its successor fades in, with no empty stage between.
   if (create.length) await scene.createEmbeddedDocuments("Tile", create);
-  if (update.length) await scene.updateEmbeddedDocuments("Tile", update);
+  if (update.length) await scene.updateEmbeddedDocuments("Tile", update, instant ? { [MODULE]: { instant: true } } : {});
   if (remove.length) await scene.deleteEmbeddedDocuments("Tile", remove);
 
   Hooks.callAll(`${MODULE}.layout`, scene, placed.map(({ entry, box, fallback }) => ({

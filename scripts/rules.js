@@ -368,3 +368,23 @@ function emptySideX(side, other, usable, boundary, gap) {
     ? Math.max(0, Math.min(mirror, boundary - gap))
     : Math.min(usable, Math.max(mirror, boundary + gap));
 }
+
+/* -------------------------------------------- */
+/*  Moves                                       */
+/* -------------------------------------------- */
+
+/** The box `p` of the way from `from` to `to` (0 to 1; boxes are `{x, y, w, h}`: centre and size). */
+export function tweenBox(from, to, p) {
+  const at = (k) => (p === 1 ? to[k] : from[k] + (to[k] - from[k]) * p);
+  return { x: at("x"), y: at("y"), w: at("w"), h: at("h") };
+}
+
+/** Are two boxes the same to within `tol` pixels on every side and size? */
+export function sameBox(a, b, tol = 0.5) {
+  return ["x", "y", "w", "h"].every((k) => Math.abs(a[k] - b[k]) <= tol);
+}
+
+/** Should a tile update jump instead of slide? Only when it was sent as instant (Adjust's changes) and moves or resizes the tile. */
+export function snapsBox(changes, instant) {
+  return !!instant && ["x", "y", "width", "height"].some((k) => k in changes);
+}

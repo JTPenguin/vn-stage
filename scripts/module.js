@@ -166,8 +166,8 @@ function onSettingChanged(setting, userId) {
     preloadStage();
     if (userId === game.user.id && game.user.isGM && isStage()) layout(canvas.scene);
   }
-  // Flip, size or height changed by this GM: the viewed stage re-lays out.
-  if (setting.key === `${MODULE}.characterPrefs` && userId === game.user.id && game.user.isGM && isStage()) layout(canvas.scene);
+  // Flip, size or height changed by this GM: the viewed stage re-lays out. These are setup (the Adjust window, the menu's Flip), so tiles jump there.
+  if (setting.key === `${MODULE}.characterPrefs` && userId === game.user.id && game.user.isGM && isStage()) layout(canvas.scene, { instant: true });
   StageWindow.refresh();
   GroupsWindow.refresh();
 }

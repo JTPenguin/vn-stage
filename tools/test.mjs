@@ -446,3 +446,37 @@ test("view fit: a sidebar wider than half the screen, or none, means cover", () 
   assert.deepEqual(R.fitFrame(1920, 1080, 1000, FRAME.width, FRAME.height), cover);
   assert.deepEqual(R.fitFrame(1920, 1080, -50, FRAME.width, FRAME.height), cover);
 });
+
+/* -------------------------------------------- */
+/*  Moves                                       */
+/* -------------------------------------------- */
+
+const BOX_A = { x: 100, y: 200, w: 300, h: 600 }, BOX_B = { x: 500, y: 100, w: 150, h: 400 };
+
+test("a move starts exactly at its box and ends exactly at the new one", () => {
+  assert.deepEqual(R.tweenBox(BOX_A, BOX_B, 0), BOX_A);
+  assert.deepEqual(R.tweenBox(BOX_A, BOX_B, 1), BOX_B);
+});
+
+test("halfway through a move, every side and size is halfway", () => {
+  assert.deepEqual(R.tweenBox(BOX_A, BOX_B, 0.5), { x: 300, y: 150, w: 225, h: 500 });
+});
+
+test("a move redirected mid-way ends at the new target", () => {
+  const BOX_C = { x: -40, y: 333.3, w: 77, h: 901 };
+  assert.deepEqual(R.tweenBox(R.tweenBox(BOX_A, BOX_B, 0.37), BOX_C, 1), BOX_C);
+});
+
+test("same box: within half a pixel on every field, not at a full pixel on any one", () => {
+  assert.ok(R.sameBox(BOX_A, { x: 100.5, y: 199.5, w: 300.4, h: 599.6 }));
+  for (const k of ["x", "y", "w", "h"]) assert.ok(!R.sameBox(BOX_A, { ...BOX_A, [k]: BOX_A[k] + 1 }), k);
+});
+
+test("a tile update jumps only when sent as instant and it moves or resizes the tile", () => {
+  assert.ok(R.snapsBox({ x: 10 }, true));
+  assert.ok(R.snapsBox({ height: 10 }, true));
+  assert.ok(!R.snapsBox({ x: 10 }, false), "not instant: slides");
+  assert.ok(!R.snapsBox({ x: 10 }, undefined));
+  assert.ok(!R.snapsBox({ texture: { scaleX: -1 } }, true), "a flip alone doesn't move the box");
+  assert.ok(!R.snapsBox({ sort: 99 }, true));
+});
