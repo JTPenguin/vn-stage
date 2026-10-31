@@ -60,3 +60,6 @@ export const LAYOUT = Object.freeze({
 
 /** Tile flag `part` values. */
 export const PART = Object.freeze({ BACKGROUND: "background", PORTRAIT: "portrait", SHADE: "shade" });
+
+/** The soft shadow behind every portrait (shadows.js): the strength setting's default and range, then its offset (`x`, `y`) and `blur` in frame pixels. */
+export const SHADOW = Object.freeze({ strength: 0.5, min: 0, max: 1, step: 0.05, x: 0, y: 10, blur: 24 });

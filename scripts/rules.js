@@ -388,3 +388,24 @@ export function sameBox(a, b, tol = 0.5) {
 export function snapsBox(changes, instant) {
   return !!instant && ["x", "y", "width", "height"].some((k) => k in changes);
 }
+
+/* -------------------------------------------- */
+/*  Shadows                                     */
+/* -------------------------------------------- */
+
+/**
+ * How the portrait shadow looks on this screen, or null for none. `strength`
+ * is how dark it is (0 to 1); `scale` is the view's zoom, so the shadow keeps
+ * its size against the portrait. `look` is SHADOW (constants.js): offset and
+ * blur in frame pixels. The result is in screen pixels, with the padding the
+ * filter needs so neither the shift nor the blur is cut off.
+ */
+export function shadowLook({ on, strength, scale }, look) {
+  if (!on || !(strength > 0)) return null;
+  const shiftX = look.x * scale, shiftY = look.y * scale, blur = look.blur * scale;
+  return {
+    alpha: Math.min(strength, 1),
+    shiftX, shiftY, blur,
+    padding: Math.ceil(Math.max(Math.abs(shiftX), Math.abs(shiftY)) + 2 * blur + 1),
+  };
+}

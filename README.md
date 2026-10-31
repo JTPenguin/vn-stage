@@ -27,6 +27,7 @@ ln -s "<path to this folder>" "<Foundry data folder>/Data/modules/vn-stage"
 - **Art folder:** one subfolder per character, with a `portrait` image and, if you like, `expressions/`, `forms/` and a `vn-stage.json`. The whole format, including how art is sized, is in [docs/art-format.md](docs/art-format.md).
 - **Safety-net background:** set once as the scene's own background when it becomes a stage. The background shown during play is a tile above it, because changing a scene's own background redraws the canvas on every screen.
 - **Group background folders:** a folder every group finds its backgrounds in by itself, when it exists; `{group}` stands for the group's name (`scenes/{group}/`). Other modules can add folders with the `vn-stage.groupFolders` hook.
+- **Portrait shadows** and **Shadow strength:** a soft shadow behind every portrait, drawn by each screen. Strength is how dark it is.
 
 ## Console API
 
@@ -53,6 +54,7 @@ Change any of these only with a step in `scripts/migrate.js` (bump `SCHEMA`), so
 | Where | Key | Holds |
 |---|---|---|
 | World setting | `artRoot`, `safetyBackground`, `groupFolders` | The settings above |
+| World setting | `portraitShadow`, `portraitShadowStrength` | The shadow settings above: on or off, and how dark (0 to 1) |
 | World setting | `schema` | The last data upgrade run (migrate.js) |
 | World setting | `groups` | `{ [id]: { label, folders, images, add, remove, hideAuto, deleted } }`; members also come from the art's `groups` |
 | World setting | `presets` | `{ [id]: { name, groups, background, cast, saved } }`; cast entries may carry `partyMember` and `form` |
@@ -93,6 +95,7 @@ These rely on Foundry or PIXI behaviour that isn't a promised API. Check each on
 | Click and drag a portrait: the character menu opens, the drag moves them, and Foundry's selection box doesn't appear | Our window-level `pointerdown` listener (capture phase) runs before the canvas's own | `interact.js` |
 | Add, remove and swap: portraits fade, backgrounds crossfade | Stand-in `PrimarySpriteMesh`es added to `canvas.primary` (`sortDirty`), and the `refreshTile` hook scaling `tile.mesh.alpha` | `fades.js` (turns itself off on error; look for a console warning) |
 | Switch a side, or load a preset that keeps some of the cast: portraits slide and scale to their new places. Drag an Adjust slider: they jump | The `refreshTile` hook running after `Tile#_refreshPosition` and `_refreshSize`, then writing `tile.mesh.position` and `PrimarySpriteMesh#resize`; the mesh being kept across redraws (`PrimaryCanvasGroup.addTile`); custom update options (`{ "vn-stage": { instant: true } }`) reaching every client's `updateTile` hook before the refresh | `fades.js` (turns itself off on error; look for a console warning) |
+| Put two characters on stage: each has a soft shadow. Add or remove one: the shadow fades with them. Zoom (GM, view unlocked): the shadow keeps its size against the portrait | A custom `PIXI.Filter` (with `PIXI.BlurFilter`) on each portrait's `tile.mesh`: `PrimarySpriteMesh`'s filter rendering, `FilterSystem#applyFilter`, `getFilterTexture`, the `inputSize` uniform, and `canvas.stage.scale` | `shadows.js` (turns itself off on error; look for a console warning) |
 | Drag a portrait: it dims while dragged | Setting `tile.mesh.alpha` until the next `refreshState` | `interact.js` |
 | Right-click a Cast row: the menu opens above the Stage window | `ApplicationV2._maxZ` (internal), with the open windows' z-index as a fallback | `interact.js` (`topZ`) |
 | As a player, try to pan or zoom: the view stays fitted | Shadowing `canvas.pan` and `canvas.animatePan` | `view.js` |

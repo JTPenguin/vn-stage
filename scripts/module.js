@@ -18,12 +18,14 @@ import { listPresets, savePreset, loadPreset, deletePreset, updatePreset, rename
 import { setExpression, setForm, resetAllExpressions, currentExpression, preloadStage, isRelayGM } from "./expressions.js";
 import { startClicks, stopClicks, dropTarget, setWindowDrag } from "./interact.js";
 import { registerFades } from "./fades.js";
+import { registerShadows, refreshShadows } from "./shadows.js";
 import { migrate, migrationPending } from "./migrate.js";
 
 Hooks.once("init", () => {
   registerSettings({
     onArtRootChange: () => { if (game.user.isGM && (game.users.activeGM ?? game.user) === game.user) scanArt(); },
     onGmViewLockChange: () => { if (canvas.ready) startView(); StageWindow.refresh(); },
+    onShadowChange: () => refreshShadows(),
   });
   // Open the Stage window from the keyboard (GM). No key by default; set one in Configure Controls.
   game.keybindings.register(MODULE, "openWindow", {
@@ -50,6 +52,7 @@ Hooks.once("init", () => {
     },
   });
   registerFades();
+  registerShadows();
   foundry.applications.handlebars.loadTemplates({
     "vn-stage.bg": `modules/${MODULE}/templates/stage-bg.hbs`,
     "vn-stage.cast-row": `modules/${MODULE}/templates/cast-row.hbs`,

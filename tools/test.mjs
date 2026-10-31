@@ -480,3 +480,42 @@ test("a tile update jumps only when sent as instant and it moves or resizes the 
   assert.ok(!R.snapsBox({ texture: { scaleX: -1 } }, true), "a flip alone doesn't move the box");
   assert.ok(!R.snapsBox({ sort: 99 }, true));
 });
+
+/* -------------------------------------------- */
+/*  Shadows                                     */
+/* -------------------------------------------- */
+
+const { SHADOW } = await load("constants");
+
+test("shadows: none when off or at strength 0", () => {
+  assert.equal(R.shadowLook({ on: false, strength: 0.5, scale: 1 }, SHADOW), null);
+  assert.equal(R.shadowLook({ on: true, strength: 0, scale: 1 }, SHADOW), null);
+});
+
+test("shadows: strength is clamped to 0–1", () => {
+  assert.equal(R.shadowLook({ on: true, strength: 1.5, scale: 1 }, SHADOW).alpha, 1);
+  assert.equal(R.shadowLook({ on: true, strength: -0.2, scale: 1 }, SHADOW), null);
+});
+
+test("shadows: offset and blur follow the view's zoom, darkness doesn't", () => {
+  const full = R.shadowLook({ on: true, strength: 0.4, scale: 1 }, SHADOW);
+  assert.deepEqual([full.shiftX, full.shiftY, full.blur, full.alpha], [SHADOW.x, SHADOW.y, SHADOW.blur, 0.4]);
+  const half = R.shadowLook({ on: true, strength: 0.4, scale: 0.5 }, SHADOW);
+  assert.deepEqual([half.shiftX, half.shiftY, half.blur, half.alpha], [SHADOW.x / 2, SHADOW.y / 2, SHADOW.blur / 2, 0.4]);
+});
+
+test("shadows: the padding always covers the shift plus the blur on both sides", () => {
+  for (const look of [SHADOW, { ...SHADOW, x: -30, y: 5 }]) {
+    for (const scale of [0.1, 0.37, 1, 2.5]) {
+      const s = R.shadowLook({ on: true, strength: 1, scale }, look);
+      assert.ok(s.padding >= Math.max(Math.abs(s.shiftX), Math.abs(s.shiftY)) + 2 * s.blur + 1, `scale ${scale}`);
+      assert.ok(Number.isInteger(s.padding));
+    }
+  }
+});
+
+test("shadows: the default strength lies in the slider's range and on one of its steps", () => {
+  assert.ok(SHADOW.strength >= SHADOW.min && SHADOW.strength <= SHADOW.max);
+  const steps = (SHADOW.strength - SHADOW.min) / SHADOW.step;
+  assert.ok(Math.abs(steps - Math.round(steps)) < 1e-9);
+});

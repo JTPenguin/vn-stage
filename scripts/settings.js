@@ -1,10 +1,11 @@
-import { MODULE } from "./constants.js";
+import { MODULE, SHADOW } from "./constants.js";
 
 /**
  * `onArtRootChange` runs when the art folder changes (module.js passes the art cache's clear, so this file needs no import of art.js).
  * `onGmViewLockChange` runs when this GM locks or unlocks their view.
+ * `onShadowChange` runs when either portrait shadow setting changes.
  */
-export function registerSettings({ onArtRootChange = () => {}, onGmViewLockChange = () => {} } = {}) {
+export function registerSettings({ onArtRootChange = () => {}, onGmViewLockChange = () => {}, onShadowChange = () => {} } = {}) {
   game.settings.register(MODULE, "artRoot", {
     name: "VNSTAGE.Settings.ArtRoot.Name",
     hint: "VNSTAGE.Settings.ArtRoot.Hint",
@@ -34,6 +35,28 @@ export function registerSettings({ onArtRootChange = () => {}, onGmViewLockChang
     config: true,
     type: String,
     default: "",
+  });
+
+  // A soft shadow behind every portrait (shadows.js), and how dark it is.
+  game.settings.register(MODULE, "portraitShadow", {
+    name: "VNSTAGE.Settings.PortraitShadow.Name",
+    hint: "VNSTAGE.Settings.PortraitShadow.Hint",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true,
+    onChange: () => onShadowChange(),
+  });
+
+  game.settings.register(MODULE, "portraitShadowStrength", {
+    name: "VNSTAGE.Settings.PortraitShadowStrength.Name",
+    hint: "VNSTAGE.Settings.PortraitShadowStrength.Hint",
+    scope: "world",
+    config: true,
+    type: Number,
+    range: { min: SHADOW.min, max: SHADOW.max, step: SHADOW.step },
+    default: SHADOW.strength,
+    onChange: () => onShadowChange(),
   });
 
   // The last one-time data upgrade run in this world (migrate.js).

@@ -139,7 +139,8 @@ export function registerFades() {
     drawn.delete(doc.id);
     const mesh = doc.object?.mesh;
     if (!mesh || !FADES_IN.has(part(doc)) || reduced()) return;
-    fadeOut(ghostOf(mesh), PORTRAIT_MS);
+    // A leaving portrait takes its shadow along; the form-switch ghost below doesn't (it would darken the new form).
+    fadeOut(ghostOf(mesh, 0, { shadow: part(doc) === PART.PORTRAIT }), PORTRAIT_MS);
   }));
 
   // A background change, or a portrait's new form: the old image stays on top until the new one is drawn, then fades away.
@@ -228,8 +229,8 @@ function fadeIn(tile) {
   });
 }
 
-/** A stand-in for a mesh that's about to go: same image, place and depth (`sortBump` puts it just above, in Foundry's scaled sort units). */
-function ghostOf(mesh, sortBump = 0) {
+/** A stand-in for a mesh that's about to go: same image, place and depth (`sortBump` puts it just above, in Foundry's scaled sort units). With `shadow`, also its filters (shadows.js). */
+function ghostOf(mesh, sortBump = 0, { shadow = false } = {}) {
   const { PrimarySpriteMesh } = foundry.canvas.primary;
   const ghost = new PrimarySpriteMesh({ texture: mesh.texture, name: `${MODULE}.fade` });
   ghost.anchor.copyFrom(mesh.anchor);
@@ -242,6 +243,7 @@ function ghostOf(mesh, sortBump = 0) {
   ghost.zIndex = mesh.zIndex;
   ghost.tint = mesh.tint;
   ghost.alpha = mesh.alpha;
+  if (shadow) ghost.filters = mesh.filters ? [...mesh.filters] : null;
   ghost.eventMode = "none";
   canvas.primary.addChild(ghost);
   canvas.primary.sortDirty = true; // sort it in among the tiles, not on top of everything

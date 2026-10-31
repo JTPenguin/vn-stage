@@ -12,6 +12,14 @@
       "GroupFolders": {
         "Name": "Group background folders",
         "Hint": "A folder every group finds its backgrounds in by itself, when it exists. {group} stands for the group's name, for example scenes/{group}/. Leave blank for none."
+      },
+      "PortraitShadow": {
+        "Name": "Portrait shadows",
+        "Hint": "A soft shadow behind every portrait on a stage, so characters stand out from the background. Each screen draws its own."
+      },
+      "PortraitShadowStrength": {
+        "Name": "Shadow strength",
+        "Hint": "How dark the portrait shadows are, from none to solid black."
       }
     },
     "Keybindings": {
