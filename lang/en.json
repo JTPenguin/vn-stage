@@ -18,7 +18,15 @@
       "OpenWindow": {
         "Name": "Open the Stage window",
         "Hint": "Opens the VN Stage window (GM only). No key is set by default."
+      },
+      "LockView": {
+        "Name": "Lock my view to the stage",
+        "Hint": "GM only. Keeps your view fitted to the stage frame, like the players'; pans, drags and zooms are ignored. No key is set by default."
       }
+    },
+    "Window": {
+      "LockView": "Lock view to the stage",
+      "UnlockView": "Unlock view"
     }
   }
 }

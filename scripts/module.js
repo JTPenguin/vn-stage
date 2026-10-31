@@ -2,7 +2,7 @@
  * VN Stage: visual-novel scenes on a native Foundry scene.
  *
  * GM actions write the cast flag and tiles, which Foundry syncs to everyone.
- * Every client fits its view to the stage frame; players' view is locked.
+ * Every client fits its view to the stage frame; players' view is locked, and a GM can lock theirs.
  */
 import { MODULE } from "./constants.js";
 import { registerSettings } from "./settings.js";
@@ -11,7 +11,7 @@ import { getCast, addToCast, addParty, removeParty, partySide, partyEntryIds, se
 import { artIndex, characterArt, clearArtCache, scanArt, scanArtIfStale } from "./art.js";
 import { layout, lastArrangement } from "./layout.js";
 import { listGroups, getGroup, memberNames, createGroup, addFolder, addMember, groupFolders, stageGroup, setStageGroup } from "./groups.js";
-import { startView, stopView, viewLocked, viewFitted } from "./view.js";
+import { startView, stopView, viewLocked, viewFitted, toggleGmViewLock } from "./view.js";
 import { StageWindow } from "./window.js";
 import { GroupsWindow } from "./groups-window.js";
 import { listPresets, savePreset, loadPreset, deletePreset, updatePreset, renamePreset, setPresetGroups } from "./presets.js";
@@ -21,7 +21,10 @@ import { registerFades } from "./fades.js";
 import { migrate, migrationPending } from "./migrate.js";
 
 Hooks.once("init", () => {
-  registerSettings({ onArtRootChange: () => { if (game.user.isGM && (game.users.activeGM ?? game.user) === game.user) scanArt(); } });
+  registerSettings({
+    onArtRootChange: () => { if (game.user.isGM && (game.users.activeGM ?? game.user) === game.user) scanArt(); },
+    onGmViewLockChange: () => { if (canvas.ready) startView(); StageWindow.refresh(); },
+  });
   // Open the Stage window from the keyboard (GM). No key by default; set one in Configure Controls.
   game.keybindings.register(MODULE, "openWindow", {
     name: "VNSTAGE.Keybindings.OpenWindow.Name",
@@ -30,6 +33,19 @@ Hooks.once("init", () => {
     restricted: true,
     onDown: () => {
       StageWindow.open();
+      return true;
+    },
+  });
+  // Lock the GM's own view to the stage, like the players' (GM). No key by default.
+  game.keybindings.register(MODULE, "lockView", {
+    name: "VNSTAGE.Keybindings.LockView.Name",
+    hint: "VNSTAGE.Keybindings.LockView.Hint",
+    editable: [],
+    restricted: true,
+    onDown: async () => {
+      const locked = await toggleGmViewLock();
+      const note = canvas.ready && isStage() ? "" : " (Takes effect on a stage.)";
+      ui.notifications.info(`VN Stage | ${locked ? "View locked to the stage." : "View unlocked."}${note}`);
       return true;
     },
   });
@@ -45,6 +61,7 @@ Hooks.once("init", () => {
     setExpression, setForm, resetAllExpressions, currentExpression,
     listPresets, savePreset, loadPreset, deletePreset, updatePreset, renamePreset, setPresetGroups,
     listGroups, getGroup, memberNames, createGroup, addFolder, addMember, groupFolders, stageGroup, setStageGroup,
+    toggleViewLock: toggleGmViewLock, viewLocked,
     openWindow: () => StageWindow.open(),
     openGroups: (groupId) => GroupsWindow.open(groupId),
     status,

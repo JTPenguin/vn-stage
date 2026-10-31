@@ -6,6 +6,15 @@
  */
 
 /* -------------------------------------------- */
+/*  The view                                    */
+/* -------------------------------------------- */
+
+/** Is this screen's view locked to the stage? Players always; the GM only when they chose to. */
+export function locksView({ isGM, gmLock }) {
+  return !isGM || !!gmLock;
+}
+
+/* -------------------------------------------- */
 /*  The party                                   */
 /* -------------------------------------------- */
 

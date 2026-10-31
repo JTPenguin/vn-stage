@@ -1,7 +1,10 @@
 import { MODULE } from "./constants.js";
 
-/** `onArtRootChange` runs when the art folder changes (module.js passes the art cache's clear, so this file needs no import of art.js). */
-export function registerSettings({ onArtRootChange = () => {} } = {}) {
+/**
+ * `onArtRootChange` runs when the art folder changes (module.js passes the art cache's clear, so this file needs no import of art.js).
+ * `onGmViewLockChange` runs when this GM locks or unlocks their view.
+ */
+export function registerSettings({ onArtRootChange = () => {}, onGmViewLockChange = () => {} } = {}) {
   game.settings.register(MODULE, "artRoot", {
     name: "VNSTAGE.Settings.ArtRoot.Name",
     hint: "VNSTAGE.Settings.ArtRoot.Hint",
@@ -71,6 +74,15 @@ export function registerSettings({ onArtRootChange = () => {} } = {}) {
     config: false,
     type: Object,
     default: {},
+  });
+
+  // This GM's view is locked to the stage like the players' (this machine only).
+  game.settings.register(MODULE, "gmViewLock", {
+    scope: "client",
+    config: false,
+    type: Boolean,
+    default: false,
+    onChange: () => onGmViewLockChange(),
   });
 
   // Which Stage window sections this GM has collapsed (this machine only).

@@ -10,6 +10,7 @@ import { ALL, RECENT, listGroups, getGroup, stageGroup, setStageGroup } from "./
 import { GroupsWindow, choosePresetGroups, chooseImageGroups } from "./groups-window.js";
 import { askName, confirm, esc } from "./dialogs.js";
 import { resetAllExpressions } from "./expressions.js";
+import { gmViewLock, toggleGmViewLock } from "./view.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -39,6 +40,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       savePreset: StageWindow.#onSavePreset,
       loadPreset: StageWindow.#onLoadPreset,
       updatePreset: StageWindow.#onUpdatePreset,
+      toggleViewLock: StageWindow.#onToggleViewLock,
     },
   };
 
@@ -111,10 +113,31 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     };
   }
 
+  /** A lock button in the header, before the close button: lock the GM's own view to the stage. */
+  _getFrameButtons(options) {
+    return [
+      ...super._getFrameButtons(options),
+      { icon: "fa-solid fa-lock-open", label: "VNSTAGE.Window.LockView", action: "toggleViewLock" },
+    ];
+  }
+
   _onRender(context, options) {
     super._onRender(context, options);
     const title = this.window?.title;
     if (title) title.textContent = this.title;
+
+    // The lock button shows whether the view is locked now.
+    const lock = this.window?.header?.querySelector("[data-action=toggleViewLock]");
+    if (lock) {
+      const locked = gmViewLock();
+      const label = game.i18n.localize(locked ? "VNSTAGE.Window.UnlockView" : "VNSTAGE.Window.LockView");
+      lock.classList.toggle("fa-lock", locked);
+      lock.classList.toggle("fa-lock-open", !locked);
+      lock.classList.toggle("active", locked);
+      lock.setAttribute("aria-pressed", String(locked));
+      lock.setAttribute("aria-label", label);
+      lock.dataset.tooltip = label;
+    }
 
     const input = this.element.querySelector("input[name=filter]");
     input?.addEventListener("input", () => {
@@ -191,6 +214,11 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     const divider = this.element.querySelector(".vn-cast-divider");
     if (divider) divider.hidden = !outside;
+  }
+
+  static async #onToggleViewLock() {
+    game.tooltip.deactivate(); // so the hover label doesn't show the old state
+    await toggleGmViewLock();
   }
 
   static async #onMakeStage() {

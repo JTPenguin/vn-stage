@@ -188,3 +188,4 @@
 .vn-character-menu button.vn-form.current { border-color: #e0a64a; color: #e0a64a; }
 .vn-character-menu .vn-form-label { max-width: 7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vn-character-menu .vn-menu-note { opacity: 0.7; font-style: italic; }
+.vn-stage .window-header .header-control.active { color: var(--color-warm-2, #c9593f); }

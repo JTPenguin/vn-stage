@@ -41,6 +41,7 @@ ln -s "<path to this folder>" "<Foundry data folder>/Data/modules/vn-stage"
 | Presets | `listPresets(groupId)`, `savePreset(name)`, `loadPreset(id)`, `deletePreset`, `updatePreset`, `renamePreset`, `setPresetGroups` |
 | Groups | `listGroups`, `getGroup`, `memberNames`, `createGroup`, `addFolder`, `addMember`, `groupFolders`, `stageGroup`, `setStageGroup` |
 | Windows | `openWindow()`, `openGroups(groupId)` |
+| View | `toggleViewLock()` (GM only: lock your view to the stage), `viewLocked()` |
 | Debugging | `status()`: what the module sees on this screen |
 
 **Hooks it calls:** `vn-stage.layout(scene, placements)` after each layout (each portrait's box, for other modules); `vn-stage.groupFolders(group, folders)` to let modules add a group's automatic folders.
@@ -59,6 +60,7 @@ Change any of these only with a step in `scripts/migrate.js` (bump `SCHEMA`), so
 | World setting | `artIndex` | `{ root, scanned, art: { [key]: art } }`: the art folder as the GM's screen last scanned it (paths relative to `root`), so players read art without browsing files. Rescanned every time the world loads, when the Art folder setting changes, and by the Stage window's refresh button |
 | World setting | `characterPrefs` | `{ [art key]: { flip, scale, yOffset, size, flying } }`. `scale` and `yOffset` are the actual values and replace the art file's; absent means the file's |
 | Client setting | `collapsed` | Which Stage window sections and folder strips this GM collapsed |
+| Client setting | `gmViewLock` | Whether this GM's view is locked to the stage like the players' |
 | Scene flag | `stage` | `{ version }`: the scene is a stage |
 | Scene flag | `cast` | `[{ id, name, actorUuid, side, expression?, form? }]` in standing order (`expression` and `form` only for art without an actor) |
 | Scene flag | `partyOrder` | Actor ids, the order the party last stood in |

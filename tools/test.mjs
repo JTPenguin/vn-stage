@@ -371,3 +371,10 @@ test("schema 2: values that match the art's own are dropped", () => {
   assert.deepEqual(R.absolutePrefs({ scale: 1, yOffset: 0, size: "lg" }, artAt(0.54, 0.024)), { size: "lg" });
   assert.deepEqual(R.absolutePrefs({ flip: true }, artAt(0.54, 0.024)), { flip: true });
 });
+
+test("view lock: players are always locked; the GM only when they chose to", () => {
+  assert.equal(R.locksView({ isGM: false, gmLock: false }), true);
+  assert.equal(R.locksView({ isGM: false, gmLock: true }), true);
+  assert.equal(R.locksView({ isGM: true, gmLock: false }), false);
+  assert.equal(R.locksView({ isGM: true, gmLock: true }), true);
+});

@@ -4,7 +4,11 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 
 ## [Unreleased]
 
+### Added
+- **The GM can lock their own view to the stage, like the players'.** A lock button in the Stage window header, or the Lock my view keybinding (no key by default), keeps the view fitted to the stage frame and ignores pans, drags and zooms. Each GM's choice is remembered on their machine.
+
 ### Changed
+- **Bigger Background headers.** The Background section title and its folder headings are larger, in both the Stage window and the Groups window.
 - **Art is read from folders and sized by height, not by face.** The module reads `portrait.*`, `expressions/`, `forms/` and an optional `vn-stage.json` (see `docs/art-format.md`) and no longer reads any other art file. The GM's screen scans the art folder and saves the result as the world setting `artIndex`, so players read art without browsing files; the Stage window's refresh button rescans. Characters are sized by the file's `scale` and `yOffset`, and every character now shows its expressions. Crowded stages zoom around the face guide's centre line.
 - Wording: the settings hints, the empty-group text and the Groups window tooltip describe the art format (a group is "named in the character's `vn-stage.json`"), and no tool or campaign is named.
 - The character menu shows a labelled button per expression instead of face thumbnails.
