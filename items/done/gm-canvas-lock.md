@@ -1,13 +1,14 @@
 ---
 title: "Let the GM lock their canvas like the players"
 kind: feature
-status: ready
-waits_on: Claude
+status: done
+waits_on: none
 priority: ⏫
 blocked_by: []
 source: "Justin's list, 2026-10-30"
 added: 2026-10-30
 updated: 2026-10-30
+outcome: "Built in 9ec1568: a header lock button and a Lock my view keybinding toggle the client setting gmViewLock. Justin checked it in Foundry on 2026-10-30."
 ---
 # Let the GM lock their canvas like the players
 
