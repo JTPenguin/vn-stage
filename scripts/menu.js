@@ -10,8 +10,8 @@ import { chooseCharacterGroups } from "./groups-window.js";
  * The character menu: clicking a portrait on the stage (interact.js), or
  * right-clicking a Cast row (the Stage window). The character's forms (when it
  * has more than one), its expressions, and for the GM a row of actions (Flip,
- * Adjust, VN art…, Groups…, Remove). The GM can lock a form (a lock button on
- * it); players don't see locked forms. Players get the forms and expressions of
+ * Adjust, VN art…, Groups…, Remove). The GM locks or opens a form by
+ * right-clicking it; players don't see locked forms. Players get the forms and expressions of
  * characters they own, nothing else. Off stage, the forms and expressions
  * they'll arrive with, plus Flip and Groups….
  */
@@ -68,7 +68,8 @@ export async function openMenu(entry, clientX, clientY) {
         `<img src="${esc(encodeURI(f.thumb))}" alt=""><span class="vn-form-label">${esc(f.label)}</span>`,
         () => chooseForm(entry, f.key));
       button.dataset.tooltip = f.label;
-      list.append(game.user.isGM && entry.actorUuid ? formChip(button, entry.actorUuid, f.key, locked.includes(f.key)) : button);
+      if (game.user.isGM && entry.actorUuid) lockable(button, entry.actorUuid, f.key, f.label, locked.includes(f.key));
+      list.append(button);
     }
     el.append(list);
   }
@@ -127,29 +128,21 @@ async function gmActions(entry, key, name, groupKey = key) {
   return actions;
 }
 
-/** A form button with the GM's lock toggle beside it. The toggle changes in place: the menu stays open. */
-function formChip(button, actorUuid, formKey, locked) {
-  const chip = document.createElement("div");
-  chip.className = "vn-form-chip";
-  const lock = document.createElement("button");
-  lock.type = "button";
-  lock.className = "vn-form-lock";
+/** The GM's right-click on a form button locks or opens it. It changes in place: the menu stays open. */
+function lockable(button, actorUuid, formKey, label, locked) {
   const show = (on) => {
-    chip.classList.toggle("locked", on);
-    lock.innerHTML = `<i class="fa-solid ${on ? "fa-lock" : "fa-lock-open"}"></i>`;
-    lock.dataset.tooltip = on ? "Locked: players can't switch to this form" : "Open";
-    lock.setAttribute("aria-label", lock.dataset.tooltip);
+    button.classList.toggle("locked", on);
+    button.dataset.tooltip = on ? `${label}: locked, players can't switch to it. Right-click to open` : `${label}. Right-click to lock`;
   };
   show(locked);
-  lock.addEventListener("click", async (event) => {
+  button.addEventListener("contextmenu", async (event) => {
+    event.preventDefault();
     event.stopPropagation();
-    const on = !chip.classList.contains("locked");
+    const on = !button.classList.contains("locked");
     show(on);
     lockWrite = lockWrite.then(() => setFormLocked(actorUuid, formKey, on)).catch(() => show(!on));
     await lockWrite;
   });
-  chip.append(button, lock);
-  return chip;
 }
 
 function menuButton(className, html, run) {

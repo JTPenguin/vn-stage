@@ -21,9 +21,9 @@ Let the GM disable some of a character's forms, so a player can't switch to them
 - Characters without an actor need nothing: only the GM can switch their forms already.
 
 **Built (2026-10-30), waiting on Justin's check in Foundry:**
-1. As GM, a portrait of an actor-linked character with forms shows a lock button on each form. Locking dims it, and the menu stays open. Lock two forms quickly: both stay locked after reopening.
+1. As GM, a portrait of an actor-linked character with forms lets you right-click a form to lock it. Locking dims it, the tooltip says it's locked, and the menu stays open. Right-click it again to open it. Lock two forms quickly: both stay locked after reopening.
 2. Open the same character on another stage: the lock is still there.
 3. As a player who owns the actor, the locked form is gone from the menu.
 4. As that player, `VNStage.setForm(castId, "<locked key>")`, `VNStage.setForm(castId, null)` with Base locked, and `VNStage.setForm(castId, "nonsense")` all change nothing.
 5. Lock Base while the character is in another form: the player can't get back to Base, the GM can.
-6. A character without an actor shows no lock buttons. The off-stage Cast row menu shows them for actor characters.
+6. A character without an actor can't be locked: right-click does nothing. In the off-stage Cast row menu, right-click locks forms of actor characters too.

@@ -5,7 +5,7 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 ## [Unreleased]
 
 ### Added
-- **The GM can lock a character's forms.** In the character menu, each form of an actor-linked character has a lock button. Players don't see locked forms and can't switch to them; the GM still can. Locks are saved on the actor, so they follow it to every stage.
+- **The GM can lock a character's forms.** In the character menu, the GM right-clicks a form of an actor-linked character to lock or open it; a locked form is dimmed. Players don't see locked forms and can't switch to them; the GM still can. Locks are saved on the actor, so they follow it to every stage.
 - **The GM can lock their own view to the stage, like the players'.** A lock button in the Stage window header, or the Lock my view keybinding (no key by default), keeps the view fitted to the stage frame and ignores pans, drags and zooms. Each GM's choice is remembered on their machine.
 - **Characters slide to their new places.** When a side switch, an added or removed character, or a preset load moves or resizes portraits, they slide and scale there over about 0.4 seconds instead of jumping. The bottom shade moves with them. Changes made in the Adjust window still jump, since Adjust is for setting up. Off for viewers who ask their system for reduced motion.
 - **Portraits cast a soft shadow,** so characters stand out from the background. Two world settings, Portrait shadows (on by default) and Shadow strength (how dark), apply to every portrait. Each screen draws its own shadows, and they move and fade with their characters.

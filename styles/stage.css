@@ -187,14 +187,7 @@
 .vn-character-menu button.vn-form img { width: 1.55rem; height: 1.55rem; object-fit: cover; object-position: top; border-radius: 50%; border: none; flex: none; }
 .vn-character-menu button.vn-form:hover { background: rgba(255, 255, 255, 0.16); }
 .vn-character-menu button.vn-form.current { border-color: #e0a64a; color: #e0a64a; }
-.vn-character-menu .vn-form-chip { display: inline-flex; align-items: center; gap: 0.15rem; }
-.vn-character-menu .vn-form-chip.locked button.vn-form { opacity: 0.5; }
-.vn-character-menu button.vn-form-lock {
-  display: inline-flex; align-items: center; justify-content: center; width: 1.3rem; height: 1.3rem; min-height: 0; margin: 0; padding: 0;
-  border: none; border-radius: 50%; background: transparent; box-shadow: none; color: inherit; cursor: pointer; font-size: 10px; line-height: 1; opacity: 0.6;
-}
-.vn-character-menu button.vn-form-lock:hover { background: rgba(255, 255, 255, 0.16); opacity: 1; }
-.vn-character-menu .vn-form-chip.locked button.vn-form-lock { color: #e0a64a; opacity: 1; }
+.vn-character-menu button.vn-form.locked { opacity: 0.5; }
 .vn-character-menu .vn-form-label { max-width: 7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vn-character-menu .vn-menu-note { opacity: 0.7; font-style: italic; }
 .vn-stage .window-header .header-control.active { color: var(--color-warm-2, #c9593f); }
