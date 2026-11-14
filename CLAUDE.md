@@ -9,6 +9,7 @@ A Foundry VTT module (v14) for visual-novel scenes on a native Foundry scene. Ev
 - Items: `python3 "/home/justin/Projects/Character Art Pipeline/infra/items.py" --dir=items check`
 - The pre-commit gate (`.githooks/pre-commit`, enabled by `git config core.hooksPath .githooks`) runs the two JS checks when `scripts/`, `tools/`, `lang/` or `module.json` is staged, and the items check when `items/` is staged. Skip once with `git commit --no-verify`.
 - Node isn't installed; Foundry's Electron runs the JavaScript.
+- Start or stop Foundry for a live check: `foundry-ctl start|stop|restart|status` (`~/.local/bin/foundry-ctl`). It opens the desktop app, so it needs Justin's login session. Tell him before `stop` or `restart`: players may be connected.
 
 ## Work
 
