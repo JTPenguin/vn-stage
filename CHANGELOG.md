@@ -26,6 +26,7 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 - **New art shows up on reload.** The GM's screen now rescans the art folder every time the world loads, so a new form or expression appears without pressing refresh. Before, only new or removed character folders were noticed.
 - **Loading a preset no longer leaves a character's old form on screen.** When a character's form changed with the preset, their old form stayed up for about five seconds beside the new one before fading. It now fades out with the rest of the old cast.
 - **Background and form changes no longer hide the cast.** The old image's stand-in sat above every portrait while it faded, so the cast vanished for a moment. It now fades under them. Loading a preset also keeps characters who are already on stage in place, and replaced portraits fade out as their successors fade in.
+- **A drag released over the sidebar no longer leaves things behind.** Releasing a dragged portrait outside the stage (over the sidebar, say) now cancels the drag: the character stays put and the drop marker and floating name clear. Before, the marker stayed until the next drag and the name stayed until reload.
 - **Drag markers are steadier.** A drop on a crowded one-sided stage can again reach every position on that side, and the far edge always counts as the other side. A drop on an empty side snaps to one spot, past the other side's end-of-row marker. A drag to the other side shows a dashed marker with an arrow pointing to that side.
 
 ### Removed

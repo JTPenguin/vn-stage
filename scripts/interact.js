@@ -28,8 +28,12 @@ let lastClick = null;   // the previous click on a portrait: { id, t }
  */
 export function startClicks() {
   window.addEventListener("pointerdown", onDown, true);
-  window.addEventListener("pointermove", onMove);
-  window.addEventListener("pointerup", onUp);
+  // Moves and releases are caught in the capture phase too: parts of Foundry's
+  // UI (the sidebar) stop them, and a lost release left the drag running.
+  window.addEventListener("pointermove", onMove, true);
+  window.addEventListener("pointerup", onUp, true);
+  window.addEventListener("pointercancel", cancelDrag, true);
+  window.addEventListener("blur", cancelDrag);
   window.addEventListener("keydown", onDragKey, true);
   canvas.app?.view?.addEventListener("dragover", onDragOver);
   canvas.app?.view?.addEventListener("dragleave", clearMarker);
@@ -38,8 +42,10 @@ export function startClicks() {
 
 export function stopClicks() {
   window.removeEventListener("pointerdown", onDown, true);
-  window.removeEventListener("pointermove", onMove);
-  window.removeEventListener("pointerup", onUp);
+  window.removeEventListener("pointermove", onMove, true);
+  window.removeEventListener("pointerup", onUp, true);
+  window.removeEventListener("pointercancel", cancelDrag, true);
+  window.removeEventListener("blur", cancelDrag);
   window.removeEventListener("keydown", onDragKey, true);
   canvas.app?.view?.removeEventListener("dragover", onDragOver);
   canvas.app?.view?.removeEventListener("dragleave", clearMarker);
@@ -50,6 +56,7 @@ export function stopClicks() {
 }
 
 function onDown(event) {
+  cancelDrag(); // a drag still running here lost its release: end it before anything new starts
   if (event.button !== 0 || event.target !== canvas.app?.view || !isStage()) return;
   const tile = portraitAt(event.clientX, event.clientY);
   if (!tile) return closeMenu();
@@ -119,6 +126,7 @@ function startDrag() {
   press.dragging = true;
   closeMenu();
   clearHover();
+  ghost?.remove(); // never leave an earlier drag's name behind
   ghost = document.createElement("div");
   ghost.className = "vn-drag-ghost";
   document.body.append(ghost);

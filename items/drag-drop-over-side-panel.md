@@ -1,8 +1,8 @@
 ---
 title: "Drag drop over the side panel leaves a stuck marker and name"
 kind: work
-status: ready
-waits_on: Claude
+status: in-progress
+waits_on: Justin
 priority: ⏫
 blocked_by: []
 source: "Justin's bug report, 2026-10-30; details from the code and Justin, 2026-11-13"
@@ -28,10 +28,14 @@ Two faults in the same drag path.
 - The stuck "name" is the drag ghost (`.vn-drag-ghost`, which shows the character's name), not the hover label. The next drag's `startDrag` makes a new ghost and overwrites the `ghost` variable without removing the old one. The old ghost is left in the page until reload.
 - The marker is only cleared in `endDrag`, so it lasts until the next completed drag. This matches the report.
 
-**Fix:**
-1. Listen for `pointerup` and `pointercancel` in the capture phase, so a release anywhere ends the drag.
-2. A release outside the stage frame (`dropTarget` returns null) cancels the drag.
-3. `startDrag` removes any leftover ghost and marker first, as a safety net.
-4. Add a test for the cancel path if `tools/test.mjs` can reach it.
+**Built (2026-11-13), waiting on Justin's check in Foundry:**
+- Moves and releases are caught in the capture phase, so the sidebar can't swallow them. `pointercancel` and the window losing focus also cancel a drag.
+- A release outside the stage frame cancels, as before: the character stays put.
+- A new press ends any drag still running first, and a new drag removes any leftover name, so nothing can be orphaned again.
+- Tests (85) and the load check pass. The browser pane can't run Foundry (no WebGL), so the live check is Justin's.
 
-**Check in Foundry, as GM:** release over the side panel, then click a character on the canvas. The marker and name are gone and the character hasn't moved. Then drag normally and confirm drops still land.
+**Check in Foundry, as GM:**
+1. Drag a character and release over the sidebar. The marker, the name and the dimming clear at once, and the character hasn't moved.
+2. Click a character on the canvas. No marker or name is left behind, and the character menu opens as usual.
+3. Drag a character and release on the stage. The drop still lands where the marker shows.
+4. Drag a character, then alt-tab away mid-drag. The drag cancels.
