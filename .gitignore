@@ -13,3 +13,7 @@ dist/
 # Logs and scratch
 *.log
 tmp/
+
+# Obsidian (the items are viewed from the Wayfinder vault)
+.obsidian/
+ITEMS.base
