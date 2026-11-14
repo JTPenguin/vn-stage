@@ -1,8 +1,9 @@
 ---
 title: "Drag drop over the side panel leaves a stuck marker and name"
 kind: work
-status: in-progress
-waits_on: Justin
+status: done
+waits_on: none
+outcome: "Fixed in cf28bcc and checked in Foundry 2026-11-13: a release over the sidebar, a click after it, a normal drop and a blur mid-drag all behave."
 priority: ⏫
 blocked_by: []
 source: "Justin's bug report, 2026-10-30; details from the code and Justin, 2026-11-13"
@@ -28,14 +29,14 @@ Two faults in the same drag path.
 - The stuck "name" is the drag ghost (`.vn-drag-ghost`, which shows the character's name), not the hover label. The next drag's `startDrag` makes a new ghost and overwrites the `ghost` variable without removing the old one. The old ghost is left in the page until reload.
 - The marker is only cleared in `endDrag`, so it lasts until the next completed drag. This matches the report.
 
-**Built (2026-11-13), waiting on Justin's check in Foundry:**
+**Built and checked (2026-11-13):**
 - Moves and releases are caught in the capture phase, so the sidebar can't swallow them. `pointercancel` and the window losing focus also cancel a drag.
-- A release outside the stage frame cancels, as before: the character stays put.
-- A new press ends any drag still running first, and a new drag removes any leftover name, so nothing can be orphaned again.
-- Tests (85) and the load check pass. The browser pane can't run Foundry (no WebGL), so the live check is Justin's.
+- A release outside the stage frame cancels: the character stays put.
+- A new press ends any drag still running first, and a new drag removes any leftover name.
+- Tests (85) and the load check pass.
 
-**Check in Foundry, as GM:**
-1. Drag a character and release over the sidebar. The marker, the name and the dimming clear at once, and the character hasn't moved.
-2. Click a character on the canvas. No marker or name is left behind, and the character menu opens as usual.
-3. Drag a character and release on the stage. The drop still lands where the marker shows.
-4. Drag a character, then alt-tab away mid-drag. The drag cancels.
+**Checked in Foundry (test world, as GM, in the browser pane):**
+1. Release over the open sidebar: the name, the marker and the dimming clear at once, and the cast is unchanged.
+2. A click on a portrait afterwards opens the character menu, with nothing left behind.
+3. A normal drop into the other cluster lands, and the marker and name clear.
+4. A blur mid-drag (simulated with a window `blur` event) clears everything, and the later release does nothing.
