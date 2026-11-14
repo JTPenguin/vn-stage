@@ -524,6 +524,18 @@ export function dropSlot(x, clusters, frameWidth) {
   return { cluster: k - 1, index: clusters.at(-1).length, newCluster: false, x: last }; // not reached
 }
 
+/**
+ * The band across the top of the frame, as a share of its height, where
+ * dropping a dragged portrait takes the character off the stage. It ends above
+ * the drop markers and well above the face guide, so a move never removes.
+ */
+export const REMOVE_BAND = 0.3;
+
+/** Is this frame point (frame pixels) in the remove band? Points outside the frame aren't. */
+export function inRemoveBand(x, y, frameWidth, frameHeight) {
+  return x >= 0 && x <= frameWidth && y >= 0 && y < REMOVE_BAND * frameHeight;
+}
+
 /* -------------------------------------------- */
 /*  Moves                                       */
 /* -------------------------------------------- */

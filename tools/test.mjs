@@ -450,6 +450,18 @@ test("schema 3: a preset's cast, an old party entry keeping its order", () => {
 
 const FW = FRAME.width;
 
+test("the remove band: the top of the frame only, above the markers and every face", () => {
+  const FH = FRAME.height;
+  assert.equal(R.inRemoveBand(FW / 2, 0, FW, FH), true);
+  assert.equal(R.inRemoveBand(FW / 2, R.REMOVE_BAND * FH - 1, FW, FH), true);
+  assert.equal(R.inRemoveBand(FW / 2, R.REMOVE_BAND * FH, FW, FH), false);
+  assert.equal(R.inRemoveBand(-1, 10, FW, FH), false);       // left of the frame
+  assert.equal(R.inRemoveBand(FW + 1, 10, FW, FH), false);   // right of it (the sidebar)
+  assert.equal(R.inRemoveBand(FW / 2, -1, FW, FH), false);   // above it
+  assert.ok(R.REMOVE_BAND < 0.4);                            // markers start at 0.4 of the height
+  assert.ok(R.REMOVE_BAND < faceGuide(1.08).top);            // the biggest creature's face starts lower
+});
+
 test("a drop on an empty stage starts cluster 0, marked in the middle", () => {
   assert.deepEqual(R.dropSlot(300, [], FW), { cluster: 0, index: 0, newCluster: true, x: FW / 2 });
 });

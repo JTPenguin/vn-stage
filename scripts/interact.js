@@ -1,14 +1,15 @@
 import { MODULE, PART, FRAME, faceGuide } from "./constants.js";
-import { getCast, moveEntry, displayName } from "./cast.js";
+import { getCast, moveEntry, removeFromCast, displayName } from "./cast.js";
 import { placements } from "./layout.js";
 import { canChange } from "./expressions.js";
 import { isStage } from "./stage.js";
-import { dropSlot, castWithout } from "./rules.js";
+import { dropSlot, castWithout, inRemoveBand, REMOVE_BAND } from "./rules.js";
 import { openMenu, closeMenu } from "./menu.js";
 
 /**
  * Working on the stage itself. Dragging a portrait moves the character within
- * its cluster, to another one or into a new one (GM); clicking one opens its character menu
+ * its cluster, to another one or into a new one, or takes them off the stage when
+ * dropped in the band across the top (GM); clicking one opens its character menu
  * (menu.js) for anyone who may change it, double-clicking opens its character sheet; hovering shows the GM its name.
  */
 
@@ -75,7 +76,17 @@ function onMove(event) {
     startDrag();
   }
   moveGhost(event.clientX, event.clientY);
-  showMarker(dropTarget(event.clientX, event.clientY, press.entry.id));
+  const removing = inBand(event.clientX, event.clientY);
+  setGhostRemoving(removing);
+  if (removing) showRemove();
+  else showMarker(dropTarget(event.clientX, event.clientY, press.entry.id));
+}
+
+/** Is this screen point in the remove band at the top of the stage? */
+function inBand(clientX, clientY) {
+  const point = canvas.canvasCoordinatesFromClient({ x: clientX, y: clientY });
+  const { sceneX = 0, sceneY = 0 } = canvas.dimensions;
+  return inRemoveBand(point.x - sceneX, point.y - sceneY, FRAME.width, FRAME.height);
 }
 
 async function onUp(event) {
@@ -83,9 +94,11 @@ async function onUp(event) {
   press = null;
   if (!p || event.button !== 0) return;
   if (p.dragging) {
-    const target = dropTarget(event.clientX, event.clientY, p.entry.id);
+    const removing = inBand(event.clientX, event.clientY);
+    const target = removing ? null : dropTarget(event.clientX, event.clientY, p.entry.id);
     endDrag(p);
-    if (target) await moveEntry(p.entry.id, target);
+    if (removing) await removeFromCast(p.entry.id);
+    else if (target) await moveEntry(p.entry.id, target);
     return;
   }
   if (performance.now() - p.t > CLICK_TIME) return;
@@ -242,6 +255,38 @@ function showMarker(target) {
   marker.moveTo(mx - dir * head * 0.6, top - head);
   marker.lineTo(mx + dir * head * 0.6, top);
   marker.lineTo(mx - dir * head * 0.6, top + head);
+}
+
+/** The remove band, lit red across the top of the stage, with a cross in the middle. */
+function showRemove() {
+  if (!marker || marker.destroyed) {
+    marker = new PIXI.Graphics();
+    marker.eventMode = "none";
+    canvas.interface.addChild(marker);
+  }
+  const { sceneX = 0, sceneY = 0 } = canvas.dimensions;
+  const h = REMOVE_BAND * FRAME.height, cx = sceneX + FRAME.width / 2, cy = sceneY + h / 2, arm = 0.25 * h;
+  marker.clear();
+  marker.beginFill(0xc9593f, 0.3);
+  marker.drawRect(sceneX, sceneY, FRAME.width, h);
+  marker.endFill();
+  marker.lineStyle(8, 0xc9593f, 0.9);
+  marker.moveTo(sceneX, sceneY + h);
+  marker.lineTo(sceneX + FRAME.width, sceneY + h);
+  marker.lineStyle(14, 0xffffff, 0.9);
+  marker.moveTo(cx - arm, cy - arm);
+  marker.lineTo(cx + arm, cy + arm);
+  marker.moveTo(cx + arm, cy - arm);
+  marker.lineTo(cx - arm, cy + arm);
+}
+
+/** The floating name says what a drop will do. */
+function setGhostRemoving(removing) {
+  if (!ghost || !press) return;
+  const name = displayName(press.entry);
+  const text = removing ? game.i18n.format("VNSTAGE.Drag.Remove", { name }) : name;
+  if (ghost.textContent !== text) ghost.textContent = text;
+  ghost.classList.toggle("removing", removing);
 }
 
 function clearMarker() {
