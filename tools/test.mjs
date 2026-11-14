@@ -682,7 +682,7 @@ const onScreen = (f, screenW, screenH) => ({
 });
 const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-6, `${msg}: ${a} vs ${b}`);
 
-test("view fit, sidebar closed: the frame covers the screen, centred", () => {
+test("view fit, sidebar closed: the frame covers the screen; a wide one loses the top, not the bottom", () => {
   const exact = R.fitFrame(1920, 1080, 0, FRAME.width, FRAME.height);
   assert.deepEqual(exact, { x: FRAME.width / 2, y: FRAME.height / 2, scale: 1920 / FRAME.width });
   const tall = onScreen(R.fitFrame(1920, 1200, 0, FRAME.width, FRAME.height), 1920, 1200); // 16:10 crops the sides
@@ -693,8 +693,16 @@ test("view fit, sidebar closed: the frame covers the screen, centred", () => {
   const wide = onScreen(R.fitFrame(2560, 1080, 0, FRAME.width, FRAME.height), 2560, 1080); // 21:9 crops top and bottom
   near(wide.left, 0, "21:9 left");
   near(wide.right, 2560, "21:9 right");
-  assert.ok(wide.top < 0 && wide.bottom > 1080, "21:9 crops top and bottom");
-  near(wide.top, 1080 - wide.bottom, "21:9 centred");
+  assert.ok(wide.top < 0, "21:9 crops the top");
+  near(wide.bottom, 1080, "21:9 bottom meets the screen's bottom");
+  const short = onScreen(R.fitFrame(1600, 500, 0, FRAME.width, FRAME.height), 1600, 500); // a short window
+  near(short.bottom, 500, "short window: bottom meets the screen's bottom");
+  assert.ok(short.top < 0, "short window crops the top");
+  // 4:1: the crop stops at MAX_TOP_CROP, just above the highest face, and the rest comes off the bottom.
+  const ultra = R.fitFrame(4000, 1000, 0, FRAME.width, FRAME.height);
+  const shown = 1000 / ultra.scale;
+  near(ultra.y - shown / 2, R.MAX_TOP_CROP * FRAME.height, "4:1 top crop capped");
+  assert.ok(R.MAX_TOP_CROP < faceGuide(1.08).top, "the cap is above every face");
 });
 
 test("view fit, sidebar open: the whole frame fits left of the sidebar, centred there", () => {

@@ -16,18 +16,31 @@ export function locksView({ isGM, gmLock }) {
 
 /**
  * Where to centre the view (frame coordinates) and at what scale. With the
- * sidebar closed, the frame covers the screen. With it open, the whole frame
- * fits in the area left of it, centred there; Foundry's canvas shows in the
- * bands. A sidebar wider than half the screen counts as closed.
+ * sidebar closed, the frame covers the screen. A screen narrower than 16:9
+ * loses the sides equally; a wider one loses the top (the sky), not the bottom,
+ * so the cast stays in view, up to `MAX_TOP_CROP` of the frame height, after
+ * which the bottom goes too. With the sidebar open, the whole frame fits in
+ * the area left of it, centred there; Foundry's canvas shows in the bands. A
+ * sidebar wider than half the screen counts as closed.
  */
 export function fitFrame(screenW, screenH, sidebarW, frameW, frameH) {
   const free = screenW - sidebarW;
   if (sidebarW <= 0 || free < screenW / 2) {
-    return { x: frameW / 2, y: frameH / 2, scale: Math.max(screenW / frameW, screenH / frameH) };
+    const scale = Math.max(screenW / frameW, screenH / frameH);
+    const shown = screenH / scale; // frame pixels from top to bottom of the screen
+    const crop = Math.min(frameH - shown, MAX_TOP_CROP * frameH);
+    return { x: frameW / 2, y: crop + shown / 2, scale };
   }
   const scale = Math.min(free / frameW, screenH / frameH);
   return { x: frameW / 2 + sidebarW / (2 * scale), y: frameH / 2, scale };
 }
+
+/**
+ * The most a wide screen crops off the top of the frame, as a share of its
+ * height: just above the highest face guide (a Large creature's, near 0.5).
+ * Only screens wider than about 3.2:1 reach it.
+ */
+export const MAX_TOP_CROP = 0.45;
 
 /* -------------------------------------------- */
 /*  The party                                   */
