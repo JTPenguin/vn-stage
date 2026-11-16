@@ -27,10 +27,10 @@ export function registerSettings({ onArtRootChange = () => {}, onGmViewLockChang
     filePicker: "image",
   });
 
-  // A folder each group finds its backgrounds in by itself; {group} is the group's name.
-  game.settings.register(MODULE, "groupFolders", {
-    name: "VNSTAGE.Settings.GroupFolders.Name",
-    hint: "VNSTAGE.Settings.GroupFolders.Hint",
+  // A folder each tag finds its backgrounds in by itself; {tag} is the tag's name.
+  game.settings.register(MODULE, "tagFolders", {
+    name: "VNSTAGE.Settings.TagFolders.Name",
+    hint: "VNSTAGE.Settings.TagFolders.Hint",
     scope: "world",
     config: true,
     type: String,
@@ -75,15 +75,19 @@ export function registerSettings({ onArtRootChange = () => {}, onGmViewLockChang
     default: {},
   });
 
-  // Groups: { [id]: { label, folders: [], images: [], add: [], remove: [], hideAuto: [], deleted } }. Members also come from the art's `groups`.
-  game.settings.register(MODULE, "groups", {
+  // Tags: { [id]: { label, folders: [], images: [], add: [], remove: [], hideAuto: [], deleted } }. Characters also come from the art's `tags`.
+  game.settings.register(MODULE, "tags", {
     scope: "world",
     config: false,
     type: Object,
     default: {},
   });
 
-  // Characters put on a stage lately, newest first (the Recent group): { names: [] }.
+  // From before tags (schema 3): read once by migrate.js, then left alone.
+  game.settings.register(MODULE, "groups", { scope: "world", config: false, type: Object, default: {} });
+  game.settings.register(MODULE, "groupFolders", { scope: "world", config: false, type: String, default: "" });
+
+  // Characters put on a stage lately, newest first (the Recent list): { names: [] }.
   game.settings.register(MODULE, "recent", {
     scope: "world",
     config: false,
@@ -91,7 +95,7 @@ export function registerSettings({ onArtRootChange = () => {}, onGmViewLockChang
     default: { names: [] },
   });
 
-  // Presets: { [id]: { name, groups: [], background, cast, saved } } (older ones have `group`, one id or null).
+  // Presets: { [id]: { name, tags: [], background, cast, saved } }.
   game.settings.register(MODULE, "presets", {
     scope: "world",
     config: false,

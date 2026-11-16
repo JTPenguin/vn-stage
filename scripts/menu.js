@@ -4,16 +4,16 @@ import { ArtPicker } from "./art-picker.js";
 import { characterPrefs, setFlip, removeFromCast, displayName } from "./cast.js";
 import { currentExpression, chooseExpression, chooseForm, setFormLocked, offstageEntry } from "./expressions.js";
 import { AdjustWindow } from "./adjust.js";
-import { chooseCharacterGroups } from "./groups-window.js";
+import { TagEditor } from "./tag-editor.js";
 
 /**
  * The character menu: clicking a portrait on the stage (interact.js), or
  * right-clicking a Cast row (the Stage window). The character's forms (when it
  * has more than one), its expressions, and for the GM a row of actions (Flip,
- * Adjust, VN art…, Groups…, Remove). The GM locks or opens a form by
+ * Adjust, VN art…, Tags…, Remove). The GM locks or opens a form by
  * right-clicking it; players don't see locked forms. Players get the forms and expressions of
  * characters they own, nothing else. Off stage, the forms and expressions
- * they'll arrive with, plus Flip and Groups….
+ * they'll arrive with, plus Flip and Tags….
  */
 
 let menu = null;
@@ -27,7 +27,7 @@ let closes = 0; // counts closeMenu calls, so a menu still being built when it's
 /**
  * The character menu for a Cast row (GM). On stage, the same menu as clicking
  * the portrait. Off stage, the forms and expressions they'll arrive with, plus
- * Flip and Groups….
+ * Flip and Tags….
  */
 export function openCastMenu(row, clientX, clientY) {
   return openMenu(row.entry ?? offstageEntry(row.name, row.actorUuid), clientX, clientY);
@@ -36,20 +36,20 @@ export function openCastMenu(row, clientX, clientY) {
 /**
  * `entry` is the cast entry on stage, or a stand-in for a character who isn't
  * (`offstage`). The menu works on the form shown (its expressions, Flip,
- * Adjust); Groups… always works on the character.
+ * Adjust); Tags… always works on the character.
  */
 export async function openMenu(entry, clientX, clientY) {
   closeMenu();
   const mine = closes;
   const onStage = !entry.offstage;
   const key = (await artKeyOf(entry)) ?? entry.name;
-  const groupKey = (await baseArtKeyOf(entry)) ?? entry.name;
+  const baseKey = (await baseArtKeyOf(entry)) ?? entry.name;
   const art = await characterArt(key);
   const expressions = Object.keys(art?.expressions ?? {});
   const locked = lockedForms(entry);
   const forms = visibleForms(await formsFor(key), locked, { isGM: game.user.isGM });
-  const name = entry.actorUuid ? displayName(entry) : (await characterArt(groupKey))?.label ?? entry.name;
-  const actions = game.user.isGM ? await gmActions(onStage ? entry : null, key, name, groupKey) : [];
+  const name = entry.actorUuid ? displayName(entry) : (await characterArt(baseKey))?.label ?? entry.name;
+  const actions = game.user.isGM ? await gmActions(onStage ? entry : null, key, baseKey) : [];
   if (expressions.length < 2 && !forms.some((f) => f.key !== key) && !actions.length) return;
   const current = currentExpression(entry);
   if (mine !== closes) return;
@@ -114,15 +114,15 @@ export async function openMenu(entry, clientX, clientY) {
   });
 }
 
-/** The GM's row: what this character (or party member) can have done to them. Off stage (no `entry`), only Flip and Groups…. */
-async function gmActions(entry, key, name, groupKey = key) {
+/** The GM's row: what this character (or party member) can have done to them. Off stage (no `entry`), only Flip and Tags…. */
+async function gmActions(entry, key, baseKey = key) {
   const flip = !!characterPrefs(key).flip;
   const actions = [{ label: "Flip", icon: "fa-solid fa-left-right", active: flip, run: () => setFlip(key, !flip) }];
   if (entry) actions.push({ label: "Adjust size and height", icon: "fa-solid fa-sliders", run: () => AdjustWindow.open(entry.id) });
   if (entry?.actorUuid) {
     actions.push({ label: "VN art…: which character's art this actor uses", icon: "fa-solid fa-image-portrait", run: () => ArtPicker.open(entry.actorUuid) });
   }
-  actions.push({ label: "Groups…", icon: "fa-solid fa-layer-group", run: () => chooseCharacterGroups(groupKey, name) });
+  actions.push({ label: "Tags…", icon: "fa-solid fa-tags", run: () => TagEditor.open({ kind: "character", key: baseKey }) });
   if (!entry) return actions;
   actions.push("|", { label: "Remove from the stage", icon: "fa-solid fa-xmark", run: () => removeFromCast(entry.id) });
   return actions;

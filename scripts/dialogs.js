@@ -11,6 +11,18 @@ export async function askName(title, value, label = "Save") {
   return name?.trim() || null;
 }
 
+/** Pick one of `options` ([{ id, label }]) from a menu; resolves to its id, or null. */
+export async function askChoice(title, options, label = "Save") {
+  const list = options.map((o) => `<option value="${esc(o.id)}">${esc(o.label)}</option>`).join("");
+  const id = await DialogV2.prompt({
+    window: { title },
+    content: `<select name="choice" autofocus>${list}</select>`,
+    ok: { label, callback: (_event, button) => button.form.elements.choice.value },
+    rejectClose: false,
+  });
+  return id || null;
+}
+
 /** A yes/no question; `html` is the message (escape anything from the user). */
 export function confirm(title, html) {
   return DialogV2.confirm({ window: { title }, content: `<p>${html}</p>`, rejectClose: false });

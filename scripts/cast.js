@@ -1,5 +1,5 @@
 import { MODULE } from "./constants.js";
-import { noteRecent } from "./groups.js";
+import { noteRecent } from "./tags.js";
 import { baseArtKeyOf } from "./art.js";
 import { takePending } from "./pending.js";
 import { orderMembers, compactClusters, clustersFromSides, clusterCount, castWithout, placeEntries, resolveCluster, innerIndex, joinIndex, targetFromShown } from "./rules.js";

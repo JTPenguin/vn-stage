@@ -234,7 +234,7 @@ test("cast entries compare equal whatever their field order, and missing equals 
 });
 
 /* -------------------------------------------- */
-/*  Art and groups                              */
+/*  Art and tags                                */
 /* -------------------------------------------- */
 
 test("a form's family is the character it belongs to", () => {
@@ -259,10 +259,64 @@ test("form locks: locking adds once, opening removes, a missing list counts as e
   assert.deepEqual(R.toggleLock(null, "A", false), []);
 });
 
-test("group members: tags plus hand additions, and a hand removal wins over a tag", () => {
-  const index = [{ name: "Ezren", groups: ["The Crew"] }, { name: "Valeros", groups: ["The Crew"] }, { name: "Merisiel", groups: [] }];
-  const members = R.groupMembers("The Crew", index, { add: ["Merisiel"], remove: ["Valeros"] });
+test("a tag's characters: named in the art plus tagged by hand, and a hand removal wins over the art", () => {
+  const index = [{ name: "Ezren", tags: ["The Crew"] }, { name: "Valeros", tags: ["The Crew"] }, { name: "Merisiel", tags: [] }];
+  const members = R.tagMembers("The Crew", index, { add: ["Merisiel"], remove: ["Valeros"] });
   assert.deepEqual(members.sort(), ["Ezren", "Merisiel"]);
+});
+
+test("a tag is listed while a character, a background, a folder or a preset carries it", () => {
+  const index = [{ name: "Ezren", tags: ["Crew"] }, { name: "Valeros", tags: ["Gone"] }];
+  const stored = {
+    Vallaki: { label: "Vallaki town", images: ["a.webp"] },
+    Docks: { folders: ["scenes/docks/"] },
+    Hand: { add: ["Ezren"] },
+    Empty: { label: "Empty", add: [], images: [], folders: [], hideAuto: ["x/"] },
+    Gone: { deleted: true },
+    Hidden: { remove: ["Nobody"] },
+  };
+  const tags = R.liveTags(stored, index, ["Session 2", "Session 10"]);
+  assert.deepEqual(tags.map((t) => t.id), ["Crew", "Docks", "Hand", "Session 2", "Session 10", "Vallaki"]);
+  assert.equal(tags.find((t) => t.id === "Vallaki").label, "Vallaki town");
+});
+
+test("a tag named in the art goes once every character is untagged by hand", () => {
+  const index = [{ name: "Ezren", tags: ["Crew"] }];
+  assert.deepEqual(R.liveTags({ Crew: { remove: ["Ezren"] } }, index), []);
+});
+
+test("typed tags: split at commas, and matched to a tag by label or id whatever the case", () => {
+  assert.deepEqual(R.splitTagText(" Vallaki, session 12 ,,Vallaki "), ["Vallaki", "session 12"]);
+  assert.deepEqual(R.splitTagText(""), []);
+  const tags = [{ id: "PFS 4-07", label: "Docks job" }, { id: "Crew", label: "Crew" }];
+  assert.equal(R.matchTag("docks JOB", tags), "PFS 4-07");
+  assert.equal(R.matchTag(" pfs 4-07", tags), "PFS 4-07");
+  assert.equal(R.matchTag("Vallaki", tags), null);
+});
+
+test("upgrade to tags: groups, presets, the art index and the folder pattern move over whole", () => {
+  const before = {
+    groups: { Crew: { label: "The Crew", folders: ["f/"], images: ["i.webp"], add: ["A"], remove: ["B"], hideAuto: ["h/"] }, Old: { deleted: true } },
+    groupFolders: "scenes/{group}/",
+    presets: { p1: { name: "Docks", groups: ["Crew"], cast: [] }, p2: { name: "Bare", groups: [] } },
+    artIndex: { root: "art/", art: { A: { key: "A", groups: ["Crew"] }, B: { key: "B", groups: [] } } },
+  };
+  const copy = JSON.parse(JSON.stringify(before));
+  const next = R.groupsToTags(before);
+  assert.deepEqual(before, copy);
+  assert.deepEqual(next.tags, before.groups);
+  assert.equal(next.tagFolders, "scenes/{group}/");
+  assert.deepEqual(next.presets, { p1: { name: "Docks", tags: ["Crew"], cast: [] }, p2: { name: "Bare", tags: [] } });
+  assert.deepEqual(next.artIndex, { root: "art/", art: { A: { key: "A", tags: ["Crew"] }, B: { key: "B", tags: [] } } });
+});
+
+test("upgrade to tags: run again it changes nothing, and tags or a pattern already set are kept", () => {
+  const once = R.groupsToTags({ groups: { Crew: { add: ["A"] } }, presets: { p: { name: "P", groups: ["Crew"] } } });
+  assert.deepEqual(R.groupsToTags({ groups: { Crew: { add: ["A"] } }, ...once }), once);
+  const kept = R.groupsToTags({ groups: { Crew: { add: ["A"] } }, tags: { Crew: { add: ["Z"] } }, groupFolders: "old/{group}/", tagFolders: "new/{tag}/" });
+  assert.deepEqual(kept.tags, { Crew: { add: ["Z"] } });
+  assert.equal(kept.tagFolders, "new/{tag}/");
+  assert.deepEqual(R.groupsToTags(), { tags: {}, tagFolders: "", presets: {}, artIndex: {} });
 });
 
 test("Recent puts the newest first, without repeats, up to its limit", () => {
@@ -530,9 +584,16 @@ test("a bare folder: a portrait is all a character needs", () => {
   assert.equal(a.size, "medium");
   assert.equal(a.scale, 1);
   assert.equal(a.yOffset, 0);
-  assert.deepEqual(a.groups, []);
+  assert.deepEqual(a.tags, []);
   assert.deepEqual(a.forms, []);
   assert.deepEqual(a.warnings, []);
+});
+
+test("an art file's tags: `tags` and the older `groups` read as one list, without repeats", () => {
+  const listing = { files: ["portrait.webp", "vn-stage.json"], dirs: [] };
+  assert.deepEqual(R.normaliseArt("X", listing, { format: 1, tags: ["Vallaki", " Crew "] }).tags, ["Vallaki", "Crew"]);
+  assert.deepEqual(R.normaliseArt("X", listing, { format: 1, tags: ["Vallaki"], groups: ["Crew", "Vallaki"] }).tags, ["Vallaki", "Crew"]);
+  assert.deepEqual(R.normaliseArt("X", listing, { format: 1, tags: "Vallaki", groups: [3, ""] }).tags, []);
 });
 
 test("no portrait, no character", () => {
@@ -548,7 +609,7 @@ test("a full file sets every field", () => {
   assert.equal(a.size, "large");
   assert.equal(a.scale, 0.57);
   assert.equal(a.yOffset, 0.055);
-  assert.deepEqual(a.groups, ["Crew", "Allies"]);
+  assert.deepEqual(a.tags, ["Crew", "Allies"]);
   assert.deepEqual(a.warnings, []);
 });
 
@@ -615,7 +676,7 @@ test("bad values fall back to defaults, each with a warning", () => {
   assert.equal(a.size, "medium");
   assert.equal(a.scale, 1);
   assert.equal(a.yOffset, 0);
-  assert.deepEqual(a.groups, []);
+  assert.deepEqual(a.tags, []);
   assert.equal(a.portrait, "X/portrait.webp", "a named portrait that isn't there falls back to portrait.*");
   assert.equal(a.thumb, "X/portrait.webp");
   assert.equal(a.warnings.length, 3);

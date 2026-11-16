@@ -126,7 +126,7 @@ export async function pickBackground(path, { scene = canvas.scene, keepFolder = 
   requireGM();
   const src = decodePath(path);
   await setBackground(src, { scene });
-  if (keepFolder) return; // a stage with a group keeps the group's folders
+  if (keepFolder) return; // a stage showing a tag keeps the tag's folders
   const folder = folderOf(src);
   const safety = safetyBackground();
   if (!folder || folder === (safety && folderOf(safety))) return;
@@ -145,7 +145,7 @@ function browse(folder) {
   return folderCache.get(folder);
 }
 
-/** Does `folder` exist? (An automatic group folder is only offered when it does.) */
+/** Does `folder` exist? (A tag's automatic folder is only offered when it does.) */
 export async function folderExists(folder) {
   return !!folder && (await browse(folder)) !== null;
 }

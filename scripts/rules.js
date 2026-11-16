@@ -177,7 +177,7 @@ function pickImage(files, stem) {
  * expression), so whoever reads them from the index must put the art folder
  * in front before loading an image. Returns null with no portrait.
  * Problems with the file are described in `warnings` and never stop a load.
- * @returns {null|{name, key, label, formLabel, portrait, thumb, expressions, labels, size, scale, yOffset, groups, forms, warnings}}
+ * @returns {null|{name, key, label, formLabel, portrait, thumb, expressions, labels, size, scale, yOffset, tags, forms, warnings}}
  */
 export function normaliseArt(key, listing = {}, file = null) {
   const files = listing.files ?? [];
@@ -253,7 +253,9 @@ export function normaliseArt(key, listing = {}, file = null) {
     size,
     scale,
     yOffset,
-    groups: Array.isArray(data.groups) ? data.groups.filter((g) => typeof g === "string" && g.trim()).map((g) => g.trim()) : [],
+    // `tags`, and `groups` (the field's older name), read as one list.
+    tags: [...new Set([data.tags, data.groups].flatMap((list) => (Array.isArray(list) ? list : []))
+      .filter((t) => typeof t === "string" && t.trim()).map((t) => t.trim()))],
     forms: isForm ? [] : [...(listing.forms ?? [])].sort((a, b) => a.localeCompare(b)).map((f) => `${key}/forms/${f}`),
     warnings,
   };
@@ -315,18 +317,75 @@ export function absolutePrefs(prefs, art) {
 }
 
 /* -------------------------------------------- */
-/*  Groups                                      */
+/*  Tags                                        */
 /* -------------------------------------------- */
 
 /**
- * A group's members: characters whose art names it (`index`: [{ name, groups }]),
+ * A tag's characters: the ones whose art names it (`index`: [{ name, tags }]),
  * plus ones added by hand, minus ones removed by hand (a removal wins over a name in the art).
  */
-export function groupMembers(id, index, { add = [], remove = [] } = {}) {
-  const names = new Set(index.filter((a) => a.groups.includes(id)).map((a) => a.name));
+export function tagMembers(id, index, { add = [], remove = [] } = {}) {
+  const names = new Set(index.filter((a) => a.tags.includes(id)).map((a) => a.name));
   for (const n of add) names.add(n);
   for (const n of remove) names.delete(n);
   return [...names];
+}
+
+/**
+ * The tags that exist: a tag exists while something carries it (a character, a
+ * single background, a folder added by hand or a preset), so there are no empty
+ * tags to clean up. `stored` is the tags setting, `presetTags` every preset's
+ * tag ids. Returns [{ id, label }] by label.
+ */
+export function liveTags(stored, index, presetTags = []) {
+  const ids = new Set([...Object.keys(stored), ...presetTags]);
+  for (const art of index) for (const t of art.tags) ids.add(t);
+  const inPreset = new Set(presetTags);
+  return [...ids]
+    .filter((id) => {
+      const g = stored[id];
+      if (g?.deleted) return false;
+      return inPreset.has(id) || !!g?.images?.length || !!g?.folders?.length || tagMembers(id, index, g).length > 0;
+    })
+    .map((id) => ({ id, label: stored[id]?.label || id }))
+    .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
+}
+
+/** What was typed in a tag field, as names: split at commas, trimmed, no blanks or repeats. */
+export function splitTagText(text) {
+  return [...new Set(String(text ?? "").split(",").map((t) => t.trim()).filter(Boolean))];
+}
+
+/** The tag a typed name means: one whose label or id matches (case doesn't matter), or null for a new tag. `tags`: [{ id, label }]. */
+export function matchTag(name, tags) {
+  const q = name.trim().toLowerCase();
+  return tags.find((t) => t.label.toLowerCase() === q)?.id ?? tags.find((t) => t.id.toLowerCase() === q)?.id ?? null;
+}
+
+/**
+ * Stored data from before tags (schema 3), renamed: groups become tags with
+ * everything they held, presets' `groups` become `tags`, and so does each
+ * entry of the saved art index. The folder pattern moves over unless a new one
+ * is already set. Nothing is dropped.
+ */
+export function groupsToTags({ groups = {}, tags = {}, groupFolders = "", tagFolders = "", presets = {}, artIndex = {} } = {}) {
+  const clone = (v) => JSON.parse(JSON.stringify(v ?? {}));
+  const nextPresets = clone(presets);
+  for (const p of Object.values(nextPresets)) {
+    p.tags ??= p.groups ?? [];
+    delete p.groups;
+  }
+  const nextIndex = clone(artIndex);
+  for (const a of Object.values(nextIndex.art ?? {})) {
+    a.tags ??= a.groups ?? [];
+    delete a.groups;
+  }
+  return {
+    tags: { ...clone(groups), ...clone(tags) },
+    tagFolders: tagFolders.trim() ? tagFolders : groupFolders,
+    presets: nextPresets,
+    artIndex: nextIndex,
+  };
 }
 
 /** The Recent list after using `used` (newest first), at most `max` long. */

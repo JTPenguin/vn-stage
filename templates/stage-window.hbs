@@ -6,24 +6,25 @@
   </section>
   {{else}}
 
-  <section class="vn-groupbar">
-    <i class="fa-solid fa-layer-group" data-tooltip="Group: sets the Presets, the Background strip and the Cast list"></i>
-    <select name="group" aria-label="Group">
+  <section class="vn-tagbar">
+    <i class="fa-solid fa-tag" data-tooltip="Tag: sets the Presets, the Background strip and the Cast list"></i>
+    <select name="tag" aria-label="Tag">
       <option value="" {{#if allSelected}}selected{{/if}}>All characters</option>
       <option value="__recent" {{#if recentSelected}}selected{{/if}}>Recent</option>
-      {{#if groups.length}}
-      <optgroup label="Groups">
-        {{#each groups}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+      <option value="__untagged" {{#if untaggedSelected}}selected{{/if}}>Untagged</option>
+      {{#if tags.length}}
+      <optgroup label="Tags">
+        {{#each tags}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
       </optgroup>
       {{/if}}
     </select>
-    <button type="button" class="vn-icon" data-action="manageGroups" data-tooltip="Manage groups"><i class="fa-solid fa-gear"></i></button>
+    <button type="button" class="vn-icon" data-action="manageTags" data-tooltip="Manage tags: rename, merge, delete, folders"><i class="fa-solid fa-gear"></i></button>
   </section>
 
   <section class="vn-section vn-presets {{#if collapsed.presets}}collapsed{{/if}}" data-section="presets">
     <h3 data-action="toggleSection"><i class="fa-solid fa-chevron-down vn-chevron"></i> Presets
       {{#if changedPreset}}<button type="button" class="vn-preset-update" data-action="updatePreset" data-preset="{{changedPreset.id}}" data-tooltip="Update {{changedPreset.name}}: save what's on stage now over it"><i class="fa-solid fa-floppy-disk"></i> Update</button>{{/if}}
-      <button type="button" class="vn-icon {{#unless changedPreset}}vn-push{{/unless}}" data-action="savePreset" data-tooltip="Save stage as preset{{#if group}} in {{group.label}}{{/if}}"><i class="fa-solid fa-plus"></i></button>
+      <button type="button" class="vn-icon {{#unless changedPreset}}vn-push{{/unless}}" data-action="savePreset" data-tooltip="Save stage as preset{{#if tag}} tagged {{tag.label}}{{/if}}"><i class="fa-solid fa-plus"></i></button>
     </h3>
     <ul class="vn-preset-list">
       {{#each presets}}
@@ -33,7 +34,7 @@
         </button>
       </li>
       {{else}}
-      <li class="vn-empty">No presets{{#if group}} in this group{{/if}} yet. Save the stage with +.</li>
+      <li class="vn-empty">{{emptyPresets}}</li>
       {{/each}}
     </ul>
   </section>
@@ -61,7 +62,7 @@
     <div class="vn-bg-row">
       <button type="button" data-action="browseBackground"><i class="fa-solid fa-folder-open"></i> Browse…</button>
       <span class="vn-bg-folder">
-        {{#if bg.grouped}}{{#unless bg.strips.length}}This group has no backgrounds yet. Add them in Manage groups.{{/unless}}
+        {{#if bg.tagged}}{{#unless bg.strips.length}}No backgrounds have this tag yet. Browse to one, then right-click it and choose Tags….{{/unless}}
         {{else}}{{#if bg.folder}}{{bg.folder}}{{else}}Browse to a scenario's scene art to swap between its images here.{{/if}}{{/if}}
       </span>
     </div>
@@ -97,7 +98,7 @@
       <li class="vn-empty">{{emptyCast}}</li>
       {{/each}}
       {{#if others.length}}
-      <li class="vn-cast-divider" hidden>Not in this group</li>
+      <li class="vn-cast-divider" hidden>{{outsideLabel}}</li>
       {{#each others}}{{> "vn-stage.cast-row" outside=true}}{{/each}}
       {{/if}}
     </ul>

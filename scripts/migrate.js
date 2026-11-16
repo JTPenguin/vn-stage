@@ -1,6 +1,6 @@
 import { MODULE } from "./constants.js";
 import { partyMembers } from "./cast.js";
-import { upgradeCast, absolutePrefs, clustersFromSides } from "./rules.js";
+import { upgradeCast, absolutePrefs, clustersFromSides, groupsToTags } from "./rules.js";
 import { characterArt, scanArtIfStale } from "./art.js";
 import { isStage } from "./stage.js";
 import { layout } from "./layout.js";
@@ -22,13 +22,19 @@ import { layout } from "./layout.js";
  *   3          Stage and preset casts: sides become clusters. Left is cluster 0,
  *              right cluster 1, its entries reversed to run left to right
  *              (clustersFromSides).
+ *   4          Groups become tags (groupsToTags): the `groups` setting moves to
+ *              `tags`, `groupFolders` to `tagFolders`, presets' `groups` to
+ *              `tags`, the saved art index's `groups` to `tags`, and each
+ *              stage's `group` flag to `tag`. The old settings are left as
+ *              they were.
  */
-export const SCHEMA = 3;
+export const SCHEMA = 4;
 
 const STEPS = {
   1: toV1,
   2: toV2,
   3: toV3,
+  4: toV4,
 };
 
 /** Is an upgrade still to run in this world? (The GM's screen waits for it before laying out.) */
@@ -71,7 +77,7 @@ async function toV1() {
   let changed = false;
   for (const p of Object.values(presets)) {
     const before = JSON.stringify(p);
-    p.groups ??= p.group ? [p.group] : [];
+    p.groups ??= p.group ? [p.group] : []; // step 4 renames `groups` to `tags`
     delete p.group;
     p.cast = upgradeCast(p.cast ?? [], party, { preset: true });
     if (JSON.stringify(p) !== before) changed = true;
@@ -103,4 +109,19 @@ async function toV3() {
     if (JSON.stringify(next) !== JSON.stringify(p.cast)) { p.cast = next; changed = true; }
   }
   if (changed) await game.settings.set(MODULE, "presets", presets);
+}
+
+async function toV4() {
+  const get = (key) => game.settings.get(MODULE, key);
+  const before = { tags: get("tags"), tagFolders: get("tagFolders"), presets: get("presets"), artIndex: get("artIndex") };
+  const next = groupsToTags({ ...before, groups: get("groups"), groupFolders: get("groupFolders") });
+  for (const key of Object.keys(before)) {
+    if (JSON.stringify(next[key]) !== JSON.stringify(before[key])) await game.settings.set(MODULE, key, next[key]);
+  }
+  for (const scene of game.scenes) {
+    const group = scene.getFlag(MODULE, "group");
+    if (group === undefined) continue;
+    if (scene.getFlag(MODULE, "tag") === undefined) await scene.setFlag(MODULE, "tag", group);
+    await scene.unsetFlag(MODULE, "group");
+  }
 }

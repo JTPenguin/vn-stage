@@ -1,0 +1,29 @@
+<div class="vn-tags-body">
+  <ul class="vn-tags-list">
+    {{#each tags}}
+    <li data-tag="{{id}}">
+      <div class="vn-tags-row">
+        <span class="vn-name" {{#if renamed}}data-tooltip="Known to art files and folders as {{id}}"{{/if}}>{{label}}</span>
+        <span class="vn-tags-count">{{summary}}</span>
+        <button type="button" class="vn-icon" data-action="addFolder" data-tooltip="Add a background folder"><i class="fa-solid fa-folder-plus"></i></button>
+        <button type="button" class="vn-icon" data-action="renameTag" data-tooltip="Rename"><i class="fa-solid fa-pen"></i></button>
+        <button type="button" class="vn-icon" data-action="mergeTag" data-tooltip="Merge into another tag" {{#unless ../canMerge}}disabled{{/unless}}><i class="fa-solid fa-code-merge"></i></button>
+        <button type="button" class="vn-icon" data-action="deleteTag" data-tooltip="Delete the tag (what has it stays)"><i class="fa-solid fa-trash"></i></button>
+      </div>
+      {{#each folders}}
+      <div class="vn-tags-folder" data-folder="{{folder}}">
+        <i class="fa-solid fa-folder"></i>
+        <span class="vn-name" data-tooltip="{{folder}}">{{label}}</span>
+        {{#if auto}}<span class="vn-note" data-tooltip="Found by itself: the Tag background folders setting, or another module">auto</span>{{/if}}
+        <button type="button" class="vn-icon vn-remove" data-action="removeFolder" data-tooltip="Take this folder off the tag"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      {{/each}}
+    </li>
+    {{else}}
+    <li class="vn-empty">No tags yet. In the Stage window, right-click a character, a preset or a background and choose Tags….</li>
+    {{/each}}
+  </ul>
+  <div class="vn-tags-buttons">
+    <button type="button" data-action="newFromFolder"><i class="fa-solid fa-folder-plus"></i> New tag from a folder…</button>
+  </div>
+</div>

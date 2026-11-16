@@ -7,8 +7,9 @@ import { openCastMenu } from "./menu.js";
 import { castEntryFor, partyRow, castLists, rowContext, presetRows, backgroundStrips } from "./window-data.js";
 import { getPreset, savePreset, loadPreset, deletePreset, findPresetByName, updatePreset, renamePreset } from "./presets.js";
 import { isStage, makeStage, setBackground, currentBackground, pickBackground, clearFolderCache } from "./stage.js";
-import { ALL, RECENT, listGroups, getGroup, stageGroup, setStageGroup } from "./groups.js";
-import { GroupsWindow, choosePresetGroups, chooseImageGroups } from "./groups-window.js";
+import { ALL, RECENT, UNTAGGED, listTags, getTag, stageTag, setStageTag } from "./tags.js";
+import { TagsWindow } from "./tags-window.js";
+import { TagEditor } from "./tag-editor.js";
 import { askName, confirm, esc } from "./dialogs.js";
 import { resetAllExpressions } from "./expressions.js";
 import { gmViewLock, toggleGmViewLock } from "./view.js";
@@ -16,9 +17,10 @@ import { gmViewLock, toggleGmViewLock } from "./view.js";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 /**
- * The Stage window: the GM's controls for running the stage being viewed (group,
- * presets, background, cast). What a group holds is managed in the Groups window
- * (groups-window.js); characters on stage are worked on the stage itself (interact.js).
+ * The Stage window: the GM's controls for running the stage being viewed (tag,
+ * presets, background, cast). Right-click a character, a preset or a background
+ * for Tags… (tag-editor.js); whole tags are managed in Manage tags
+ * (tags-window.js). Characters on stage are worked on the stage itself (interact.js).
  */
 export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = {
@@ -36,7 +38,8 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       refreshCast: StageWindow.#onRefreshCast,
       toggleSection: StageWindow.#onToggleSection,
       toggleFolder: StageWindow.#onToggleFolder,
-      manageGroups: StageWindow.#onManageGroups,
+      manageTags: StageWindow.#onManageTags,
+      pickTag: StageWindow.#onPickTag,
       resetExpressions: StageWindow.#onResetExpressions,
       clearStage: StageWindow.#onClearStage,
       addParty: StageWindow.#onAddParty,
@@ -61,7 +64,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   static #refreshTimer = null;
 
   /**
-   * Re-render if open (the cast, background, groups or scene changed). One
+   * Re-render if open (the cast, background, tags or scene changed). One
    * change to the stage fires a hook per tile, so calls within 50 ms make one render.
    */
   static refresh() {
@@ -72,11 +75,11 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   #filter = "";
-  #groupLabel = null;
+  #tagLabel = null;
   #rows = new Map(); // Cast row id → its row (from the last render): who it adds, and their entry on stage
 
   get title() {
-    return this.#groupLabel ? `VN Stage · ${this.#groupLabel}` : "VN Stage";
+    return this.#tagLabel ? `VN Stage · ${this.#tagLabel}` : "VN Stage";
   }
 
   async _prepareContext() {
@@ -84,27 +87,28 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     const stage = isStage(scene);
     const collapsed = game.settings.get(MODULE, "collapsed");
     const context = { sceneName: scene?.name ?? "", stage, filter: this.#filter, collapsed };
-    this.#groupLabel = null;
+    this.#tagLabel = null;
     if (!stage) return context;
 
     const index = await artIndex();
-    const selected = stageGroup(scene);
-    const group = getGroup(selected);
-    this.#groupLabel = group?.label ?? (selected === RECENT ? "Recent" : null);
+    const selected = stageTag(scene);
+    const tag = getTag(selected);
+    this.#tagLabel = tag?.label ?? (selected === RECENT ? "Recent" : selected === UNTAGGED ? "Untagged" : null);
 
-    const presets = presetRows(scene, group);
+    const presets = presetRows(scene, selected);
 
-    // The Cast list: the group's members, then everyone else (shown only while searching).
+    // The Cast list: the characters with the tag, then everyone else (shown only while searching).
     const { rows, mine, others } = await castLists(index, scene, selected);
     this.#rows = new Map(rows.map((r) => [r.row, r]));
 
     return {
       ...context,
-      groups: listGroups(index).map((g) => ({ ...g, selected: g.id === selected })),
+      tags: listTags().map((t) => ({ ...t, selected: t.id === selected })),
       allSelected: selected === ALL,
       recentSelected: selected === RECENT,
-      group,
-      bg: await backgroundStrips(scene, group, collapsed),
+      untaggedSelected: selected === UNTAGGED,
+      tag,
+      bg: await backgroundStrips(scene, selected, collapsed),
       party: hasParty() ? partyRow(scene) : null,
       presets,
       changedPreset: presets.find((p) => p.changed) ?? null,
@@ -114,7 +118,11 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       emptyCast: selected === ALL
         ? "No characters found. Set the art folder in the module settings."
         : selected === RECENT ? "Nobody yet: characters you put on a stage appear here."
-          : "Nobody in this group yet. Add characters in Manage groups, or name the group in a character's vn-stage.json.",
+          : selected === UNTAGGED ? "Every character has a tag."
+            : "Nobody has this tag yet. Search for a character, then right-click them and choose Tags….",
+      emptyPresets: tag ? "No presets have this tag yet. Save the stage with +."
+        : selected === UNTAGGED ? "Every preset has a tag." : "No presets yet. Save the stage with +.",
+      outsideLabel: tag ? "Not tagged " + tag.label : selected === UNTAGGED ? "Tagged" : "Not recent",
     };
   }
 
@@ -158,11 +166,11 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       button.addEventListener("mouseleave", () => { video.pause(); video.currentTime = 0; });
     }
 
-    // Right-click a background: Groups… (which groups offer it).
+    // Right-click a background: its tags.
     for (const button of this.element.querySelectorAll(".vn-bg-choice")) {
       button.addEventListener("contextmenu", (event) => {
         event.preventDefault();
-        chooseImageGroups(button.dataset.src);
+        TagEditor.open({ kind: "image", src: button.dataset.src });
       });
     }
 
@@ -189,7 +197,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       }
     }
 
-    this.element.querySelector("select[name=group]")?.addEventListener("change", (event) => setStageGroup(event.target.value));
+    this.element.querySelector("select[name=tag]")?.addEventListener("change", (event) => setStageTag(event.target.value));
   }
 
   /** The preset menu: right-click a preset chip. Made once; the window's element outlives its renders. */
@@ -200,13 +208,13 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     const items = [
       { label: "Update from stage", icon: "fa-solid fa-floppy-disk", onClick: (_e, t) => StageWindow.#updatePreset(row(t).dataset.preset) },
       { label: "Rename…", icon: "fa-solid fa-pen", onClick: (_e, t) => StageWindow.#renamePreset(row(t).dataset.preset) },
-      { label: "Groups…", icon: "fa-solid fa-layer-group", onClick: (_e, t) => choosePresetGroups(row(t).dataset.preset) },
+      { label: "Tags…", icon: "fa-solid fa-tags", onClick: (_e, t) => TagEditor.open({ kind: "preset", id: row(t).dataset.preset }) },
       { label: "Delete", icon: "fa-solid fa-trash", onClick: (_e, t) => StageWindow.#deletePreset(row(t).dataset.preset) },
     ];
     new ContextMenu(this.element, ".vn-preset-list li[data-preset]", items, { jQuery: false, fixed: true });
   }
 
-  /** Searching filters the group's rows and brings in matching rows from outside it, under a divider. */
+  /** Searching filters the tag's rows and brings in matching rows from outside it, under a divider. */
   #applyFilter() {
     const q = this.#filter.trim().toLowerCase();
     let outside = 0;
@@ -231,11 +239,11 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async #onBrowseBackground() {
     const FilePicker = foundry.applications.apps.FilePicker.implementation;
-    const grouped = !!getGroup(stageGroup());
+    const tagged = !!getTag(stageTag());
     new FilePicker({
       type: "imagevideo",
       current: currentBackground() ?? "",
-      callback: (path) => pickBackground(path, { keepFolder: grouped }),
+      callback: (path) => pickBackground(path, { keepFolder: tagged }),
     }).render({ force: true });
   }
 
@@ -292,11 +300,17 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     clearFolderCache();
     await artIndex({ refresh: true });
     this.render();
-    GroupsWindow.refresh();
+    TagsWindow.refresh();
+    TagEditor.refresh();
   }
 
-  static #onManageGroups() {
-    GroupsWindow.open(stageGroup());
+  static #onManageTags() {
+    TagsWindow.open();
+  }
+
+  /** A tag chip on a Cast row: show that tag. */
+  static async #onPickTag(_event, target) {
+    await setStageTag(target.dataset.tag);
   }
 
   /** Everyone off this stage at once (they fade out). Load a preset to bring a scene back. */
@@ -326,10 +340,10 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async #onSavePreset() {
-    const group = getGroup(stageGroup());
-    const name = await askName(group ? `Save preset in ${group.label}` : "Save preset", "");
+    const tag = getTag(stageTag());
+    const name = await askName(tag ? `Save preset tagged ${tag.label}` : "Save preset", "");
     if (!name) return;
-    if (findPresetByName(name, group?.id ?? null)) {
+    if (findPresetByName(name, tag?.id ?? null)) {
       const ok = await confirm("Replace preset", `Replace the preset <strong>${esc(name)}</strong> with what's on stage now?`);
       if (!ok) return;
     }
@@ -362,7 +376,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   static async #deletePreset(id) {
     const preset = getPreset(id);
     if (!preset) return;
-    const ok = await confirm("Delete preset", `Delete the preset <strong>${esc(preset.name)}</strong>? It leaves every group.`);
+    const ok = await confirm("Delete preset", `Delete the preset <strong>${esc(preset.name)}</strong>?`);
     if (ok) await deletePreset(id);
   }
 }

@@ -26,7 +26,7 @@ ln -s "<path to this folder>" "<Foundry data folder>/Data/modules/vn-stage"
 
 - **Art folder:** one subfolder per character, with a `portrait` image and, if you like, `expressions/`, `forms/` and a `vn-stage.json`. The whole format, including how art is sized, is in [docs/art-format.md](docs/art-format.md).
 - **Safety-net background:** set once as the scene's own background when it becomes a stage. The background shown during play is a tile above it, because changing a scene's own background redraws the canvas on every screen.
-- **Group background folders:** a folder every group finds its backgrounds in by itself, when it exists; `{group}` stands for the group's name (`scenes/{group}/`). Other modules can add folders with the `vn-stage.groupFolders` hook.
+- **Tag background folders:** a folder every tag finds its backgrounds in by itself, when it exists; `{tag}` stands for the tag's name (`scenes/{tag}/`). Other modules can add folders with the `vn-stage.tagFolders` hook.
 - **Portrait shadows** and **Shadow strength:** a soft shadow behind every portrait, drawn by each screen. Strength is how dark it is.
 
 ## Console API
@@ -39,15 +39,15 @@ ln -s "<path to this folder>" "<Foundry data folder>/Data/modules/vn-stage"
 | Cast | `getCast`, `addToCast({ name, actorUuid, cluster, index, newCluster })`, `addParty(cluster, { index, newCluster })`, `removeParty`, `partyCluster`, `setCast`, `removeFromCast(id)`, `moveToCluster(id, cluster, { index, newCluster })`, `switchSide(id)`, `moveInCluster(id, step)`, `clearCast`, `setFlip`, `layout` |
 | Art | `artIndex`, `characterArt(key)`, `clearArtCache` |
 | Expressions and forms | `setExpression(castId, key)`, `setForm(castId, artKey)` (refused for players when the form is locked), `resetAllExpressions`, `currentExpression` |
-| Presets | `listPresets(groupId)`, `savePreset(name)`, `loadPreset(id)`, `deletePreset`, `updatePreset`, `renamePreset`, `setPresetGroups` |
-| Groups | `listGroups`, `getGroup`, `memberNames`, `createGroup`, `addFolder`, `addMember`, `groupFolders`, `stageGroup`, `setStageGroup` |
-| Windows | `openWindow()`, `openGroups(groupId)` |
+| Presets | `listPresets(tagId)`, `savePreset(name)`, `loadPreset(id)`, `deletePreset`, `updatePreset`, `renamePreset`, `setPresetTags` |
+| Tags | `listTags`, `getTag`, `memberNames`, `createTag`, `addFolder`, `addMember`, `tagFolders`, `stageTag`, `setStageTag` |
+| Windows | `openWindow()`, `openTags()` |
 | View | `toggleViewLock()` (GM only: lock your view to the stage), `viewLocked()` |
 | Debugging | `status()`: what the module sees on this screen |
 
 **Clusters in the API:** `cluster` counts from 0, left to right, as `getCast` and `status()` show it. A number equal to the count starts a new cluster at the right edge, and `newCluster: true` starts one at that number, moving the rest up. `index` is the place in the cluster from the left (leave it out for the right end). `side: "left"` or `"right"` still works in place of `cluster`, for the leftmost or rightmost cluster. `partySide` and `moveInSide` are the old names of `partyCluster` and `moveInCluster`; `partySide` now returns a number. `switchSide` moves a character from the leftmost cluster to the rightmost, and from any other to the leftmost.
 
-**Hooks it calls:** `vn-stage.layout(scene, placements)` after each layout (each portrait's box and `cluster`, for other modules); `vn-stage.groupFolders(group, folders)` to let modules add a group's automatic folders.
+**Hooks it calls:** `vn-stage.layout(scene, placements)` after each layout (each portrait's box and `cluster`, for other modules); `vn-stage.tagFolders(tag, folders)` to let modules add a tag's automatic folders.
 
 ## Stored data
 
@@ -55,11 +55,12 @@ Change any of these only with a step in `scripts/migrate.js` (bump `SCHEMA`), so
 
 | Where | Key | Holds |
 |---|---|---|
-| World setting | `artRoot`, `safetyBackground`, `groupFolders` | The settings above |
+| World setting | `artRoot`, `safetyBackground`, `tagFolders` | The settings above |
 | World setting | `portraitShadow`, `portraitShadowStrength` | The shadow settings above: on or off, and how dark (0 to 1) |
 | World setting | `schema` | The last data upgrade run (migrate.js) |
-| World setting | `groups` | `{ [id]: { label, folders, images, add, remove, hideAuto, deleted } }`; members also come from the art's `groups` |
-| World setting | `presets` | `{ [id]: { name, groups, background, cast, saved } }`; cast entries carry `cluster` like the scene's, and may carry `partyMember` and `form` |
+| World setting | `tags` | `{ [id]: { label, folders, images, add, remove, hideAuto, deleted } }`; characters also come from the art's `tags`. A tag is listed only while something carries it |
+| World setting | `groups`, `groupFolders` | From before tags. Read once by the schema 4 upgrade, then left alone |
+| World setting | `presets` | `{ [id]: { name, tags, background, cast, saved } }`; cast entries carry `cluster` like the scene's, and may carry `partyMember` and `form` |
 | World setting | `recent` | `{ names }`: art keys, newest first (24) |
 | World setting | `artIndex` | `{ root, scanned, art: { [key]: art } }`: the art folder as the GM's screen last scanned it (paths relative to `root`), so players read art without browsing files. Rescanned every time the world loads, when the Art folder setting changes, and by the Stage window's refresh button |
 | World setting | `characterPrefs` | `{ [art key]: { flip, scale, yOffset, size, flying } }`. `scale` and `yOffset` are the actual values and replace the art file's; absent means the file's |
@@ -68,7 +69,7 @@ Change any of these only with a step in `scripts/migrate.js` (bump `SCHEMA`), so
 | Scene flag | `stage` | `{ version }`: the scene is a stage |
 | Scene flag | `cast` | `[{ id, name, actorUuid, cluster, expression?, form? }]` by cluster (from 0, no gaps), each cluster left to right (`expression` and `form` only for art without an actor) |
 | Scene flag | `partyOrder` | Actor ids, the order the party last stood in |
-| Scene flag | `group`, `backgroundFolder`, `preset` | The stage's group, its last-browsed folder, and the preset last loaded or saved |
+| Scene flag | `tag`, `backgroundFolder`, `preset` | The tag the stage shows, its last-browsed folder, and the preset last loaded or saved |
 | Actor flag | `expression`, `form`, `art`, `lockedForms` | The actor's expression and form (follow them to every stage), its VN art… link, and the forms players can't switch to (art keys; the GM still can) |
 | Tile flag | `part`, and for portraits `castId`, `name`, `key`, `fallback`; for the shade `shade` | What the module drew (`background`, `portrait`, `shade`) |
 
@@ -106,7 +107,7 @@ These rely on Foundry or PIXI behaviour that isn't a promised API. Check each on
 
 ## Keys to keep stable
 
-Saved choices (Flip, size, height), group memberships, Recent and VN art… links are keyed by the art folder's name under the art root (`Rahadin`, `Rahadin/forms/corrupted`). Form locks too. **Renaming a character's art folder loses them**; renaming actors is safe.
+Saved choices (Flip, size, height), tags, Recent and VN art… links are keyed by the art folder's name under the art root (`Rahadin`, `Rahadin/forms/corrupted`). Form locks too. **Renaming a character's art folder loses them**; renaming actors is safe.
 
 ## Conventions
 

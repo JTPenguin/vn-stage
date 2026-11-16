@@ -2,6 +2,7 @@
   <img src="{{thumb}}" alt="" loading="lazy">
   <span class="vn-name">{{label}}</span>
   {{#if note}}<span class="vn-note" data-tooltip="The art this actor uses">{{note}}</span>{{/if}}
+  {{#if tags.length}}<span class="vn-row-tags">{{#each tags}}<button type="button" class="vn-tag" data-action="pickTag" data-tag="{{id}}" data-tooltip="Show the tag {{label}}">{{label}}</button>{{/each}}{{#if moreTags}}<span class="vn-tag vn-tag-more" data-tooltip="{{moreTags.tooltip}}">+{{moreTags.count}}</span>{{/if}}</span>{{/if}}
   <span class="vn-toggles">
     {{#if onStage}}
     <button type="button" class="vn-toggle vn-step" data-action="move" data-dir="-1" aria-label="Move left" data-tooltip="Move into the cluster to the left, or a new one at the edge" {{#unless canLeft}}disabled{{/unless}}>‹</button>

@@ -43,7 +43,7 @@ The file adds what file names can't say. Every field except `format` is optional
   "size": "medium",
   "scale": 0.57,
   "yOffset": 0.055,
-  "groups": ["The Crew"]
+  "tags": ["The Crew"]
 }
 ```
 
@@ -57,7 +57,7 @@ The file adds what file names can't say. Every field except `format` is optional
 | `size` | Creature size: `tiny`, `small`, `medium`, `large`, `huge` or `gargantuan`. The actor's sheet wins when the game system has one (PF2e). | `medium` |
 | `scale` | Default height, as a multiple of the frame height (see below). Must be above 0. | `1` |
 | `yOffset` | Default drop from standing on the bottom edge, as a share of the frame height. Positive is lower. | `0` |
-| `groups` | Names of the groups that include this character | None |
+| `tags` | The character's tags. The GM can add more in VN Stage. `groups`, the field's older name, is still read. | None |
 
 - **Unknown fields are ignored,** so tools can add their own.
 - **A broken file** (not JSON, or not an object) gives one console warning. The character still loads from its folders.
@@ -100,10 +100,10 @@ Art/
 `Old Tom` works as it is: a neutral portrait at full frame height, size Medium. `Mira Voss` has two expressions, shown as buttons labelled "Happy" and "Angry". Her file:
 
 ```json
-{ "format": 1, "scale": 0.6, "yOffset": 0.04, "groups": ["The Crew"] }
+{ "format": 1, "scale": 0.6, "yOffset": 0.04, "tags": ["The Crew"] }
 ```
 
-She stands at 60% of the frame's height, a little lower than the bottom edge, and belongs to the group "The Crew".
+She stands at 60% of the frame's height, a little lower than the bottom edge, and has the tag "The Crew".
 
 ## How VN Stage reads it
 

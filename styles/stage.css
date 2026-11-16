@@ -64,9 +64,9 @@
 .vn-adjust .vn-slider input[type=number] { width: 4.5rem; flex: none; }
 .vn-adjust .vn-adjust-buttons { display: flex; gap: 0.4rem; justify-content: flex-end; }
 
-/* Groups */
-.vn-stage .vn-groupbar { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--color-border, #0003); }
-.vn-stage .vn-groupbar select { flex: 1; }
+/* The tag bar */
+.vn-stage .vn-tagbar { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--color-border, #0003); }
+.vn-stage .vn-tagbar select { flex: 1; }
 .vn-stage .vn-bg-folder-group { margin-top: 0.4rem; }
 .vn-stage .vn-bg-folder-group h4 { cursor: pointer; user-select: none; text-transform: none; font-family: var(--font-h3); font-size: var(--font-size-12, 12px); opacity: 0.85; }
 .vn-stage .vn-bg-folder-group.collapsed .vn-chevron { transform: rotate(-90deg); }
@@ -135,44 +135,39 @@
 .vn-art-picker button.vn-art-choice.current { border-color: var(--color-warm-2, #c9593f); background: color-mix(in srgb, var(--color-warm-2, #c9593f) 20%, transparent); }
 .vn-art-picker button.vn-art-choice img { width: 2.25rem; height: 2.25rem; object-fit: cover; object-position: top; border-radius: 3px; border: none; flex: none; }
 
-/* Shared: notes beside a name, and list icons */
+/* Shared: notes beside a name */
 .vn-stage .vn-note { flex: none; font-size: 11px; padding: 0 0.3rem; border-radius: 3px; border: 1px solid var(--color-border, #0003); opacity: 0.75; }
-.vn-stage .vn-pick-icon { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: 3px; background: color-mix(in srgb, var(--color-warm-2, #c9593f) 18%, transparent); }
 
-/* Groups window */
-.vn-groups-body { display: flex; height: 100%; min-height: 0; }
-.vn-groups .vn-groups-nav { display: flex; flex-direction: column; gap: 0.4rem; width: 12rem; flex: none; padding: 0.5rem; border-right: 1px solid var(--color-border, #0003); }
-.vn-groups .vn-groups-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 0.15rem; }
-.vn-groups button.vn-groups-pick { width: 100%; justify-content: flex-start; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 1px solid transparent; background: none; }
-.vn-groups button.vn-groups-pick:hover { background: color-mix(in srgb, var(--color-warm-2, #c9593f) 12%, transparent); }
-.vn-groups button.vn-groups-pick.current { border-color: var(--color-warm-2, #c9593f); background: color-mix(in srgb, var(--color-warm-2, #c9593f) 24%, transparent); font-weight: bold; }
-.vn-groups .vn-groups-detail { flex: 1; min-width: 0; overflow-y: auto; padding: 0.5rem 0.75rem; }
-.vn-groups .vn-groups-head { display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.3rem; }
-.vn-groups .vn-groups-head h2 { flex: 1; margin: 0; border: none; font-size: var(--font-size-18, 18px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.vn-groups .vn-groups-section { padding: 0.4rem 0 0.6rem; border-bottom: 1px solid var(--color-border, #0003); }
-.vn-groups .vn-groups-section:last-child { border-bottom: none; }
-.vn-groups .vn-groups-section h3 { margin: 0 0 0.3rem; font-size: var(--font-size-14, 14px); border: none; }
-.vn-groups .vn-groups-items { list-style: none; margin: 0 0 0.3rem; padding: 0; display: flex; flex-direction: column; gap: 0.15rem; }
-.vn-groups .vn-groups-items li { display: flex; align-items: center; gap: 0.4rem; padding: 0.1rem 0.2rem; border-radius: 4px; }
-.vn-groups .vn-groups-items li:hover { background: color-mix(in srgb, var(--color-warm-2, #c9593f) 10%, transparent); }
-.vn-groups .vn-groups-items li img { width: 2rem; height: 2rem; object-fit: cover; object-position: top; border-radius: 3px; border: none; flex: none; }
-.vn-groups .vn-groups-items .vn-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.vn-groups .vn-remove { opacity: 0.55; }
-.vn-groups .vn-remove:hover { opacity: 1; }
+/* Tag chips on Cast rows */
+.vn-stage .vn-cast-list li .vn-row-tags { display: flex; flex: 0 1 auto; min-width: 0; gap: 0.2rem; overflow: hidden; }
+.vn-stage .vn-cast-list li .vn-tag { flex: 0 1 auto; min-width: 0; width: auto; height: 1.3rem; min-height: 0; margin: 0; padding: 0 0.4rem; line-height: 1.2rem; font-size: 11px; border-radius: 0.65rem; border: 1px solid var(--color-border, #0003); background: color-mix(in srgb, var(--color-warm-2, #c9593f) 14%, transparent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 8rem; }
+.vn-stage .vn-cast-list li button.vn-tag:hover { background: color-mix(in srgb, var(--color-warm-2, #c9593f) 32%, transparent); }
+.vn-stage .vn-cast-list li .vn-tag-more { flex: none; opacity: 0.75; }
 
-/* Checklist picker (Add characters…, Add presets…, Groups…) */
-.vn-pick .vn-pick-body { padding: 0.5rem 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; max-height: 70vh; }
-.vn-pick .hint { margin: 0; font-size: var(--font-size-12, 12px); opacity: 0.85; }
-.vn-pick .vn-pick-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; min-height: 0; max-height: 26rem; display: flex; flex-direction: column; gap: 0.1rem; }
-.vn-pick .vn-pick-list li[hidden] { display: none; }
-.vn-pick .vn-pick-list label { display: flex; align-items: center; gap: 0.45rem; padding: 0.1rem 0.2rem; border-radius: 4px; cursor: pointer; }
-.vn-pick .vn-pick-list label:hover { background: color-mix(in srgb, var(--color-warm-2, #c9593f) 10%, transparent); }
-.vn-pick .vn-pick-list input[type=checkbox] { flex: none; margin: 0; }
-.vn-pick .vn-pick-list img { width: 2rem; height: 2rem; object-fit: cover; object-position: top; border-radius: 3px; border: none; flex: none; }
-.vn-pick .vn-pick-list .vn-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.vn-pick .vn-pick-buttons { display: flex; gap: 0.4rem; }
-.vn-pick .vn-spacer { flex: 1; }
-.vn-groups .vn-groups-items li img.vn-wide { width: 3.5rem; height: 2rem; object-fit: cover; object-position: center; }
+/* The tag window (Tags… on a character, a preset or a background) */
+.vn-tag-editor .vn-tag-editor-body { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.5rem 0.75rem; }
+.vn-tag-editor .vn-tag-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.vn-tag-editor .vn-tag-chip { display: inline-flex; align-items: center; gap: 0.3rem; max-width: 100%; padding: 0.1rem 0.2rem 0.1rem 0.6rem; border-radius: 1rem; border: 1px solid var(--color-border, #0003); background: color-mix(in srgb, var(--color-warm-2, #c9593f) 16%, transparent); }
+.vn-tag-editor .vn-tag-chip:not(:has(button)) { padding-right: 0.6rem; }
+.vn-tag-editor .vn-tag-chip .vn-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vn-tag-editor .vn-tag-chip .vn-tag-source { flex: none; font-size: 11px; opacity: 0.7; }
+.vn-tag-editor .vn-tag-chip button.vn-icon { flex: none; min-width: 0; width: 1.3rem; height: 1.3rem; min-height: 0; padding: 0; border: none; background: none; opacity: 0.6; }
+.vn-tag-editor .vn-tag-chip button.vn-icon:hover { opacity: 1; }
+.vn-tag-editor .vn-empty { opacity: 0.7; }
+
+/* Manage tags */
+.vn-tags .vn-tags-body { display: flex; flex-direction: column; gap: 0.5rem; height: 100%; min-height: 0; padding: 0.5rem 0.75rem; }
+.vn-tags .vn-tags-list { list-style: none; margin: 0; padding: 0; flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 0.2rem; }
+.vn-tags .vn-tags-list > li { padding: 0.15rem 0.2rem; border-radius: 4px; }
+.vn-tags .vn-tags-list > li:hover { background: color-mix(in srgb, var(--color-warm-2, #c9593f) 10%, transparent); }
+.vn-tags .vn-tags-row, .vn-tags .vn-tags-folder { display: flex; align-items: center; gap: 0.35rem; }
+.vn-tags .vn-tags-row .vn-name { flex: 1; min-width: 0; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vn-tags .vn-tags-count { flex: none; font-size: var(--font-size-12, 12px); opacity: 0.75; }
+.vn-tags .vn-tags-folder { padding-left: 1rem; font-size: var(--font-size-12, 12px); }
+.vn-tags .vn-tags-folder .vn-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vn-tags .vn-remove { opacity: 0.55; }
+.vn-tags .vn-remove:hover { opacity: 1; }
+.vn-tags .vn-tags-buttons { display: flex; }
 .vn-stage .vn-bg-choice.elsewhere { border-style: dashed; }
 .vn-stage .vn-cast-divider { margin: 0.4rem 0 0.15rem; padding: 0.15rem 0.2rem 0; border-top: 1px solid var(--color-border, #0003); font-size: var(--font-size-12, 12px); text-transform: uppercase; opacity: 0.7; }
 .vn-stage .vn-cast-divider[hidden] { display: none; }

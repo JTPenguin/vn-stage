@@ -1,0 +1,19 @@
+<div class="vn-tag-editor-body">
+  {{#if gone}}
+  <p class="vn-empty">This isn't there any more.</p>
+  {{else}}
+  <ul class="vn-tag-chips">
+    {{#each chips}}
+    <li class="vn-tag-chip" data-tag="{{id}}" {{#if tooltip}}data-tooltip="{{tooltip}}"{{/if}}>
+      <span class="vn-name">{{label}}</span>
+      {{#if note}}<span class="vn-tag-source">{{note}}</span>{{/if}}
+      {{#if removable}}<button type="button" class="vn-icon" data-action="removeTag" aria-label="Remove the tag {{label}}"><i class="fa-solid fa-xmark"></i></button>{{/if}}
+    </li>
+    {{else}}
+    <li class="vn-empty">No tags yet.</li>
+    {{/each}}
+  </ul>
+  <input type="text" name="tag" list="vn-tag-suggestions" placeholder="Add a tag: type it, then Enter" autocomplete="off" aria-label="Add a tag">
+  <datalist id="vn-tag-suggestions">{{#each suggestions}}<option value="{{label}}"></option>{{/each}}</datalist>
+  {{/if}}
+</div>

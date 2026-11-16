@@ -18,7 +18,8 @@
     "size": { "enum": ["tiny", "small", "medium", "large", "huge", "gargantuan"], "default": "medium" },
     "scale": { "type": "number", "exclusiveMinimum": 0, "default": 1, "description": "Default height as a multiple of the frame height." },
     "yOffset": { "type": "number", "default": 0, "description": "Default drop from standing on the bottom edge, as a share of the frame height. Positive is lower." },
-    "groups": { "type": "array", "items": { "type": "string", "minLength": 1 }, "default": [] }
+    "tags": { "type": "array", "items": { "type": "string", "minLength": 1 }, "default": [], "description": "The character's tags." },
+    "groups": { "type": "array", "items": { "type": "string", "minLength": 1 }, "default": [], "description": "The older name of `tags`; read together with it." }
   },
   "additionalProperties": true
 }

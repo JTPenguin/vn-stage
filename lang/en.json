@@ -9,9 +9,9 @@
         "Name": "Safety-net background",
         "Hint": "Set once as the scene's own background when a scene becomes a stage, and used as its first background. Players still see it if the module fails."
       },
-      "GroupFolders": {
-        "Name": "Group background folders",
-        "Hint": "A folder every group finds its backgrounds in by itself, when it exists. {group} stands for the group's name, for example scenes/{group}/. Leave blank for none."
+      "TagFolders": {
+        "Name": "Tag background folders",
+        "Hint": "A folder every tag finds its backgrounds in by itself, when it exists. {tag} stands for the tag's name, for example scenes/{tag}/. Leave blank for none."
       },
       "PortraitShadow": {
         "Name": "Portrait shadows",

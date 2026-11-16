@@ -15,7 +15,7 @@ export { familyOf };
  * world setting `artIndex`: { root, scanned, art: { [key]: <normaliseArt shape> } }
  * with paths relative to `root`. Every screen reads art from that setting, so
  * players never browse folders. Saved choices (flip, scale, height, size) and
- * group membership belong to the key, not to an actor, so renaming an actor
+ * tags belong to the key, not to an actor, so renaming an actor
  * loses nothing.
  */
 
@@ -43,10 +43,15 @@ function loaded() {
 
 /**
  * The art for one character or form, or null if it has none.
- * @returns {Promise<{name, key, label, formLabel, portrait, thumb, expressions, labels, size, scale, yOffset, groups, forms}|null>}
+ * @returns {Promise<{name, key, label, formLabel, portrait, thumb, expressions, labels, size, scale, yOffset, tags, forms}|null>}
  */
 export async function characterArt(name) {
   return loaded().byKey.get(name) ?? null;
+}
+
+/** The saved index as it stands, by label (no scan): what `artIndex()` resolves to. */
+export function artList() {
+  return loaded().list;
 }
 
 /** Every character and form that has a VN portrait, by label. Every screen reads the saved index; `refresh` (GM) scans the folders first. */

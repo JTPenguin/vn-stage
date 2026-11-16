@@ -10,11 +10,12 @@ import { isStage, makeStage, unmakeStage, setBackground, currentBackground } fro
 import { getCast, findEntry, addToCast, addParty, removeParty, partyCluster, partyEntryIds, setCast, removeFromCast, moveToCluster, switchSide, moveInCluster, clearCast, setFlip } from "./cast.js";
 import { artIndex, characterArt, clearArtCache, scanArt, scanArtIfStale } from "./art.js";
 import { layout, lastArrangement } from "./layout.js";
-import { listGroups, getGroup, memberNames, createGroup, addFolder, addMember, groupFolders, stageGroup, setStageGroup } from "./groups.js";
+import { listTags, getTag, memberNames, createTag, addFolder, addMember, tagFolders, stageTag, setStageTag } from "./tags.js";
 import { startView, stopView, viewLocked, viewFitted, toggleGmViewLock, refitView } from "./view.js";
 import { StageWindow } from "./window.js";
-import { GroupsWindow } from "./groups-window.js";
-import { listPresets, savePreset, loadPreset, deletePreset, updatePreset, renamePreset, setPresetGroups } from "./presets.js";
+import { TagsWindow } from "./tags-window.js";
+import { TagEditor } from "./tag-editor.js";
+import { listPresets, savePreset, loadPreset, deletePreset, updatePreset, renamePreset, setPresetTags } from "./presets.js";
 import { setExpression, setForm, resetAllExpressions, currentExpression, preloadStage, isRelayGM } from "./expressions.js";
 import { startClicks, stopClicks, dropTarget, setWindowDrag } from "./interact.js";
 import { registerFades } from "./fades.js";
@@ -63,11 +64,11 @@ Hooks.once("init", () => {
     partySide: partyCluster, moveInSide: moveInCluster, // the names from before clusters
     artIndex, characterArt, clearArtCache, layout,
     setExpression, setForm, resetAllExpressions, currentExpression,
-    listPresets, savePreset, loadPreset, deletePreset, updatePreset, renamePreset, setPresetGroups,
-    listGroups, getGroup, memberNames, createGroup, addFolder, addMember, groupFolders, stageGroup, setStageGroup,
+    listPresets, savePreset, loadPreset, deletePreset, updatePreset, renamePreset, setPresetTags,
+    listTags, getTag, memberNames, createTag, addFolder, addMember, tagFolders, stageTag, setStageTag,
     toggleViewLock: toggleGmViewLock, viewLocked,
     openWindow: () => StageWindow.open(),
-    openGroups: (groupId) => GroupsWindow.open(groupId),
+    openTags: () => TagsWindow.open(),
     status,
   };
   game.modules.get(MODULE).api = api;
@@ -163,7 +164,7 @@ Hooks.on("createSetting", (setting, _options, userId) => onSettingChanged(settin
 Hooks.on("updateSetting", (setting, _changes, _options, userId) => onSettingChanged(setting, userId));
 
 function onSettingChanged(setting, userId) {
-  const keys = ["characterPrefs", "groups", "recent", "presets", "groupFolders", "artIndex"].map((k) => `${MODULE}.${k}`);
+  const keys = ["characterPrefs", "tags", "recent", "presets", "tagFolders", "artIndex"].map((k) => `${MODULE}.${k}`);
   if (!keys.includes(setting.key)) return;
   if (setting.key === `${MODULE}.artIndex`) {
     clearArtCache();
@@ -173,7 +174,8 @@ function onSettingChanged(setting, userId) {
   // Flip, size or height changed by this GM: the viewed stage re-lays out. These are setup (the Adjust window, the menu's Flip), so tiles jump there.
   if (setting.key === `${MODULE}.characterPrefs` && userId === game.user.id && game.user.isGM && isStage()) layout(canvas.scene, { instant: true });
   StageWindow.refresh();
-  GroupsWindow.refresh();
+  TagsWindow.refresh();
+  TagEditor.refresh();
 }
 
 // GM: drop an actor or the party (sidebar), a Cast row or The Party (Stage window) where it should stand:
