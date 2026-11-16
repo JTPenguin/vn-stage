@@ -34,7 +34,9 @@
     },
     "Window": {
       "LockView": "Lock view to the stage",
-      "UnlockView": "Unlock view"
+      "UnlockView": "Unlock view",
+      "TabbedLayout": "Show as tabs",
+      "StackedLayout": "Show all sections"
     },
     "Drag": {
       "Remove": "Take {name} off the stage"

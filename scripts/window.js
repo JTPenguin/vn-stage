@@ -15,6 +15,20 @@ import { gmViewLock, toggleGmViewLock } from "./view.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
+/** The two layouts: stacked sections, or one tab at a time. Each opens at its own size until the GM resizes it. */
+const LAYOUT_SIZES = { stacked: { width: 560, height: 760 }, tabbed: { width: 560, height: 480 } };
+const TAB_IDS = ["cast", "background", "presets"];
+
+function layout() {
+  return game.settings.get(MODULE, "windowLayout") === "tabbed" ? "tabbed" : "stacked";
+}
+
+/** The size this GM last left the window at in a layout, or that layout's default. */
+function layoutSize(mode) {
+  const saved = game.settings.get(MODULE, "windowSizes")?.[mode];
+  return saved?.width && saved?.height ? { width: saved.width, height: saved.height } : { ...LAYOUT_SIZES[mode] };
+}
+
 /**
  * The Stage window: the GM's controls for running the stage being viewed (tag,
  * presets, background, cast). Right-click a character, a preset or a background
@@ -44,15 +58,23 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       loadPreset: StageWindow.#onLoadPreset,
       updatePreset: StageWindow.#onUpdatePreset,
       toggleViewLock: StageWindow.#onToggleViewLock,
+      toggleLayout: StageWindow.#onToggleLayout,
     },
   };
 
-  static PARTS = { main: { template: `modules/${MODULE}/templates/stage-window.hbs`, scrollable: [".vn-cast-list", ".vn-bg-scroll"] } };
+  /** The tabbed layout's tabs (unused while stacked). The open tab is remembered per GM. */
+  static TABS = { main: { tabs: TAB_IDS.map((id) => ({ id })), initial: "cast" } };
+
+  static PARTS = { main: { template: `modules/${MODULE}/templates/stage-window.hbs`, scrollable: [".vn-cast-list", ".vn-bg-scroll", ".vn-preset-list"] } };
 
   static #instance = null;
 
   static open() {
-    this.#instance ??= new StageWindow();
+    if (!this.#instance) {
+      this.#instance = new StageWindow({ position: layoutSize(layout()) });
+      const tab = game.settings.get(MODULE, "windowTab");
+      this.#instance.tabGroups.main = TAB_IDS.includes(tab) ? tab : "cast";
+    }
     return this.#instance.render({ force: true });
   }
 
@@ -72,6 +94,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   #filter = "";
   #tagLabel = null;
   #rows = new Map(); // Cast row id → its row (from the last render): who it adds, and their entry on stage
+  #sizeTimer = null;
 
   get title() {
     return this.#tagLabel ? `VN Stage · ${this.#tagLabel}` : "VN Stage";
@@ -81,7 +104,8 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     const scene = canvas.scene;
     const stage = isStage(scene);
     const collapsed = game.settings.get(MODULE, "collapsed");
-    const context = { sceneName: scene?.name ?? "", stage, filter: this.#filter, collapsed };
+    const tabbed = layout() === "tabbed";
+    const context = { sceneName: scene?.name ?? "", stage, filter: this.#filter, collapsed, tabbed, tabs: this._prepareTabs("main") };
     this.#tagLabel = null;
     if (!stage) return context;
 
@@ -121,12 +145,37 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     };
   }
 
-  /** A lock button in the header, before the close button: lock the GM's own view to the stage. */
+  /** Header buttons, before the close button: flip the layout, and lock the GM's own view to the stage. */
   _getFrameButtons(options) {
     return [
       ...super._getFrameButtons(options),
+      { icon: "fa-solid fa-folder", label: "VNSTAGE.Window.TabbedLayout", action: "toggleLayout" },
       { icon: "fa-solid fa-lock-open", label: "VNSTAGE.Window.LockView", action: "toggleViewLock" },
     ];
+  }
+
+  /** Remember the open tab for next time. */
+  changeTab(tab, group, options = {}) {
+    super.changeTab(tab, group, options);
+    if (group === "main" && TAB_IDS.includes(tab) && game.settings.get(MODULE, "windowTab") !== tab) {
+      game.settings.set(MODULE, "windowTab", tab);
+    }
+  }
+
+  /** Remember the window's size for the layout it's in (saved once the GM stops resizing). */
+  _onPosition(position) {
+    super._onPosition(position);
+    if (this.minimized || !this.rendered) return;
+    const { width, height } = position;
+    if (!(width > 0 && height > 0)) return;
+    clearTimeout(this.#sizeTimer);
+    this.#sizeTimer = setTimeout(() => {
+      const mode = layout();
+      const sizes = game.settings.get(MODULE, "windowSizes") ?? {};
+      const was = sizes[mode];
+      if (was?.width === width && was?.height === height) return;
+      game.settings.set(MODULE, "windowSizes", { ...sizes, [mode]: { width, height } });
+    }, 300);
   }
 
   _onRender(context, options) {
@@ -145,6 +194,17 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       lock.setAttribute("aria-pressed", String(locked));
       lock.setAttribute("aria-label", label);
       lock.dataset.tooltip = label;
+    }
+
+    // The layout button shows what it switches to.
+    const flip = this.window?.header?.querySelector("[data-action=toggleLayout]");
+    if (flip) {
+      const tabbed = layout() === "tabbed";
+      const label = game.i18n.localize(tabbed ? "VNSTAGE.Window.StackedLayout" : "VNSTAGE.Window.TabbedLayout");
+      flip.classList.toggle("fa-folder", !tabbed);
+      flip.classList.toggle("fa-bars", tabbed);
+      flip.setAttribute("aria-label", label);
+      flip.dataset.tooltip = label;
     }
 
     const input = this.element.querySelector("input[name=filter]");
@@ -226,6 +286,16 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   static async #onToggleViewLock() {
     game.tooltip.deactivate(); // so the hover label doesn't show the old state
     await toggleGmViewLock();
+  }
+
+  /** Flip between stacked sections and tabs. Each layout keeps its own window size. */
+  static async #onToggleLayout() {
+    game.tooltip.deactivate();
+    clearTimeout(this.#sizeTimer);
+    const next = layout() === "tabbed" ? "stacked" : "tabbed";
+    await game.settings.set(MODULE, "windowLayout", next);
+    this.setPosition(layoutSize(next));
+    await this.render();
   }
 
   static async #onMakeStage() {

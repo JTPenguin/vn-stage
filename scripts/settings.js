@@ -120,6 +120,30 @@ export function registerSettings({ onArtRootChange = () => {}, onGmViewLockChang
     default: {},
   });
 
+  // The Stage window's layout for this GM (this machine only): "stacked" sections or "tabbed".
+  game.settings.register(MODULE, "windowLayout", {
+    scope: "client",
+    config: false,
+    type: String,
+    default: "stacked",
+  });
+
+  // The tab the tabbed Stage window opens on: the last one this GM used (this machine only).
+  game.settings.register(MODULE, "windowTab", {
+    scope: "client",
+    config: false,
+    type: String,
+    default: "cast",
+  });
+
+  // The Stage window's size in each layout (this machine only), e.g. { tabbed: { width: 560, height: 480 } }.
+  game.settings.register(MODULE, "windowSizes", {
+    scope: "client",
+    config: false,
+    type: Object,
+    default: {},
+  });
+
   // Per-character choices that follow them to every stage, by art key, or "actor:<id>" for an actor without art (e.g. { "Ambrus Valsin": { flip: true } }).
   game.settings.register(MODULE, "characterPrefs", {
     scope: "world",

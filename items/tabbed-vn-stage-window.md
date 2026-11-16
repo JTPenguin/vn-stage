@@ -1,8 +1,8 @@
 ---
 title: "Test a tabbed VN Stage window"
 kind: test
-status: ready
-waits_on: Claude
+status: in-progress
+waits_on: Justin
 blocked_by: []
 source: "Justin's words, 2026-11-16; details settled with Justin, 2026-11-16"
 added: 2026-11-16
@@ -43,10 +43,21 @@ Try a version of the VN Stage window with three tabs: **Cast**, **Background** a
 - **Re-renders** (a stage change fires one) must keep the open tab.
 - **Dragging from Cast** onto the stage must still work from the tabbed window.
 
-## Check (Justin, in a real session)
+## Built (2026-11-16)
 
-- Does the window read more easily with tabs?
-- Is moving between cast, backgrounds and presets quicker than scrolling?
-- Does anything get hidden that needs to stay in view during a scene?
+- **Layout button** in the title bar, beside the view lock. It shows a folder icon ("Show as tabs") in stacked mode and a bars icon ("Show all sections") in tabbed mode.
+- **Settings** (client, hidden): `windowLayout` (`stacked` or `tabbed`), `windowTab` (the last tab used) and `windowSizes` (one size per layout). Tabbed opens at 560 × 480 and stacked at 560 × 760, until the GM resizes the window.
+- **Tabbed mode** uses Foundry's own tabs. A row holds the tabs on the left and Update, Save preset and Clear stage on the right. Reset expressions and Re-read the art folder move next to the Cast search box.
+- **Stacked mode** is unchanged.
+- Code: `scripts/window.js`, `scripts/settings.js`, `templates/stage-window.hbs`, `styles/stage.css`, `lang/en.json`.
+- Tests (94) and the load check pass. The template was rendered in both layouts outside Foundry. Nothing has run in Foundry yet.
 
-**Next step:** Claude builds the tabbed mode and the title-bar toggle, runs the tests and load check, then hands it to Justin for the Foundry check.
+## Check in Foundry (Justin)
+
+- The layout button flips between layouts, and each layout reopens at its own size after a reload.
+- Clicking a tab switches it, and the window reopens on that tab. A stage change (adding a character) keeps the open tab.
+- Each tab scrolls on its own. Dragging a character from the Cast tab onto the stage still works.
+- Update appears in the tab row after you change a loaded preset.
+- Then the real test, in a session: does the window read more easily with tabs? Is moving between cast, backgrounds and presets quicker than scrolling? Does anything get hidden that needs to stay in view?
+
+**Next step:** Justin checks it in Foundry and picks a layout. Claude then removes the losing one.
