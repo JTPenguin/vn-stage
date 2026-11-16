@@ -1,12 +1,13 @@
 ---
 title: "Test a tabbed VN Stage window"
 kind: test
-status: in-progress
-waits_on: Justin
+status: done
+waits_on: none
 blocked_by: []
 source: "Justin's words, 2026-11-16; details settled with Justin, 2026-11-16"
 added: 2026-11-16
 updated: 2026-11-16
+outcome: "Done: the Stage window is tabs only (Cast, Background, Presets); the stacked layout is removed. Checked in Foundry by Justin, 2026-11-16."
 ---
 # Test a tabbed VN Stage window
 
@@ -61,4 +62,4 @@ Try a version of the VN Stage window with three tabs: **Cast**, **Background** a
 - Each tab scrolls on its own and fills the window. Dragging a character from the Cast tab onto the stage still works.
 - Update appears in the tab row after you change a loaded preset.
 
-**Next step:** Justin checks the tabs-only window in Foundry, then closes this item.
+**Checked:** Justin checked it in Foundry and closed it, 2026-11-16.
