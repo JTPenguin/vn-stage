@@ -1,13 +1,14 @@
 ---
-title: "Drop shadows behind portraits"
+title: Drop shadows behind portraits
 kind: feature
-status: in-progress
-waits_on: Justin
+status: done
+waits_on: none
+outcome: "Built 2026-10-30; marked done by Justin. Every portrait casts a soft shadow, drawn on each screen, with two world settings: Portrait shadows and Shadow strength."
 priority: 🔼
 blocked_by: []
-source: "Justin's request, 2026-10-25"
+source: Justin's request, 2026-10-25
 added: 2026-10-25
-updated: 2026-10-30
+updated: 2026-11-16
 ---
 # Drop shadows behind portraits
 

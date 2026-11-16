@@ -1,13 +1,14 @@
 ---
-title: "Stage clusters instead of fixed left and right"
+title: Stage clusters instead of fixed left and right
 kind: feature
-status: in-progress
-waits_on: Justin
+status: done
+waits_on: none
+outcome: "Built 2026-10-30; marked done by Justin. Clusters replace the fixed left and right sides, with a schema 3 upgrade for existing stages and presets."
 priority: 🔼
 blocked_by: []
-source: "Justin's request, 2026-10-26"
+source: Justin's request, 2026-10-26
 added: 2026-10-26
-updated: 2026-10-30
+updated: 2026-11-16
 ---
 # Stage clusters instead of fixed left and right
 

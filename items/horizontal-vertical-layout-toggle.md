@@ -23,7 +23,7 @@ Let the GM switch the VN Stage window between two layouts.
 - **Remembered per GM**, as a client or user setting.
 
 **Build notes:**
-- Horizontal puts the three sections in columns. The group bar stays across the top.
+- Horizontal puts the three sections in columns. The tag bar stays across the top.
 - Each column scrolls on its own. The Cast list keeps the most width, because its rows hold the cluster buttons.
 - Collapsing a section narrows its column rather than hiding it.
 - Remember the window size for each layout separately.

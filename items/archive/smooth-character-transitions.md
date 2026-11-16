@@ -1,13 +1,14 @@
 ---
-title: "Smooth transitions when characters move"
+title: Smooth transitions when characters move
 kind: feature
-status: in-progress
-waits_on: Justin
+status: done
+waits_on: none
+outcome: "Built 2026-10-30; marked done by Justin. Portraits slide and scale to their new places in about 0.4 s; Adjust changes still jump, and reduced motion turns it off."
 priority: 🔼
 blocked_by: []
-source: "Justin's request, 2026-10-26"
+source: Justin's request, 2026-10-26
 added: 2026-10-26
-updated: 2026-10-30
+updated: 2026-11-16
 ---
 # Smooth transitions when characters move
 

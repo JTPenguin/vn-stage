@@ -1,13 +1,14 @@
 ---
-title: "Lock forms"
+title: Lock forms
 kind: feature
-status: in-progress
-waits_on: Justin
+status: done
+waits_on: none
+outcome: "Built 2026-10-30; marked done by Justin. The GM right-clicks a form in the character menu to lock or open it; players don't see locked forms and can't switch to them. Locks are saved on the actor."
 priority: 🔼
 blocked_by: []
-source: "Justin's ideas backlog, 2026-10-21 (moved here 2026-10-24)"
+source: Justin's ideas backlog, 2026-10-21 (moved here 2026-10-24)
 added: 2026-10-24
-updated: 2026-10-30
+updated: 2026-11-16
 ---
 # Lock forms
 
