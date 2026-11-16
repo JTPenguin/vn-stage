@@ -1,13 +1,14 @@
 ---
-title: "Toggle the VN Stage window between horizontal and vertical layouts"
+title: Toggle the VN Stage window between horizontal and vertical layouts
 kind: feature
-status: ready
+status: dropped
 waits_on: Claude
 priority: 🔽
 blocked_by: []
-source: "Justin's request, 2026-10-31; details settled with Justin, 2026-11-13"
+source: Justin's request, 2026-10-31; details settled with Justin, 2026-11-13
 added: 2026-10-31
-updated: 2026-11-13
+updated: 2026-11-16
+outcome: "Dropped: replaced by the tabbed VN Stage window (tabbed-vn-stage-window)"
 ---
 # Toggle the VN Stage window between horizontal and vertical layouts
 
