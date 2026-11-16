@@ -7,7 +7,7 @@
 import { MODULE } from "./constants.js";
 import { registerSettings } from "./settings.js";
 import { isStage, makeStage, unmakeStage, setBackground, currentBackground } from "./stage.js";
-import { getCast, findEntry, addToCast, addParty, removeParty, partyCluster, partyEntryIds, setCast, removeFromCast, moveToCluster, switchSide, moveInCluster, clearCast, setFlip } from "./cast.js";
+import { getCast, findEntry, addToCast, addParty, removeParty, partyCluster, partyEntryIds, setCast, removeFromCast, moveToCluster, clearCast, setFlip } from "./cast.js";
 import { artIndex, characterArt, clearArtCache, scanArt, scanArtIfStale } from "./art.js";
 import { layout, lastArrangement } from "./layout.js";
 import { listTags, getTag, memberNames, createTag, addFolder, addMember, tagFolders, stageTag, setStageTag } from "./tags.js";
@@ -60,8 +60,7 @@ Hooks.once("init", () => {
   });
   const api = {
     isStage, makeStage, unmakeStage, setBackground, currentBackground,
-    getCast, addToCast, addParty, removeParty, partyCluster, setCast, removeFromCast, moveToCluster, switchSide, moveInCluster, clearCast, setFlip,
-    partySide: partyCluster, moveInSide: moveInCluster, // the names from before clusters
+    getCast, addToCast, addParty, removeParty, partyCluster, setCast, removeFromCast, moveToCluster, clearCast, setFlip,
     artIndex, characterArt, clearArtCache, layout,
     setExpression, setForm, resetAllExpressions, currentExpression,
     listPresets, savePreset, loadPreset, deletePreset, updatePreset, renamePreset, setPresetTags,

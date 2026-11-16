@@ -518,38 +518,6 @@ export function placeEntries(cast, entries, { cluster, index = null, newCluster 
 }
 
 /**
- * A cluster number from the console API's `cluster` or its older `side`:
- * "left" is the leftmost cluster, "right" the rightmost (with `newCluster`, a
- * new one past it). `count` is the number of clusters.
- */
-export function resolveCluster({ cluster = null, side = null, newCluster = false }, count) {
-  if (cluster != null && side != null) throw new Error("VN Stage | Give a cluster or a side, not both.");
-  if (side === "left") return 0;
-  if (side === "right") return newCluster ? count : Math.max(count - 1, 0);
-  if (side != null) throw new Error(`VN Stage | Unknown side "${side}".`);
-  return cluster ?? 0;
-}
-
-/**
- * Where to join a cluster from the Cast list: at its end nearest the middle of
- * the stage. null is the right end (for a cluster left of the middle, or in
- * it), 0 the left end.
- */
-export function innerIndex(cluster, count) {
-  return cluster <= (count - 1) / 2 ? null : 0;
-}
-
-/**
- * Where the Cast list's Left or Right joins a stage of `count` clusters: the
- * leftmost or rightmost cluster at its end nearest the middle; with one
- * cluster, Left at its left end and Right at its right end.
- */
-export function joinIndex(side, count) {
-  if (count === 1) return side === "left" ? 0 : null;
-  return innerIndex(side === "left" ? 0 : count - 1, count);
-}
-
-/**
  * A target in the numbers the cast shows (getCast, status(): every entry
  * counted, the movers too) turned into the one placeEntries takes, counted
  * without the entries `ids`. Clusters only the movers stand in go while they
@@ -570,32 +538,6 @@ export function targetFromShown(cast, ids, { cluster, index = null, newCluster =
   const members = all.filter((e) => e.cluster === cluster);
   if (newCluster || !members.some(stays)) return { cluster: cluster - gone, index: null, newCluster: true };
   return { cluster: cluster - gone, index, newCluster: false };
-}
-
-/**
- * Where the Cast list's ‹ or › (`dir` -1 or 1) moves the entries `ids` (one
- * cluster's members): into the neighbouring cluster, at its near end; past the
- * edge, into a new cluster there. Alone at the edge, there's nowhere to go: null.
- * The target is counted without them, as placeEntries wants.
- */
-export function neighbourTarget(cast, ids, dir) {
-  const skip = new Set([ids].flat());
-  const all = compactClusters(cast);
-  const moving = all.filter((e) => skip.has(e.id));
-  if (!moving.length) return null;
-  const c = moving[0].cluster;
-  const count = clusterCount(all);
-  const others = all.some((e) => e.cluster === c && !skip.has(e.id));
-  const near = (n) => ({ cluster: n, index: dir > 0 ? 0 : null, newCluster: false });
-  if (others) {
-    // Their cluster stays where it is.
-    if (c + dir < 0) return { cluster: 0, index: null, newCluster: true };
-    if (c + dir >= count) return { cluster: count, index: null, newCluster: true };
-    return near(c + dir);
-  }
-  // Their cluster goes with them, so the clusters to its right move down one.
-  if (dir < 0) return c === 0 ? null : near(c - 1);
-  return c === count - 1 ? null : near(c);
 }
 
 /**

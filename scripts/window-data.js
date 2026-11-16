@@ -6,7 +6,7 @@ import { ALL, RECENT, UNTAGGED, getTag, tagFolders, memberNames, listTags, backg
 import { folderLabel } from "./tags-window.js";
 import { esc } from "./dialogs.js";
 import { safetyBackground } from "./settings.js";
-import { neighbourTarget, familyOf, isEntryFor, tellApart } from "./rules.js";
+import { familyOf, isEntryFor, tellApart } from "./rules.js";
 
 /**
  * What the Stage window shows, worked out from the stage, the art and the
@@ -41,25 +41,21 @@ function isRowEntry(row, e) {
   return isEntryFor(e, { name: row.key, actorUuid: row.actorUuid });
 }
 
-/** The cast entry a row's toggles work on, read fresh (the row's own may be from the last render). */
+/** The cast entry a row works on, read fresh (the row's own may be from the last render). */
 export function castEntryFor(row) {
   return getCast().find((e) => isRowEntry(row, e)) ?? null;
 }
 
 /**
- * The Party's row: its cluster (from 1) when every member stands in one, and
- * whether ‹ and › can move them. `onStage`: is any member on stage? (The row
- * lights up a little, even when they're split.)
+ * The Party's row. `together` when every member stands in one cluster
+ * (the row lights up fully); `onStage`: is any member on stage? (The row
+ * lights up a little, even when they're split, and shows its ×.)
  */
 export function partyRow(scene) {
-  const cluster = partyCluster(scene);
-  const cast = getCast(scene), ids = partyEntryIds(scene);
   return {
     label: PARTY_LABEL,
-    cluster: cluster === null ? null : cluster + 1,
-    onStage: ids.length > 0,
-    canLeft: cluster !== null && !!neighbourTarget(cast, ids, -1),
-    canRight: cluster !== null && !!neighbourTarget(cast, ids, 1),
+    together: partyCluster(scene) !== null,
+    onStage: partyEntryIds(scene).length > 0,
   };
 }
 
@@ -69,8 +65,7 @@ export function partyRow(scene) {
  * can share one character's art), and one per character no actor uses (or that
  * stands on stage without an actor); forms have no rows of their own. Actors
  * that share a name are told apart by their art, then by their sidebar folder
- * (tellApart in rules.js). Each row knows its cast entry on stage, its cluster,
- * and whether ‹ and › can move it.
+ * (tellApart in rules.js). Each row knows its cast entry on stage.
  */
 export async function castRows(index, cast) {
   const byKey = new Map(index.map((a) => [a.key, a]));
@@ -94,9 +89,6 @@ export async function castRows(index, cast) {
   }
   for (const r of rows) {
     r.entry = cast.find((e) => isRowEntry(r, e)) ?? null;
-    r.cluster = r.entry?.cluster ?? null;
-    r.canLeft = !!r.entry && !!neighbourTarget(cast, r.entry.id, -1);
-    r.canRight = !!r.entry && !!neighbourTarget(cast, r.entry.id, 1);
   }
   return rows;
 }
@@ -118,7 +110,6 @@ export function rowContext(r) {
     tags: tags.slice(0, CHIPS),
     moreTags: tags.length > CHIPS ? { count: tags.length - CHIPS, tooltip: esc(tags.map((t) => t.label).join(", ")) } : null,
     search: `${r.label} ${r.note ?? ""} ${r.key} ${tags.map((t) => t.label).join(" ")}`.toLowerCase(),
-    cluster: r.cluster === null ? null : r.cluster + 1, canLeft: r.canLeft, canRight: r.canRight,
   };
 }
 

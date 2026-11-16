@@ -377,32 +377,6 @@ test("placing: the party lands as one block, in the order given", () => {
   assert.equal(shape(R.placeEntries(cast, pick(cast, "da"), { cluster: 1, newCluster: true })), "b|da|c");
 });
 
-test("cluster or side: left is the first, right the last (or a new one past it); both is an error", () => {
-  assert.equal(R.resolveCluster({ side: "left" }, 3), 0);
-  assert.equal(R.resolveCluster({ side: "right" }, 3), 2);
-  assert.equal(R.resolveCluster({ side: "right" }, 0), 0);
-  assert.equal(R.resolveCluster({ side: "right", newCluster: true }, 3), 3);
-  assert.equal(R.resolveCluster({ cluster: 1 }, 3), 1);
-  assert.equal(R.resolveCluster({}, 3), 0);
-  assert.throws(() => R.resolveCluster({ cluster: 1, side: "left" }, 3));
-  assert.throws(() => R.resolveCluster({ side: "full" }, 3));
-});
-
-test("joining from the Cast list: at the end nearest the middle", () => {
-  assert.equal(R.innerIndex(0, 2), null);
-  assert.equal(R.innerIndex(1, 2), 0);
-  assert.equal(R.innerIndex(0, 1), null, "a lone cluster: its right end");
-  assert.equal(R.innerIndex(1, 3), null, "the middle cluster: its right end");
-});
-
-test("Left and Right from the Cast list: with one cluster, Left joins its left end and Right its right end", () => {
-  assert.equal(R.joinIndex("left", 1), 0);
-  assert.equal(R.joinIndex("right", 1), null);
-  assert.equal(R.joinIndex("left", 2), null, "the leftmost cluster's inner end");
-  assert.equal(R.joinIndex("right", 2), 0, "the rightmost cluster's inner end");
-  assert.equal(R.joinIndex("right", 0), null);
-});
-
 test("the console's cluster numbers are the ones the cast shows, turned into a move's", () => {
   const cast = castOf("a", "bc");
   const into = R.targetFromShown(cast, "a", { cluster: 1 });
@@ -420,37 +394,11 @@ test("the console's cluster numbers are the ones the cast shows, turned into a m
   assert.throws(() => R.targetFromShown(cast, "a", { cluster: 3 }), /no cluster 3/);
 });
 
-test("‹ and ›: with others in the cluster, into the neighbour's near end, or a new cluster past the edge", () => {
-  const cast = castOf("a", "bc", "d");
-  const right = R.neighbourTarget(cast, "b", 1);
-  assert.deepEqual(right, { cluster: 2, index: 0, newCluster: false });
-  assert.equal(shape(R.placeEntries(cast, pick(cast, "b"), right)), "a|c|bd");
-  const left = R.neighbourTarget(cast, "b", -1);
-  assert.deepEqual(left, { cluster: 0, index: null, newCluster: false });
-  assert.equal(shape(R.placeEntries(cast, pick(cast, "b"), left)), "ab|c|d");
-  const edge = castOf("ab", "cd");
-  assert.deepEqual(R.neighbourTarget(edge, "a", -1), { cluster: 0, index: null, newCluster: true });
-  assert.equal(shape(R.placeEntries(edge, pick(edge, "a"), R.neighbourTarget(edge, "a", -1))), "a|b|cd");
-  assert.deepEqual(R.neighbourTarget(edge, "d", 1), { cluster: 2, index: null, newCluster: true });
-  assert.equal(shape(R.placeEntries(edge, pick(edge, "d"), R.neighbourTarget(edge, "d", 1))), "ab|c|d");
-});
-
-test("‹ and ›: alone, into the neighbour's near end, and nowhere past the edge", () => {
-  const cast = castOf("a", "b", "cd");
-  const right = R.neighbourTarget(cast, "b", 1);
-  assert.deepEqual(right, { cluster: 1, index: 0, newCluster: false }, "counted without b, cd is cluster 1");
-  assert.equal(shape(R.placeEntries(cast, pick(cast, "b"), right)), "a|bcd");
-  const left = R.neighbourTarget(cast, "b", -1);
-  assert.deepEqual(left, { cluster: 0, index: null, newCluster: false });
-  assert.equal(shape(R.placeEntries(cast, pick(cast, "b"), left)), "ab|cd");
-  assert.equal(R.neighbourTarget(cast, "a", -1), null);
-  assert.equal(R.neighbourTarget(castOf("ab", "c"), "c", 1), null);
-  assert.equal(R.neighbourTarget(castOf("a"), "a", 1), null);
-});
-
-test("‹ and › move the party together", () => {
-  const cast = castOf("a", "bc");
-  assert.equal(shape(R.placeEntries(cast, pick(cast, "bc"), R.neighbourTarget(cast, ["b", "c"], -1))), "abc");
+test("the party, split across clusters, gathers as one block where it's asked to stand", () => {
+  const cast = castOf("ab", "cd");
+  const to = R.targetFromShown(cast, ["b", "c"], { cluster: 0 });
+  assert.equal(shape(R.placeEntries(cast, pick(cast, "bc"), to)), "abc|d");
+  assert.equal(shape(R.placeEntries(cast, pick(cast, "bc"), R.targetFromShown(cast, ["b", "c"], { cluster: 1, index: 0 }))), "a|bcd");
 });
 
 test("who stands in front: the leftmost left of the middle and in it, the rightmost right of it", () => {

@@ -43,16 +43,9 @@
 .vn-stage .vn-cast-list li { border-radius: 4px; padding-left: 0.2rem; padding-right: 0.2rem; }
 .vn-stage .vn-cast-list li.on-stage { background: color-mix(in srgb, var(--color-warm-2, #c9593f) 24%, transparent); box-shadow: inset 3px 0 0 var(--color-warm-2, #c9593f); }
 .vn-stage .vn-cast-list li.on-stage .vn-name { font-weight: bold; }
-.vn-stage .vn-toggles { display: inline-flex; flex: none; }
-.vn-stage .vn-toggles .vn-toggle { border-radius: 0; margin: 0; min-width: 3.1rem; }
-.vn-stage .vn-toggles .vn-toggle:first-child { border-radius: 4px 0 0 4px; }
-.vn-stage .vn-toggles .vn-toggle:last-child { border-radius: 0 4px 4px 0; }
-.vn-stage .vn-toggles .vn-toggle + .vn-toggle { border-left-width: 0; }
-.vn-stage .vn-toggles .vn-toggle.active { background: var(--color-warm-2, #c9593f); border-color: var(--color-warm-2, #c9593f); color: #fff; }
-.vn-stage .vn-toggles .vn-toggle:disabled { opacity: 0.45; }
-/* On stage, ‹ n › takes the same width as Left / Right, so rows don't shift. */
-.vn-stage .vn-toggles .vn-toggle.vn-step { min-width: 1.55rem; width: 1.55rem; padding: 0; }
-.vn-stage .vn-toggles .vn-toggle.vn-cluster { width: 3.1rem; }
+/* On stage, a small × takes the character (or the whole party) off. */
+.vn-stage .vn-cast-list li .vn-row-remove { flex: none; width: 1.6rem; min-width: 0; height: 1.6rem; min-height: 0; margin: 0; padding: 0; line-height: 1; border: none; background: none; opacity: 0.6; }
+.vn-stage .vn-cast-list li .vn-row-remove:hover { opacity: 1; background: color-mix(in srgb, var(--color-warm-2, #c9593f) 32%, transparent); }
 
 /* Adjust window */
 .vn-adjust .vn-adjust-body { padding: 0.5rem 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }

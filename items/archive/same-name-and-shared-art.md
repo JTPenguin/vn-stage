@@ -1,8 +1,9 @@
 ---
-title: "Actors with the same name or shared art"
+title: Actors with the same name or shared art
 kind: work
-status: in-progress
-waits_on: Justin
+status: done
+waits_on: none
+outcome: "Built in fc2402a; Justin marked it done on 2026-11-16."
 priority: 🔽
 blocked_by: []
 source: "Justin, 2026-11-02: add an item to decide how to handle multiple actors with the same name or that share art; decided with Justin, 2026-11-13; details settled and built, 2026-11-16"

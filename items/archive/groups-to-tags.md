@@ -1,8 +1,9 @@
 ---
 title: Replace groups with tags
 kind: feature
-status: in-progress
-waits_on: Justin
+status: done
+waits_on: none
+outcome: "Built in fa6ba9c; Justin marked it done on 2026-11-16."
 priority: 🔼
 blocked_by: []
 source: Justin's list, 2026-10-30; planned with Justin, 2026-11-16

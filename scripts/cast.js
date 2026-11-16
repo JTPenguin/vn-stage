@@ -2,7 +2,7 @@ import { MODULE } from "./constants.js";
 import { noteRecent } from "./tags.js";
 import { baseArtKeyOf } from "./art.js";
 import { takePending } from "./pending.js";
-import { orderMembers, compactClusters, clustersFromSides, clusterCount, castWithout, placeEntries, resolveCluster, innerIndex, joinIndex, targetFromShown, isEntryFor } from "./rules.js";
+import { orderMembers, compactClusters, clustersFromSides, placeEntries, targetFromShown, isEntryFor } from "./rules.js";
 
 /**
  * The cast is the source of truth for who stands on a stage: a scene flag
@@ -16,8 +16,7 @@ import { orderMembers, compactClusters, clustersFromSides, clusterCount, castWit
  * key. Each actor, and each art alone, stands on a stage once. Characters stand in one or
  * more clusters across the stage: `cluster` counts from 0, left to right, and
  * each cluster's members are listed left to right (the rules are in rules.js).
- * The console API still takes `side: "left"|"right"` for the leftmost and
- * rightmost cluster. Party members are ordinary entries; The Party is only a
+ * Party members are ordinary entries; The Party is only a
  * shortcut that adds, gathers or removes all of the system's party members
  * (PF2e's party actor) at once. Each stage remembers the order its party
  * members last stood in (scene flag `partyOrder`, actor ids), for the next time
@@ -105,23 +104,21 @@ function requireGM() {
 }
 
 /**
- * Put a character on the stage, in `cluster` (or the older `side`) at place
- * `index` from the left (null: the cluster's right end); `newCluster` starts a
- * cluster there. Numbers are the ones the cast shows (getCast). Already in that
- * cluster, with no place given? Nothing changes. A drop or a ‹ › passes
- * `target` instead, counted without the character (placeEntries in rules.js).
+ * Put a character on the stage, in `cluster` at place `index` from the left
+ * (null: the cluster's right end); `newCluster` starts a cluster there.
+ * Numbers are the ones the cast shows (getCast). Already in that cluster, with
+ * no place given? Nothing changes. A drop passes `target` instead, counted without the character (placeEntries in rules.js).
  * With no `actorUuid` at all (the console), the one world actor with that name
  * is linked, so its owners control it; `actorUuid: null` means art alone.
  */
-export async function addToCast({ name, actorUuid, cluster = null, side = null, index = null, newCluster = false, target = null, scene = canvas.scene }) {
+export async function addToCast({ name, actorUuid, cluster = 0, index = null, newCluster = false, target = null, scene = canvas.scene }) {
   requireGM();
   if (actorUuid === undefined) actorUuid = actorNamed(name);
   const cast = getCast(scene);
   const existing = findEntry(cast, { name, actorUuid });
   if (!target) {
-    const shown = resolveCluster({ cluster, side, newCluster }, clusterCount(cast));
-    if (existing && index === null && !newCluster && shown === existing.cluster) return;
-    target = targetFromShown(cast, existing ? [existing.id] : [], { cluster: shown, index, newCluster });
+    if (existing && index === null && !newCluster && cluster === existing.cluster) return;
+    target = targetFromShown(cast, existing ? [existing.id] : [], { cluster, index, newCluster });
   }
   // Art alone arrives with any form or expression chosen for it off stage.
   const entry = existing ?? { id: foundry.utils.randomID(), name, actorUuid, ...(actorUuid ? {} : takePending(name)) };
@@ -131,40 +128,22 @@ export async function addToCast({ name, actorUuid, cluster = null, side = null, 
 }
 
 /**
- * Put every party member in `cluster` (a number, or "left" / "right" for the
- * leftmost or rightmost), numbered as the cast shows (getCast). With no
- * `index` (the Cast list's toggle), members already there stay where they
- * stand and the rest join at its end nearest the middle (with one cluster,
- * Left joins at its left end). With an `index` or `newCluster`, or a drop's
- * `target` (counted without them), they all gather there as one block. Either
- * way they come in the stage's remembered order.
+ * Gather every party member in `cluster`, numbered as the cast shows
+ * (getCast), at place `index` from the left (null: its right end);
+ * `newCluster` starts one there. A drop passes `target` instead, counted
+ * without them. They stand together as one block, in the stage's remembered
+ * order.
  */
 export async function addParty(cluster = 0, { index = null, newCluster = false, target = null, scene = canvas.scene } = {}) {
   requireGM();
-  const side = typeof cluster === "string" ? cluster : null;
-  const number = side ? null : cluster;
   const members = orderedMembers(scene.getFlag(MODULE, "partyOrder") ?? []);
   if (!members.length) return ui.notifications.info(`VN Stage | ${PARTY_LABEL} has nobody in it.`);
   const cast = getCast(scene);
   const entryOf = (a) => cast.find((e) => e.actorUuid === a.uuid);
-  const idsOf = (list) => list.map(entryOf).filter(Boolean).map((e) => e.id);
-  let moving = members;
-  if (!target && index === null && !newCluster) {
-    const here = resolveCluster({ cluster: number, side }, clusterCount(cast));
-    moving = members.filter((a) => entryOf(a)?.cluster !== here);
-    // Counted without the members who move, the cluster may have a new number (or be a new one).
-    const rest = castWithout(cast, idsOf(moving));
-    const n = clusterCount(rest);
-    const stays = cast.find((e) => e.cluster === here);
-    const c = stays ? rest.find((e) => e.id === stays.id).cluster : n;
-    target = { cluster: c, index: side && n === 1 ? joinIndex(side, n) : innerIndex(c, n), newCluster: !stays };
-  } else if (!target) {
-    const shown = resolveCluster({ cluster: number, side, newCluster }, clusterCount(cast));
-    target = targetFromShown(cast, idsOf(members), { cluster: shown, index, newCluster });
-  }
-  const entries = moving.map((a) => entryOf(a) ?? memberEntry(a, target.cluster));
+  target ??= targetFromShown(cast, members.map(entryOf).filter(Boolean).map((e) => e.id), { cluster, index, newCluster });
+  const entries = members.map((a) => entryOf(a) ?? memberEntry(a, target.cluster));
   const next = placeEntries(cast, entries, target);
-  const keys = await Promise.all(moving.map(async (a) => (await baseArtKeyOf({ name: a.name, actorUuid: a.uuid })) ?? a.name));
+  const keys = await Promise.all(members.map(async (a) => (await baseArtKeyOf({ name: a.name, actorUuid: a.uuid })) ?? a.name));
   await noteRecent(keys);
   return saveCast(scene, next);
 }
@@ -204,15 +183,12 @@ export async function moveEntry(ids, target, { scene = canvas.scene } = {}) {
 }
 
 /**
- * Move a character to `cluster` (a number as the cast shows it, or "left" /
- * "right"), at place `index` from the left; `newCluster` starts one there.
+ * Move a character to `cluster` (a number as the cast shows it), at place
+ * `index` from the left; `newCluster` starts one there.
  */
 export async function moveToCluster(id, cluster, { index = null, newCluster = false, scene = canvas.scene } = {}) {
   requireGM();
-  const side = typeof cluster === "string" ? cluster : null;
-  const cast = getCast(scene);
-  const shown = resolveCluster({ cluster: side ? null : cluster, side, newCluster }, clusterCount(cast));
-  return moveEntry(id, targetFromShown(cast, id, { cluster: shown, index, newCluster }), { scene });
+  return moveEntry(id, targetFromShown(getCast(scene), id, { cluster, index, newCluster }), { scene });
 }
 
 /** Replace the whole cast (a preset). New characters get new ids; ones already on stage keep theirs. */
@@ -231,37 +207,6 @@ export async function setCast(entries, { scene = canvas.scene } = {}) {
 export async function removeFromCast(id, { scene = canvas.scene } = {}) {
   requireGM();
   return saveCast(scene, getCast(scene).filter((e) => e.id !== id));
-}
-
-/**
- * The old switch between sides: from the leftmost cluster to the rightmost, at
- * its end nearest the middle (a new cluster at the right edge when there's only
- * one); from any other cluster to the end of the leftmost.
- */
-export async function switchSide(id, { scene = canvas.scene } = {}) {
-  requireGM();
-  const cast = getCast(scene);
-  const entry = cast.find((e) => e.id === id);
-  if (!entry) return;
-  const count = clusterCount(castWithout(cast, id));
-  const target = entry.cluster !== 0 ? { cluster: 0, index: null }
-    : clusterCount(cast) === 1 ? { cluster: count, newCluster: true }
-      : { cluster: count - 1, index: innerIndex(count - 1, count) };
-  return saveCast(scene, placeEntries(cast, [entry], target));
-}
-
-/** Move a character one place left (-1) or right (+1) within their cluster. */
-export async function moveInCluster(id, step, { scene = canvas.scene } = {}) {
-  requireGM();
-  const cast = getCast(scene);
-  const entry = cast.find((e) => e.id === id);
-  if (!entry) return;
-  const cluster = cast.filter((e) => e.cluster === entry.cluster);
-  const other = cluster[cluster.indexOf(entry) + step];
-  if (!other) return;
-  const i = cast.indexOf(entry), j = cast.indexOf(other);
-  [cast[i], cast[j]] = [cast[j], cast[i]];
-  return saveCast(scene, cast);
 }
 
 export async function clearCast({ scene = canvas.scene } = {}) {

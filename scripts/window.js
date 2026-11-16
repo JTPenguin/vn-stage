@@ -1,7 +1,6 @@
 import { MODULE } from "./constants.js";
 import { artIndex } from "./art.js";
-import { getCast, findEntry, addToCast, addParty, removeParty, clearCast, partyEntryIds, removeFromCast, moveEntry, hasParty } from "./cast.js";
-import { neighbourTarget, clusterCount, joinIndex } from "./rules.js";
+import { getCast, findEntry, removeParty, clearCast, partyEntryIds, removeFromCast, hasParty } from "./cast.js";
 import { setWindowDrag } from "./interact.js";
 import { openCastMenu } from "./menu.js";
 import { castEntryFor, partyRow, castLists, rowContext, presetRows, backgroundStrips } from "./window-data.js";
@@ -32,8 +31,6 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       makeStage: StageWindow.#onMakeStage,
       browseBackground: StageWindow.#onBrowseBackground,
       setBackground: StageWindow.#onSetBackground,
-      add: StageWindow.#onAdd,
-      move: StageWindow.#onMove,
       remove: StageWindow.#onRemove,
       refreshCast: StageWindow.#onRefreshCast,
       toggleSection: StageWindow.#onToggleSection,
@@ -42,8 +39,6 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       pickTag: StageWindow.#onPickTag,
       resetExpressions: StageWindow.#onResetExpressions,
       clearStage: StageWindow.#onClearStage,
-      addParty: StageWindow.#onAddParty,
-      moveParty: StageWindow.#onMoveParty,
       removeParty: StageWindow.#onRemoveParty,
       savePreset: StageWindow.#onSavePreset,
       loadPreset: StageWindow.#onLoadPreset,
@@ -251,29 +246,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     await setBackground(target.dataset.src);
   }
 
-  /**
-   * Off stage, Left / Right: join the leftmost or rightmost cluster at its end
-   * nearest the middle (with one cluster, Left joins its left end and Right
-   * its right end). Shift-click starts a new cluster at that edge.
-   */
-  static async #onAdd(event, target) {
-    const row = this.#rows.get(target.closest("[data-row]").dataset.row);
-    if (!row) return;
-    const side = target.dataset.side;
-    const entry = castEntryFor(row);
-    const index = event.shiftKey ? null : joinIndex(side, clusterCount(getCast()));
-    await addToCast({ name: entry?.name ?? row.name, actorUuid: row.actorUuid, side, index, newCluster: event.shiftKey });
-  }
-
-  /** On stage, ‹ / ›: into the neighbouring cluster, or a new one past the edge. */
-  static async #onMove(_event, target) {
-    const row = this.#rows.get(target.closest("[data-row]").dataset.row);
-    const entry = row && castEntryFor(row);
-    const to = entry && neighbourTarget(getCast(), entry.id, Number(target.dataset.dir));
-    if (to) await moveEntry(entry.id, to);
-  }
-
-  /** On stage, the lit cluster number: take the character off. */
+  /** On stage, ×: take the character off. */
   static async #onRemove(_event, target) {
     const row = this.#rows.get(target.closest("[data-row]").dataset.row);
     const entry = row && castEntryFor(row);
@@ -322,19 +295,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     await resetAllExpressions();
   }
 
-  /** The Party's Left / Right: gather every member in the leftmost or rightmost cluster (shift-click: a new cluster at that edge). */
-  static async #onAddParty(event, target) {
-    await addParty(target.dataset.side, { newCluster: event.shiftKey });
-  }
-
-  /** The Party's ‹ / ›, once they stand together: move them all into the neighbouring cluster, or a new one past the edge. */
-  static async #onMoveParty(_event, target) {
-    const ids = partyEntryIds();
-    const to = neighbourTarget(getCast(), ids, Number(target.dataset.dir));
-    if (to) await moveEntry(ids, to);
-  }
-
-  /** The Party's lit cluster number: take them all off. */
+  /** The Party's ×: take every member off. */
   static async #onRemoveParty() {
     await removeParty();
   }
