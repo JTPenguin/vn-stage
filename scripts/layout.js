@@ -1,6 +1,6 @@
 import { MODULE, FRAME, PART, SIZE, LAYOUT, faceGuide } from "./constants.js";
 import { arrange, clusterCentres, shadeCut } from "./arrange.js";
-import { characterArt, artKeyOf } from "./art.js";
+import { characterArt, artKeyOf, prefsKeyOf } from "./art.js";
 import { getCast, characterPrefs } from "./cast.js";
 import { isStage } from "./stage.js";
 import { currentExpression } from "./expressions.js";
@@ -113,7 +113,7 @@ async function measure(entry) {
   const actor = entry.actorUuid ? fromUuidSync(entry.actorUuid) : null;
   const key = (await artKeyOf(entry)) ?? entry.name;
   const art = await characterArt(key);
-  const prefs = characterPrefs(key);
+  const prefs = characterPrefs(await prefsKeyOf(entry));
   const size = sizeOf(prefs, actor, art);
   const place = placementOf(prefs, art);
   const height = FRAME.height * place.scale * size.scale;

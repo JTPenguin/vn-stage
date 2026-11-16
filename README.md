@@ -63,7 +63,7 @@ Change any of these only with a step in `scripts/migrate.js` (bump `SCHEMA`), so
 | World setting | `presets` | `{ [id]: { name, tags, background, cast, saved } }`; cast entries carry `cluster` like the scene's, and may carry `partyMember` and `form` |
 | World setting | `recent` | `{ names }`: art keys, newest first (24) |
 | World setting | `artIndex` | `{ root, scanned, art: { [key]: art } }`: the art folder as the GM's screen last scanned it (paths relative to `root`), so players read art without browsing files. Rescanned every time the world loads, when the Art folder setting changes, and by the Stage window's refresh button |
-| World setting | `characterPrefs` | `{ [art key]: { flip, scale, yOffset, size, flying } }`. `scale` and `yOffset` are the actual values and replace the art file's; absent means the file's |
+| World setting | `characterPrefs` | `{ [art key]: { flip, scale, yOffset, size, flying } }`; an actor without art uses `actor:<id>` as its key. `scale` and `yOffset` are the actual values and replace the art file's; absent means the file's |
 | Client setting | `collapsed` | Which Stage window sections and folder strips this GM collapsed |
 | Client setting | `gmViewLock` | Whether this GM's view is locked to the stage like the players' |
 | Scene flag | `stage` | `{ version }`: the scene is a stage |
@@ -108,6 +108,15 @@ These rely on Foundry or PIXI behaviour that isn't a promised API. Check each on
 ## Keys to keep stable
 
 Saved choices (Flip, size, height), tags, Recent and VN art… links are keyed by the art folder's name under the art root (`Rahadin`, `Rahadin/forms/corrupted`). Form locks too. **Renaming a character's art folder loses them**; renaming actors is safe.
+
+## Actors with the same name, and shared art
+
+An actor's name is only a label. Every cast entry with an actor belongs to that actor, so two actors called "Guard" are two characters and can stand on a stage together. Each actor stands on a stage once.
+
+- **Different art for the same name:** give each its own art folder ("Guard (5-04)", with `label: "Guard"` in its `vn-stage.json` if the folder name shouldn't show). An actor whose portrait or token image lives in that folder finds it by itself, even when a plain "Guard" folder exists. Otherwise link it with VN art….
+- **Shared art:** point each actor at the one folder with VN art…. Foundry copies the link when it duplicates an actor. Actors that share art share Flip, size and height.
+- **In the Cast list,** rows with the same name show their art's label, and copies that share art also show the actor's sidebar folder.
+- **From the console,** `addToCast({ name })` links the one actor with that name. With several, pass `actorUuid`.
 
 ## Conventions
 

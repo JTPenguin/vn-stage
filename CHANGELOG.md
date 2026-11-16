@@ -12,6 +12,12 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 - **Portraits cast a soft shadow,** so characters stand out from the background. Two world settings, Portrait shadows (on by default) and Shadow strength (how dark), apply to every portrait. Each screen draws its own shadows, and they move and fade with their characters.
 
 ### Changed
+- **Actors with the same name are separate characters.** A cast entry with an actor now belongs to that actor alone, so two actors called "Guard" can stand on a stage together; before, adding the second moved the first. Each actor still stands on a stage once.
+  - **Art for a shared name:** an actor whose portrait or token image lives in another character's art folder now uses that folder, even when a folder with its own name exists. Two "Guard" actors with tokens from "Guard (5-04)" and "Guard (7-01)" each find their own art without a VN art… link. An actor whose images are in its own name's folder is unchanged.
+  - **The Cast list tells them apart:** rows with the same name show their art's label, and copies that share one art also show the actor's sidebar folder. Search finds both.
+  - **Art alone stays art alone:** adding an art-only row no longer links a world actor that happens to have that name.
+  - **Flip, size and height for an actor without art** are saved for that actor, not under its name. **A one-time upgrade (schema 5)** copies what each name held to every such actor.
+  - **Console API:** `addToCast({ name })` links an actor only when exactly one has that name; with several it warns and adds art alone, so pass `actorUuid`. `actorUuid: null` now means art alone.
 - **Tags replace groups.** A tag does what a group did: one name pulls together characters, backgrounds and presets, and the Stage window shows one tag at a time. Every group becomes a tag with everything it held.
   - **Tags…** (right-click a character, a preset or a background) opens one small window: the thing's tags as chips with ×, and a field to type more. Enter adds a tag, and makes it if it's new. It saves at once, and the window stays open and turns to whatever Tags… is chosen on next. It replaces the Groups… checklists.
   - **Tags show on the things.** Cast rows show tag chips under All characters, Recent and in search results from outside the selected tag; clicking a chip shows that tag. Backgrounds and presets name their tags in their hover text. Searching the Cast list finds characters by tag too.

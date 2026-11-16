@@ -2,7 +2,7 @@ import { MODULE } from "./constants.js";
 import { noteRecent } from "./tags.js";
 import { baseArtKeyOf } from "./art.js";
 import { takePending } from "./pending.js";
-import { orderMembers, compactClusters, clustersFromSides, clusterCount, castWithout, placeEntries, resolveCluster, innerIndex, joinIndex, targetFromShown } from "./rules.js";
+import { orderMembers, compactClusters, clustersFromSides, clusterCount, castWithout, placeEntries, resolveCluster, innerIndex, joinIndex, targetFromShown, isEntryFor } from "./rules.js";
 
 /**
  * The cast is the source of truth for who stands on a stage: a scene flag
@@ -10,7 +10,10 @@ import { orderMembers, compactClusters, clustersFromSides, clusterCount, castWit
  * by `layout`, which the GM's screen runs whenever its own change to a cast
  * flag lands (module.js), so nothing here calls it.
  *
- * Entry: { id, name, actorUuid|null, cluster }. Characters stand in one or
+ * Entry: { id, name, actorUuid|null, cluster }. An entry with an actor is that
+ * actor's, whatever it's called: `name` is only a label, and two actors with
+ * one name are two characters. Art alone (no actor) goes by `name`, its art
+ * key. Each actor, and each art alone, stands on a stage once. Characters stand in one or
  * more clusters across the stage: `cluster` counts from 0, left to right, and
  * each cluster's members are listed left to right (the rules are in rules.js).
  * The console API still takes `side: "left"|"right"` for the leftmost and
@@ -71,9 +74,20 @@ export function getCast(scene = canvas.scene) {
   return compactClusters(clustersFromSides(foundry.utils.deepClone(scene?.getFlag(MODULE, "cast") ?? [])));
 }
 
-/** A character's entry in the cast: their actor's, or one with the same name. */
-export function findEntry(cast, { name, actorUuid = null }) {
-  return cast.find((e) => (actorUuid && e.actorUuid === actorUuid) || e.name === name) ?? null;
+/** A character's entry in the cast: their actor's, or for art alone (no actor) the art-only entry with that name. */
+export function findEntry(cast, who) {
+  return cast.find((e) => isEntryFor(e, who)) ?? null;
+}
+
+/**
+ * The actor a bare name stands for (the console: `addToCast({ name })`): the
+ * one world actor with that name. With several, none: the name alone can't
+ * say which, so it goes on as art alone.
+ */
+function actorNamed(name) {
+  const found = game.actors.filter((a) => a.name === name && a.type !== "party");
+  if (found.length > 1) console.warn(`VN Stage | ${found.length} actors are called "${name}"; pass actorUuid to say which. Added as art alone.`);
+  return found.length === 1 ? found[0].uuid : null;
 }
 
 /** Save the cast, its clusters numbered without gaps, remembering the order its party members stand in. */
@@ -96,11 +110,12 @@ function requireGM() {
  * cluster there. Numbers are the ones the cast shows (getCast). Already in that
  * cluster, with no place given? Nothing changes. A drop or a ‹ › passes
  * `target` instead, counted without the character (placeEntries in rules.js).
- * A world actor with the same name is linked, so its owners control it.
+ * With no `actorUuid` at all (the console), the one world actor with that name
+ * is linked, so its owners control it; `actorUuid: null` means art alone.
  */
-export async function addToCast({ name, actorUuid = null, cluster = null, side = null, index = null, newCluster = false, target = null, scene = canvas.scene }) {
+export async function addToCast({ name, actorUuid, cluster = null, side = null, index = null, newCluster = false, target = null, scene = canvas.scene }) {
   requireGM();
-  actorUuid ??= game.actors.getName(name)?.uuid ?? null;
+  if (actorUuid === undefined) actorUuid = actorNamed(name);
   const cast = getCast(scene);
   const existing = findEntry(cast, { name, actorUuid });
   if (!target) {
@@ -205,9 +220,8 @@ export async function setCast(entries, { scene = canvas.scene } = {}) {
   requireGM();
   // A character already on stage keeps their id, so their tile is updated in place instead of replaced (no fade out and in).
   const spare = getCast(scene);
-  const same = (a, b) => (a.actorUuid ? a.actorUuid === b.actorUuid : !b.actorUuid && a.name === b.name);
   const cast = entries.map((e) => {
-    const old = spare.findIndex((o) => same(o, e));
+    const old = spare.findIndex((o) => isEntryFor(o, e));
     const id = old >= 0 ? spare.splice(old, 1)[0].id : foundry.utils.randomID();
     return { ...foundry.utils.deepClone(e), id };
   });
@@ -255,13 +269,17 @@ export async function clearCast({ scene = canvas.scene } = {}) {
   return saveCast(scene, []);
 }
 
-/** Per-character choices that follow them to every stage (a world setting, by name). */
-export function characterPrefs(name) {
-  return game.settings.get(MODULE, "characterPrefs")[name] ?? {};
+/**
+ * Per-character choices that follow them to every stage: a world setting, by
+ * the key `prefsKeyOf` (art.js) gives a cast entry: its art key, or for an
+ * actor without art, "actor:<id>".
+ */
+export function characterPrefs(key) {
+  return game.settings.get(MODULE, "characterPrefs")[key] ?? {};
 }
 
-export function setFlip(name, flip) {
-  return setPrefs(name, { flip: !!flip });
+export function setFlip(key, flip) {
+  return setPrefs(key, { flip: !!flip });
 }
 
 /**
@@ -271,11 +289,11 @@ export function setFlip(name, flip) {
  * a choice, so the art's own applies again. `flying` keeps the character from
  * bringing up the bottom shade.
  */
-export async function setPrefs(name, patch) {
+export async function setPrefs(key, patch) {
   requireGM();
   const all = foundry.utils.deepClone(game.settings.get(MODULE, "characterPrefs"));
-  all[name] = { ...all[name], ...patch };
-  for (const [k, v] of Object.entries(patch)) if (v === null) delete all[name][k];
+  all[key] = { ...all[key], ...patch };
+  for (const [k, v] of Object.entries(patch)) if (v === null) delete all[key][k];
   // The viewed stage re-lays out when the setting lands (module.js); others catch up when next viewed.
   return game.settings.set(MODULE, "characterPrefs", all);
 }

@@ -6,7 +6,7 @@ import { ALL, RECENT, UNTAGGED, getTag, tagFolders, memberNames, listTags, backg
 import { folderLabel } from "./tags-window.js";
 import { esc } from "./dialogs.js";
 import { safetyBackground } from "./settings.js";
-import { neighbourTarget, familyOf } from "./rules.js";
+import { neighbourTarget, familyOf, isEntryFor, tellApart } from "./rules.js";
 
 /**
  * What the Stage window shows, worked out from the stage, the art and the
@@ -38,7 +38,7 @@ export async function castLists(index, scene, selected) {
 
 /** Does cast entry `e` stand for this Cast row? Its actor's entry, or for art alone, the art-only entry with its key. */
 function isRowEntry(row, e) {
-  return row.actorUuid ? e.actorUuid === row.actorUuid : !e.actorUuid && e.name === row.key;
+  return isEntryFor(e, { name: row.key, actorUuid: row.actorUuid });
 }
 
 /** The cast entry a row's toggles work on, read fresh (the row's own may be from the last render). */
@@ -67,22 +67,24 @@ export function partyRow(scene) {
  * Everyone the Cast list can offer: one row per world actor with VN art (so it
  * goes on stage linked, and its owners control its expression; several actors
  * can share one character's art), and one per character no actor uses (or that
- * stands on stage without an actor); forms have no rows of their own. Each row
- * knows its cast entry on stage, its cluster, and whether ‹ and › can move it.
+ * stands on stage without an actor); forms have no rows of their own. Actors
+ * that share a name are told apart by their art, then by their sidebar folder
+ * (tellApart in rules.js). Each row knows its cast entry on stage, its cluster,
+ * and whether ‹ and › can move it.
  */
 export async function castRows(index, cast) {
   const byKey = new Map(index.map((a) => [a.key, a]));
-  const keys = new Set(byKey.keys());
   const rows = [];
   const usedKeys = new Set();
   for (const actor of game.actors) {
     if (actor.type === "party") continue;
-    const key = await indexedActorKey(actor, keys);
+    const key = await indexedActorKey(actor);
     const art = key && byKey.get(key);
     if (!art) continue;
     usedKeys.add(key);
-    rows.push({ row: actor.uuid, key, name: actor.name, actorUuid: actor.uuid, label: actor.name, note: art.label !== actor.name ? art.label : null, thumb: art.thumb });
+    rows.push({ row: actor.uuid, key, name: actor.name, actorUuid: actor.uuid, label: actor.name, note: art.label !== actor.name ? art.label : null, artLabel: art.label, folder: folderPath(actor), thumb: art.thumb });
   }
+  tellApart(rows);
   const artOnlyOnStage = new Set(cast.filter((e) => !e.actorUuid).map((e) => e.name));
   for (const art of index) {
     if (usedKeys.has(art.key) && !artOnlyOnStage.has(art.key)) continue;
@@ -97,6 +99,13 @@ export async function castRows(index, cast) {
     r.canRight = !!r.entry && !!neighbourTarget(cast, r.entry.id, 1);
   }
   return rows;
+}
+
+/** An actor's sidebar folder, from the top: "Scenario 5 / Gatehouse" ("" outside any folder). */
+function folderPath(actor) {
+  const folder = actor.folder;
+  if (!folder) return "";
+  return [...(folder.ancestors ?? [])].reverse().concat(folder).map((f) => f.name).join(" / ");
 }
 
 const CHIPS = 2; // tag chips a Cast row has room for; the rest are counted

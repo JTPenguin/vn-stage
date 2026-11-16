@@ -1,7 +1,7 @@
 import { MODULE } from "./constants.js";
 import { partyMembers } from "./cast.js";
-import { upgradeCast, absolutePrefs, clustersFromSides, groupsToTags } from "./rules.js";
-import { characterArt, scanArtIfStale } from "./art.js";
+import { upgradeCast, absolutePrefs, clustersFromSides, groupsToTags, prefsByActor } from "./rules.js";
+import { characterArt, actorArt, scanArtIfStale } from "./art.js";
 import { isStage } from "./stage.js";
 import { layout } from "./layout.js";
 
@@ -27,14 +27,19 @@ import { layout } from "./layout.js";
  *              `tags`, the saved art index's `groups` to `tags`, and each
  *              stage's `group` flag to `tag`. The old settings are left as
  *              they were.
+ *   5          Character prefs of actors without art: kept under the actor
+ *              ("actor:<id>") instead of its name, so actors that share a name
+ *              keep their own (prefsByActor). Each such actor gets a copy of
+ *              what its name held; the name's own entry stays.
  */
-export const SCHEMA = 4;
+export const SCHEMA = 5;
 
 const STEPS = {
   1: toV1,
   2: toV2,
   3: toV3,
   4: toV4,
+  5: toV5,
 };
 
 /** Is an upgrade still to run in this world? (The GM's screen waits for it before laying out.) */
@@ -124,4 +129,16 @@ async function toV4() {
     if (scene.getFlag(MODULE, "tag") === undefined) await scene.setFlag(MODULE, "tag", group);
     await scene.unsetFlag(MODULE, "group");
   }
+}
+
+async function toV5() {
+  // Who has no art depends on the art index, so read the art folder first if it's missing or out of date.
+  await scanArtIfStale();
+  const all = game.settings.get(MODULE, "characterPrefs");
+  const artless = [];
+  for (const actor of game.actors) {
+    if (all[actor.name] && !(await actorArt(actor)).key) artless.push({ id: actor.id, name: actor.name });
+  }
+  const next = prefsByActor(all, artless);
+  if (JSON.stringify(next) !== JSON.stringify(all)) await game.settings.set(MODULE, "characterPrefs", next);
 }

@@ -865,3 +865,65 @@ test("shadows: the default strength lies in the slider's range and on one of its
   const steps = (SHADOW.strength - SHADOW.min) / SHADOW.step;
   assert.ok(Math.abs(steps - Math.round(steps)) < 1e-9);
 });
+
+/* -------------------------------------------- */
+/*  Same names, shared art                      */
+/* -------------------------------------------- */
+
+const hasArt = (...keys) => (k) => keys.includes(k);
+
+test("automatic art: a folder named like the actor, else the folder its images live in", () => {
+  assert.deepEqual(R.automaticKey("Mira Voss", [null, null, null], hasArt("Mira Voss")), { key: "Mira Voss", source: "name" });
+  assert.deepEqual(R.automaticKey("Captain", [null, "Mira Voss"], hasArt("Mira Voss")), { key: "Mira Voss", source: "images" });
+  assert.deepEqual(R.automaticKey("Nobody", [null], hasArt("Mira Voss")), { key: null, source: null });
+});
+
+test("automatic art: images in another character's folder beat the name, so two Guards find their own art", () => {
+  const has = hasArt("Guard", "Guard (5-04)", "Guard (7-01)");
+  assert.deepEqual(R.automaticKey("Guard", ["Guard (5-04)"], has), { key: "Guard (5-04)", source: "images" });
+  assert.deepEqual(R.automaticKey("Guard", [null, "Guard (7-01)"], has), { key: "Guard (7-01)", source: "images" });
+  assert.deepEqual(R.automaticKey("Guard", ["Guard"], has), { key: "Guard", source: "name" });
+});
+
+test("automatic art: images that are a form of the actor's own character keep its base art", () => {
+  const has = hasArt("Mira Voss", "Mira Voss/forms/corrupted");
+  assert.deepEqual(R.automaticKey("Mira Voss", ["Mira Voss/forms/corrupted"], has), { key: "Mira Voss", source: "name" });
+});
+
+test("a cast entry is matched by its actor alone; only art alone goes by name", () => {
+  const guardA = { name: "Guard", actorUuid: "Actor.a" }, guardB = { name: "Guard", actorUuid: "Actor.b" }, art = { name: "Guard", actorUuid: null };
+  assert.equal(R.isEntryFor(guardA, { name: "Guard", actorUuid: "Actor.a" }), true);
+  assert.equal(R.isEntryFor(guardA, { name: "Guard", actorUuid: "Actor.b" }), false, "another actor with the same name");
+  assert.equal(R.isEntryFor(guardA, { name: "Renamed", actorUuid: "Actor.a" }), true, "the name is only a label");
+  assert.equal(R.isEntryFor(guardB, { name: "Guard", actorUuid: null }), false, "art alone isn't an actor's entry");
+  assert.equal(R.isEntryFor(art, { name: "Guard" }), true);
+  assert.equal(R.isEntryFor(art, { name: "Guard", actorUuid: "Actor.a" }), false);
+});
+
+test("saved choices: by art key, else by actor, else by name", () => {
+  assert.equal(R.prefsKey("Guard (5-04)", "a1", "Guard"), "Guard (5-04)", "actors sharing art share choices");
+  assert.equal(R.prefsKey(null, "a1", "Bandit"), "actor:a1");
+  assert.equal(R.prefsKey(null, null, "Gone"), "Gone");
+});
+
+test("schema 5: a name's choices are copied to each actor of that name without art", () => {
+  const before = { Bandit: { flip: true }, "Mira Voss": { size: "lg" }, "actor:b2": { scale: 0.5 } };
+  const after = R.prefsByActor(before, [{ id: "b1", name: "Bandit" }, { id: "b2", name: "Bandit" }, { id: "x", name: "Unset" }]);
+  assert.deepEqual(after, { Bandit: { flip: true }, "Mira Voss": { size: "lg" }, "actor:b1": { flip: true }, "actor:b2": { scale: 0.5 } });
+  assert.deepEqual(before, { Bandit: { flip: true }, "Mira Voss": { size: "lg" }, "actor:b2": { scale: 0.5 } }, "the input is left alone");
+  assert.deepEqual(R.prefsByActor(after, [{ id: "b1", name: "Bandit" }]), after, "running it again changes nothing");
+});
+
+test("Cast rows with one name: told apart by art, then by the actor's folder", () => {
+  const row = (label, artLabel, folder = "", note = artLabel !== label ? artLabel : null) => ({ label, note, artLabel, folder });
+  const rows = R.tellApart([
+    row("Guard", "Guard (5-04)", "Scenario 5"), row("Guard", "Guard (7-01)", "Scenario 7"),
+    row("Cultist", "Cultist", "Scenario 5 / Crypt"), row("Cultist", "Cultist", "Scenario 6"), row("Cultist", "Cultist"),
+    row("Mira Voss", "Mira Voss", "PCs"), row("Captain", "Mira Voss", "NPCs"),
+  ]);
+  assert.deepEqual(rows.map((r) => r.note), [
+    "Guard (5-04)", "Guard (7-01)",
+    "Cultist · Scenario 5 / Crypt", "Cultist · Scenario 6", "Cultist",
+    null, "Mira Voss",
+  ]);
+});

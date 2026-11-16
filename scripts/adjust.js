@@ -1,4 +1,4 @@
-import { artKeyOf, characterArt } from "./art.js";
+import { artKeyOf, prefsKeyOf, characterArt } from "./art.js";
 import { MODULE, FRAME, SIZE_CHOICES, faceGuide } from "./constants.js";
 import { getCast, characterPrefs, setPrefs, displayName } from "./cast.js";
 import { placements } from "./layout.js";
@@ -34,16 +34,17 @@ export class AdjustWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!entry) return;
     const key = (await artKeyOf(entry)) ?? entry.name;
     AdjustWindow.#open?.close();
-    AdjustWindow.#open = new AdjustWindow({ entry, key });
+    AdjustWindow.#open = new AdjustWindow({ entry, key, prefsKey: await prefsKeyOf(entry) });
     return AdjustWindow.#open.render({ force: true });
   }
 
-  /** `key`: the character's art key, which owns the saved choices. */
-  constructor({ entry, key, ...options }) {
+  /** `key`: the character's art key. `prefsKey`: what its saved choices are kept under (the art key, or the actor for one without art). */
+  constructor({ entry, key, prefsKey = key, ...options }) {
     super({ id: `vn-stage-adjust-${entry.id}`, ...options });
     this.entry = entry;
     this.key = key;
-    this.#save = foundry.utils.debounce((patch) => setPrefs(this.key, patch), 120);
+    this.prefsKey = prefsKey;
+    this.#save = foundry.utils.debounce((patch) => setPrefs(this.prefsKey, patch), 120);
   }
 
   #save;
@@ -56,7 +57,7 @@ export class AdjustWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   async _prepareContext() {
-    const p = characterPrefs(this.key);
+    const p = characterPrefs(this.prefsKey);
     const art = await characterArt(this.key);
     this.#own = artDefaults(art);
     const place = placementOf(p, art);
@@ -85,10 +86,10 @@ export class AdjustWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       }
     }
     this.element.querySelector("select[name=size]")?.addEventListener("change", (event) => {
-      setPrefs(this.key, { size: event.target.value || null });
+      setPrefs(this.prefsKey, { size: event.target.value || null });
     });
     this.element.querySelector("input[name=flying]")?.addEventListener("change", (event) => {
-      setPrefs(this.key, { flying: event.target.checked || null });
+      setPrefs(this.prefsKey, { flying: event.target.checked || null });
     });
     if (!this.#onLayout) {
       this.#onLayout = Hooks.on(`${MODULE}.layout`, () => drawGuide(this.entry.id));
@@ -117,7 +118,7 @@ export class AdjustWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async #onReset() {
-    await setPrefs(this.key, { scale: null, yOffset: null }); // back to the art file's own scale and height
+    await setPrefs(this.prefsKey, { scale: null, yOffset: null }); // back to the art file's own scale and height
     this.render();
   }
 

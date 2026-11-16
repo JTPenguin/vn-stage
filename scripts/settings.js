@@ -120,7 +120,7 @@ export function registerSettings({ onArtRootChange = () => {}, onGmViewLockChang
     default: {},
   });
 
-  // Per-character choices that follow them to every stage, by name (e.g. { "Ambrus Valsin": { flip: true } }).
+  // Per-character choices that follow them to every stage, by art key, or "actor:<id>" for an actor without art (e.g. { "Ambrus Valsin": { flip: true } }).
   game.settings.register(MODULE, "characterPrefs", {
     scope: "world",
     config: false,

@@ -267,6 +267,75 @@ export function familyOf(key) {
   return i === -1 ? key : key.slice(0, i);
 }
 
+/**
+ * The art key an actor finds by itself (no VN art… link). A folder named like
+ * the actor wins, unless the actor's own images (`imageKeys`: the art keys its
+ * portrait, token and ring subject belong to, null for none) lie in another
+ * character's folder: then the images win. Two actors called "Guard" each
+ * find their own art that way ("Guard (5-04)"), while an actor whose images
+ * are a form of its own character keeps the character's base art.
+ * `has(key)`: is there art with this key? Returns { key, source }: "name",
+ * "images", or both null.
+ */
+export function automaticKey(name, imageKeys, has) {
+  const named = has(name) ? name : null;
+  const image = imageKeys.find((k) => k && has(k)) ?? null;
+  if (image && (!named || familyOf(image) !== familyOf(named))) return { key: image, source: "images" };
+  if (named) return { key: named, source: "name" };
+  return { key: null, source: null };
+}
+
+/**
+ * Does cast entry `e` stand for this character ({ name, actorUuid })? An actor
+ * is matched by actor alone, so actors that share a name stay apart. Only art
+ * alone (no actor) goes by its name, which is its art key.
+ */
+export function isEntryFor(e, { name, actorUuid = null }) {
+  return actorUuid ? e.actorUuid === actorUuid : !e.actorUuid && e.name === name;
+}
+
+/**
+ * What a character's saved choices (flip, size, height) are kept under: its
+ * art key, so actors that share art share them; without art, the actor itself
+ * ("actor:<id>"), so actors that only share a name don't; and for art alone
+ * whose art is gone, its name.
+ */
+export function prefsKey(artKey, actorId, name) {
+  return artKey ?? (actorId ? `actor:${actorId}` : name);
+}
+
+/**
+ * Schema 5: choices saved under a name move to each actor of that name that
+ * has no art (`actors`: [{ id, name }]). The name's own stay, for art alone.
+ */
+export function prefsByActor(prefs, actors) {
+  const next = { ...prefs };
+  for (const a of actors) {
+    const key = prefsKey(null, a.id);
+    if (prefs[a.name] && !next[key]) next[key] = { ...prefs[a.name] };
+  }
+  return next;
+}
+
+/**
+ * Notes that tell Cast rows with the same label apart (`rows`: [{ label,
+ * note, artLabel, folder }], changed in place). Each shows its art's label;
+ * rows that still read the same (copies sharing one art) add the actor's
+ * folder. Rows with a label of their own keep their note.
+ */
+export function tellApart(rows) {
+  const groups = new Map();
+  for (const r of rows) groups.set(r.label, [...(groups.get(r.label) ?? []), r]);
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    for (const r of group) {
+      const twins = group.filter((o) => o.artLabel === r.artLabel).length > 1;
+      r.note = [r.artLabel, twins ? r.folder : null].filter(Boolean).join(" · ") || null;
+    }
+  }
+  return rows;
+}
+
 /** The forms a user may see in the menu: all of them for the GM, for others only those not locked (`forms`: [{ key, … }], `locked`: art keys). */
 export function visibleForms(forms, locked, { isGM = false } = {}) {
   return isGM ? forms : forms.filter((f) => !(locked ?? []).includes(f.key));

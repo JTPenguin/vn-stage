@@ -1,4 +1,4 @@
-import { characterArt, artKeyOf, baseArtKeyOf, formsFor, lockedForms } from "./art.js";
+import { characterArt, artKeyOf, baseArtKeyOf, prefsKeyOf, formsFor, lockedForms } from "./art.js";
 import { visibleForms } from "./rules.js";
 import { ArtPicker } from "./art-picker.js";
 import { characterPrefs, setFlip, removeFromCast, displayName } from "./cast.js";
@@ -49,7 +49,7 @@ export async function openMenu(entry, clientX, clientY) {
   const locked = lockedForms(entry);
   const forms = visibleForms(await formsFor(key), locked, { isGM: game.user.isGM });
   const name = entry.actorUuid ? displayName(entry) : (await characterArt(baseKey))?.label ?? entry.name;
-  const actions = game.user.isGM ? await gmActions(onStage ? entry : null, key, baseKey) : [];
+  const actions = game.user.isGM ? await gmActions(onStage ? entry : null, await prefsKeyOf(entry), baseKey) : [];
   if (expressions.length < 2 && !forms.some((f) => f.key !== key) && !actions.length) return;
   const current = currentExpression(entry);
   if (mine !== closes) return;
@@ -115,7 +115,7 @@ export async function openMenu(entry, clientX, clientY) {
 }
 
 /** The GM's row: what this character (or party member) can have done to them. Off stage (no `entry`), only Flip and Tags…. */
-async function gmActions(entry, key, baseKey = key) {
+async function gmActions(entry, key, baseKey) {
   const flip = !!characterPrefs(key).flip;
   const actions = [{ label: "Flip", icon: "fa-solid fa-left-right", active: flip, run: () => setFlip(key, !flip) }];
   if (entry) actions.push({ label: "Adjust size and height", icon: "fa-solid fa-sliders", run: () => AdjustWindow.open(entry.id) });

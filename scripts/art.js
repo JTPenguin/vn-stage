@@ -1,6 +1,6 @@
 import { MODULE } from "./constants.js";
 import { artRoot } from "./settings.js";
-import { normaliseArt, familyOf, stable } from "./rules.js";
+import { normaliseArt, familyOf, stable, automaticKey, prefsKey } from "./rules.js";
 
 export { familyOf };
 
@@ -16,7 +16,8 @@ export { familyOf };
  * with paths relative to `root`. Every screen reads art from that setting, so
  * players never browse folders. Saved choices (flip, scale, height, size) and
  * tags belong to the key, not to an actor, so renaming an actor
- * loses nothing.
+ * loses nothing, and actors that share art share them. An actor's name is
+ * only a label: two actors can share one.
  */
 
 let memo = null; // { source: the setting's value, root, byKey: Map, list: Art[] }
@@ -166,6 +167,10 @@ export async function scanArtIfStale() {
  * ("Mira Voss/forms/twin-blades/token-combat.webp") gives its character's key.
  */
 export async function artKeyFromPath(path) {
+  return keyFromPath(path);
+}
+
+function keyFromPath(path) {
   const { root, byKey } = loaded();
   if (!root || !path) return null;
   const src = decode(path);
@@ -192,10 +197,9 @@ export async function artKeyOf(entry) {
 
 /**
  * The art key a cast entry has before any form is chosen. Art-only entries
- * carry it as their name. An actor's comes from, in order: the link set with
- * VN art… (an actor flag), a folder named like the actor, the actor's own
- * images (portrait, token, ring subject) when they live in the art folder.
- * Null when nothing matches.
+ * carry it as their name. An actor's comes from the link set with VN art…
+ * (an actor flag), else what it finds by itself (`automaticArt`). Null when
+ * nothing matches.
  */
 export async function baseArtKeyOf(entry) {
   if (!entry.actorUuid) return entry.name;
@@ -244,29 +248,29 @@ export async function actorArt(actor) {
   return automaticArt(actor);
 }
 
-/** The key an actor would have without a VN art… link. */
+/**
+ * The key an actor would have without a VN art… link: a folder named like the
+ * actor, or the folder its own images (portrait, token, ring subject) live in.
+ * Images in another character's folder beat the name (automaticKey in rules.js).
+ */
 export async function automaticArt(actor) {
-  if (await characterArt(actor.name)) return { key: actor.name, source: "name" };
+  const { byKey } = loaded();
   const token = actor.prototypeToken;
-  for (const src of [actor.img, token?.texture?.src, token?.ring?.subject?.texture]) {
-    const key = await artKeyFromPath(src);
-    if (key) return { key, source: "images" };
-  }
-  return { key: null, source: null };
+  const images = [actor.img, token?.texture?.src, token?.ring?.subject?.texture].map(keyFromPath);
+  return automaticKey(actor.name, images, (k) => byKey.has(k));
+}
+
+/** `actorArt`'s key for listing every world actor (GM), null when it has no art in the index. */
+export async function indexedActorKey(actor) {
+  const { key } = await actorArt(actor);
+  return key && loaded().byKey.has(key) ? key : null;
 }
 
 /**
- * `actorArt`'s key for listing every world actor (GM): `keys` is the set of art
- * index keys.
+ * What a cast entry's saved choices (flip, size, height) are kept under: the
+ * art key it shows, else its actor (prefsKey in rules.js).
  */
-export async function indexedActorKey(actor, keys) {
-  const linked = actor.getFlag(MODULE, "art");
-  if (linked) return keys.has(linked) ? linked : null;
-  if (keys.has(actor.name)) return actor.name;
-  const token = actor.prototypeToken;
-  for (const src of [actor.img, token?.texture?.src, token?.ring?.subject?.texture]) {
-    const key = await artKeyFromPath(src);
-    if (key) return key;
-  }
-  return null;
+export async function prefsKeyOf(entry) {
+  const actor = entry.actorUuid ? fromUuidSync(entry.actorUuid) : null;
+  return prefsKey(await artKeyOf(entry), actor?.id ?? null, entry.name);
 }
