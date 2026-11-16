@@ -1,4 +1,4 @@
-<div class="vn-stage-body {{#if tabbed}}vn-tabbed{{/if}}">
+<div class="vn-stage-body">
   {{#unless stage}}
   <section class="vn-section">
     <p>{{#if sceneName}}<strong>{{sceneName}}</strong> isn't a stage yet.{{else}}No scene is being viewed.{{/if}}</p>
@@ -21,7 +21,6 @@
     <button type="button" class="vn-icon" data-action="manageTags" data-tooltip="Manage tags: rename, merge, delete, folders"><i class="fa-solid fa-gear"></i></button>
   </section>
 
-  {{#if tabbed}}
   <div class="vn-tabrow">
     <nav class="tabs vn-tabs" data-group="main" aria-label="Stage window tabs">
       <a data-action="tab" data-group="main" data-tab="cast" class="{{tabs.cast.cssClass}}">Cast</a>
@@ -34,15 +33,8 @@
       <button type="button" class="vn-icon" data-action="clearStage" data-tooltip="Clear the stage: take everyone off" {{#unless anyoneOnStage}}disabled{{/unless}}><i class="fa-solid fa-broom"></i></button>
     </span>
   </div>
-  {{/if}}
 
-  <section class="vn-section vn-presets {{#if tabbed}}tab {{tabs.presets.cssClass}}{{else if collapsed.presets}}collapsed{{/if}}" data-section="presets" {{#if tabbed}}data-group="main" data-tab="presets"{{/if}}>
-    {{#unless tabbed}}
-    <h3 data-action="toggleSection"><i class="fa-solid fa-chevron-down vn-chevron"></i> Presets
-      {{#if changedPreset}}<button type="button" class="vn-preset-update" data-action="updatePreset" data-preset="{{changedPreset.id}}" data-tooltip="Update {{changedPreset.name}}: save what's on stage now over it"><i class="fa-solid fa-floppy-disk"></i> Update</button>{{/if}}
-      <button type="button" class="vn-icon {{#unless changedPreset}}vn-push{{/unless}}" data-action="savePreset" data-tooltip="Save stage as preset{{#if tag}} tagged {{tag.label}}{{/if}}"><i class="fa-solid fa-plus"></i></button>
-    </h3>
-    {{/unless}}
+  <section class="vn-section vn-presets tab {{tabs.presets.cssClass}}" data-group="main" data-tab="presets">
     <ul class="vn-preset-list">
       {{#each presets}}
       <li data-preset="{{id}}" data-name="{{name}}">
@@ -56,8 +48,7 @@
     </ul>
   </section>
 
-  <section class="vn-section vn-background {{#if tabbed}}tab {{tabs.background.cssClass}}{{else if collapsed.background}}collapsed{{/if}}" data-section="background" {{#if tabbed}}data-group="main" data-tab="background"{{/if}}>
-    {{#unless tabbed}}<h3 data-action="toggleSection"><i class="fa-solid fa-chevron-down vn-chevron"></i> Background</h3>{{/unless}}
+  <section class="vn-section vn-background tab {{tabs.background.cssClass}}" data-group="main" data-tab="background">
 
     <div class="vn-bg-scroll">
       {{#if bg.strips.[0].showHeading}}
@@ -85,20 +76,11 @@
     </div>
   </section>
 
-  <section class="vn-section vn-cast {{#if tabbed}}tab {{tabs.cast.cssClass}}{{else if collapsed.cast}}collapsed{{/if}}" data-section="cast" {{#if tabbed}}data-group="main" data-tab="cast"{{/if}}>
-    {{#unless tabbed}}
-    <h3 data-action="toggleSection"><i class="fa-solid fa-chevron-down vn-chevron"></i> Cast
-      <button type="button" class="vn-icon" data-action="clearStage" data-tooltip="Clear the stage: take everyone off" {{#unless anyoneOnStage}}disabled{{/unless}}><i class="fa-solid fa-broom"></i></button>
-      <button type="button" class="vn-icon vn-icon-tight" data-action="resetExpressions" data-tooltip="Reset everyone's expression to neutral, on every stage"><i class="fa-solid fa-face-meh"></i></button>
-      <button type="button" class="vn-icon vn-icon-tight" data-action="refreshCast" data-tooltip="Re-read the art folder"><i class="fa-solid fa-rotate"></i></button>
-    </h3>
-    {{/unless}}
+  <section class="vn-section vn-cast tab {{tabs.cast.cssClass}}" data-group="main" data-tab="cast">
     <div class="vn-cast-tools">
       <input type="search" name="filter" value="{{filter}}" placeholder="{{#if allSelected}}Search{{else}}Search (finds everyone){{/if}}" autocomplete="off">
-      {{#if tabbed}}
       <button type="button" class="vn-icon" data-action="resetExpressions" data-tooltip="Reset everyone's expression to neutral, on every stage"><i class="fa-solid fa-face-meh"></i></button>
       <button type="button" class="vn-icon" data-action="refreshCast" data-tooltip="Re-read the art folder"><i class="fa-solid fa-rotate"></i></button>
-      {{/if}}
     </div>
     <ul class="vn-cast-list">
       {{#if party}}

@@ -15,18 +15,13 @@ import { gmViewLock, toggleGmViewLock } from "./view.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
-/** The two layouts: stacked sections, or one tab at a time. Each opens at its own size until the GM resizes it. */
-const LAYOUT_SIZES = { stacked: { width: 560, height: 760 }, tabbed: { width: 560, height: 480 } };
+const DEFAULT_SIZE = { width: 560, height: 480 };
 const TAB_IDS = ["cast", "background", "presets"];
 
-function layout() {
-  return game.settings.get(MODULE, "windowLayout") === "tabbed" ? "tabbed" : "stacked";
-}
-
-/** The size this GM last left the window at in a layout, or that layout's default. */
-function layoutSize(mode) {
-  const saved = game.settings.get(MODULE, "windowSizes")?.[mode];
-  return saved?.width && saved?.height ? { width: saved.width, height: saved.height } : { ...LAYOUT_SIZES[mode] };
+/** The size this GM last left the window at, or the default. */
+function savedSize() {
+  const saved = game.settings.get(MODULE, "windowSize");
+  return saved?.width && saved?.height ? { width: saved.width, height: saved.height } : { ...DEFAULT_SIZE };
 }
 
 /**
@@ -40,14 +35,13 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     id: "vn-stage-window",
     classes: ["vn-stage"],
     window: { title: "VN Stage", icon: "fa-solid fa-masks-theater", resizable: true },
-    position: { width: 560, height: 760 },
+    position: { ...DEFAULT_SIZE },
     actions: {
       makeStage: StageWindow.#onMakeStage,
       browseBackground: StageWindow.#onBrowseBackground,
       setBackground: StageWindow.#onSetBackground,
       remove: StageWindow.#onRemove,
       refreshCast: StageWindow.#onRefreshCast,
-      toggleSection: StageWindow.#onToggleSection,
       toggleFolder: StageWindow.#onToggleFolder,
       manageTags: StageWindow.#onManageTags,
       pickTag: StageWindow.#onPickTag,
@@ -58,11 +52,10 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       loadPreset: StageWindow.#onLoadPreset,
       updatePreset: StageWindow.#onUpdatePreset,
       toggleViewLock: StageWindow.#onToggleViewLock,
-      toggleLayout: StageWindow.#onToggleLayout,
     },
   };
 
-  /** The tabbed layout's tabs (unused while stacked). The open tab is remembered per GM. */
+  /** One tab per section. The open tab is remembered per GM. */
   static TABS = { main: { tabs: TAB_IDS.map((id) => ({ id })), initial: "cast" } };
 
   static PARTS = { main: { template: `modules/${MODULE}/templates/stage-window.hbs`, scrollable: [".vn-cast-list", ".vn-bg-scroll", ".vn-preset-list"] } };
@@ -71,7 +64,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static open() {
     if (!this.#instance) {
-      this.#instance = new StageWindow({ position: layoutSize(layout()) });
+      this.#instance = new StageWindow({ position: savedSize() });
       const tab = game.settings.get(MODULE, "windowTab");
       this.#instance.tabGroups.main = TAB_IDS.includes(tab) ? tab : "cast";
     }
@@ -104,8 +97,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     const scene = canvas.scene;
     const stage = isStage(scene);
     const collapsed = game.settings.get(MODULE, "collapsed");
-    const tabbed = layout() === "tabbed";
-    const context = { sceneName: scene?.name ?? "", stage, filter: this.#filter, collapsed, tabbed, tabs: this._prepareTabs("main") };
+    const context = { sceneName: scene?.name ?? "", stage, filter: this.#filter, tabs: this._prepareTabs("main") };
     this.#tagLabel = null;
     if (!stage) return context;
 
@@ -145,11 +137,10 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     };
   }
 
-  /** Header buttons, before the close button: flip the layout, and lock the GM's own view to the stage. */
+  /** A lock button in the header, before the close button: lock the GM's own view to the stage. */
   _getFrameButtons(options) {
     return [
       ...super._getFrameButtons(options),
-      { icon: "fa-solid fa-folder", label: "VNSTAGE.Window.TabbedLayout", action: "toggleLayout" },
       { icon: "fa-solid fa-lock-open", label: "VNSTAGE.Window.LockView", action: "toggleViewLock" },
     ];
   }
@@ -162,7 +153,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
 
-  /** Remember the window's size for the layout it's in (saved once the GM stops resizing). */
+  /** Remember the window's size (saved once the GM stops resizing). */
   _onPosition(position) {
     super._onPosition(position);
     if (this.minimized || !this.rendered) return;
@@ -170,11 +161,9 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!(width > 0 && height > 0)) return;
     clearTimeout(this.#sizeTimer);
     this.#sizeTimer = setTimeout(() => {
-      const mode = layout();
-      const sizes = game.settings.get(MODULE, "windowSizes") ?? {};
-      const was = sizes[mode];
+      const was = game.settings.get(MODULE, "windowSize");
       if (was?.width === width && was?.height === height) return;
-      game.settings.set(MODULE, "windowSizes", { ...sizes, [mode]: { width, height } });
+      game.settings.set(MODULE, "windowSize", { width, height });
     }, 300);
   }
 
@@ -196,16 +185,6 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       lock.dataset.tooltip = label;
     }
 
-    // The layout button shows what it switches to.
-    const flip = this.window?.header?.querySelector("[data-action=toggleLayout]");
-    if (flip) {
-      const tabbed = layout() === "tabbed";
-      const label = game.i18n.localize(tabbed ? "VNSTAGE.Window.StackedLayout" : "VNSTAGE.Window.TabbedLayout");
-      flip.classList.toggle("fa-folder", !tabbed);
-      flip.classList.toggle("fa-bars", tabbed);
-      flip.setAttribute("aria-label", label);
-      flip.dataset.tooltip = label;
-    }
 
     const input = this.element.querySelector("input[name=filter]");
     input?.addEventListener("input", () => {
@@ -288,16 +267,6 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     await toggleGmViewLock();
   }
 
-  /** Flip between stacked sections and tabs. Each layout keeps its own window size. */
-  static async #onToggleLayout() {
-    game.tooltip.deactivate();
-    clearTimeout(this.#sizeTimer);
-    const next = layout() === "tabbed" ? "stacked" : "tabbed";
-    await game.settings.set(MODULE, "windowLayout", next);
-    this.setPosition(layoutSize(next));
-    await this.render();
-  }
-
   static async #onMakeStage() {
     await makeStage();
   }
@@ -323,15 +292,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     if (entry) await removeFromCast(entry.id);
   }
 
-  /** Collapse or expand a section, remembered on this machine. Toggled in place, without a re-render. */
-  static async #onToggleSection(_event, target) {
-    const section = target.closest("[data-section]");
-    const collapsed = section.classList.toggle("collapsed");
-    const all = { ...game.settings.get(MODULE, "collapsed"), [section.dataset.section]: collapsed };
-    await game.settings.set(MODULE, "collapsed", all);
-  }
-
-  /** Collapse or expand one folder's images in the Background strip (same memory as the sections). */
+  /** Collapse or expand one folder's images in the Background tab, remembered on this machine. */
   static async #onToggleFolder(_event, target) {
     const strip = target.closest("[data-folder]");
     const collapsed = strip.classList.toggle("collapsed");

@@ -112,7 +112,7 @@ export function registerSettings({ onArtRootChange = () => {}, onGmViewLockChang
     onChange: () => onGmViewLockChange(),
   });
 
-  // Which Stage window sections this GM has collapsed (this machine only).
+  // Which Background folder strips this GM has collapsed in the Stage window (this machine only).
   game.settings.register(MODULE, "collapsed", {
     scope: "client",
     config: false,
@@ -120,15 +120,7 @@ export function registerSettings({ onArtRootChange = () => {}, onGmViewLockChang
     default: {},
   });
 
-  // The Stage window's layout for this GM (this machine only): "stacked" sections or "tabbed".
-  game.settings.register(MODULE, "windowLayout", {
-    scope: "client",
-    config: false,
-    type: String,
-    default: "stacked",
-  });
-
-  // The tab the tabbed Stage window opens on: the last one this GM used (this machine only).
+  // The tab the Stage window opens on: the last one this GM used (this machine only).
   game.settings.register(MODULE, "windowTab", {
     scope: "client",
     config: false,
@@ -136,8 +128,8 @@ export function registerSettings({ onArtRootChange = () => {}, onGmViewLockChang
     default: "cast",
   });
 
-  // The Stage window's size in each layout (this machine only), e.g. { tabbed: { width: 560, height: 480 } }.
-  game.settings.register(MODULE, "windowSizes", {
+  // The Stage window's size, as this GM last left it (this machine only): { width, height }.
+  game.settings.register(MODULE, "windowSize", {
     scope: "client",
     config: false,
     type: Object,

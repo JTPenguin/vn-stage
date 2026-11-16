@@ -64,7 +64,8 @@ Change any of these only with a step in `scripts/migrate.js` (bump `SCHEMA`), so
 | World setting | `recent` | `{ names }`: art keys, newest first (24) |
 | World setting | `artIndex` | `{ root, scanned, art: { [key]: art } }`: the art folder as the GM's screen last scanned it (paths relative to `root`), so players read art without browsing files. Rescanned every time the world loads, when the Art folder setting changes, and by the Stage window's refresh button |
 | World setting | `characterPrefs` | `{ [art key]: { flip, scale, yOffset, size, flying } }`; an actor without art uses `actor:<id>` as its key. `scale` and `yOffset` are the actual values and replace the art file's; absent means the file's |
-| Client setting | `collapsed` | Which Stage window sections and folder strips this GM collapsed |
+| Client setting | `collapsed` | Which Background folder strips this GM collapsed in the Stage window |
+| Client setting | `windowTab`, `windowSize` | The Stage window tab this GM last used (`cast`, `background` or `presets`), and the window's last `{ width, height }` |
 | Client setting | `gmViewLock` | Whether this GM's view is locked to the stage like the players' |
 | Scene flag | `stage` | `{ version }`: the scene is a stage |
 | Scene flag | `cast` | `[{ id, name, actorUuid, cluster, expression?, form? }]` by cluster (from 0, no gaps), each cluster left to right (`expression` and `form` only for art without an actor) |
