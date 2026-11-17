@@ -88,10 +88,11 @@
     </div>
     <ul class="vn-cast-list">
       {{#if party}}
-      <li class="vn-cast-party {{#if party.together}}on-stage{{else if party.onStage}}partly-on-stage{{/if}}" data-search="the party" data-party draggable="true">
-        <span class="vn-party-icon"><i class="fa-solid fa-users"></i></span>
-        <span class="vn-name" data-tooltip="Every party member at once. Drag onto the stage to gather them where you drop them; × takes them all off.">{{party.label}}</span>
-        {{#if party.onStage}}<button type="button" class="vn-row-remove" data-action="removeParty" aria-label="Take the party off the stage" data-tooltip="Take every party member off the stage"><i class="fa-solid fa-xmark"></i></button>{{/if}}
+      <li class="vn-tile vn-cast-party {{#if party.together}}on-stage{{else if party.onStage}}partly-on-stage{{/if}}" data-search="the party" data-party draggable="true" data-tooltip="{{party.label}}: every party member at once. Drag onto the stage to gather them where you drop them; × takes them all off.">
+        <span class="vn-tile-art vn-party-icon"><i class="fa-solid fa-users"></i>
+          {{#if party.onStage}}<button type="button" class="vn-row-remove" data-action="removeParty" aria-label="Take the party off the stage" data-tooltip="Take every party member off the stage"><i class="fa-solid fa-xmark"></i></button>{{/if}}
+        </span>
+        <span class="vn-name">{{party.label}}</span>
       </li>
       {{/if}}
       {{#each cast}}{{> "vn-stage.cast-row"}}{{else}}

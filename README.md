@@ -101,7 +101,7 @@ These rely on Foundry or PIXI behaviour that isn't a promised API. Check each on
 | Drag a character to another cluster, or load a preset that keeps some of the cast: portraits slide and scale to their new places. Drag an Adjust slider: they jump | The `refreshTile` hook running after `Tile#_refreshPosition` and `_refreshSize`, then writing `tile.mesh.position` and `PrimarySpriteMesh#resize`; the mesh being kept across redraws (`PrimaryCanvasGroup.addTile`); custom update options (`{ "vn-stage": { instant: true } }`) reaching every client's `updateTile` hook before the refresh | `fades.js` (turns itself off on error; look for a console warning) |
 | Put two characters on stage: each has a soft shadow. Add or remove one: the shadow fades with them. Zoom (GM, view unlocked): the shadow keeps its size against the portrait | A custom `PIXI.Filter` (with `PIXI.BlurFilter`) on each portrait's `tile.mesh`: `PrimarySpriteMesh`'s filter rendering, `FilterSystem#applyFilter`, `getFilterTexture`, the `inputSize` uniform, and `canvas.stage.scale` | `shadows.js` (turns itself off on error; look for a console warning) |
 | Drag a portrait: it dims while dragged | Setting `tile.mesh.alpha` until the next `refreshState` | `interact.js` |
-| Right-click a Cast row: the menu opens above the Stage window | `ApplicationV2._maxZ` (internal), with the open windows' z-index as a fallback | `interact.js` (`topZ`) |
+| Right-click a Cast tile: the menu opens above the Stage window | `ApplicationV2._maxZ` (internal), with the open windows' z-index as a fallback | `interact.js` (`topZ`) |
 | As a player, try to pan or zoom: the view stays fitted | Shadowing `canvas.pan` and `canvas.animatePan` | `view.js` |
 | Make stage on a new scene: the safety-net background shows | `scene.initialLevel` and the Level's `background.src` (v14 Levels) | `stage.js` |
 | Click a portrait's see-through edge: nothing happens | `PrimarySpriteMesh#containsCanvasPoint(point, alpha)` | `interact.js` (`portraitAt`) |
@@ -116,7 +116,7 @@ An actor's name is only a label. Every cast entry with an actor belongs to that 
 
 - **Different art for the same name:** give each its own art folder ("Guard (5-04)", with `label: "Guard"` in its `vn-stage.json` if the folder name shouldn't show). An actor whose portrait or token image lives in that folder finds it by itself, even when a plain "Guard" folder exists. Otherwise link it with VN art….
 - **Shared art:** point each actor at the one folder with VN art…. Foundry copies the link when it duplicates an actor. Actors that share art share Flip, size and height.
-- **In the Cast list,** rows with the same name show their art's label, and copies that share art also show the actor's sidebar folder.
+- **In the Cast tab,** tiles with the same name show their art's label in their hover text, and copies that share art also show the actor's sidebar folder there.
 - **From the console,** `addToCast({ name })` links the one actor with that name. With several, pass `actorUuid`.
 
 ## Conventions

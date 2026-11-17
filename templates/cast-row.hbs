@@ -1,8 +1,9 @@
-<li data-row="{{row}}" data-search="{{search}}" draggable="true" class="{{#if onStage}}on-stage{{/if}} {{#if outside}}outside{{/if}}" {{#if outside}}hidden{{/if}}>
-  <img src="{{thumb}}" alt="" loading="lazy">
+<li data-row="{{row}}" data-search="{{search}}" data-tooltip="{{tooltip}}" draggable="true" class="vn-tile {{#if onStage}}on-stage{{/if}} {{#if outside}}outside{{/if}}" {{#if outside}}hidden{{/if}}>
+  <span class="vn-tile-art">
+    <img src="{{thumb}}" alt="" loading="lazy" draggable="false">
+    {{#if outside}}{{#if @root.addRowLabel}}<button type="button" class="vn-row-add" data-action="addRowToTag" aria-label="{{@root.addRowLabel}}" data-tooltip="{{@root.addRowLabel}}"><i class="fa-solid fa-plus"></i></button>{{/if}}{{/if}}
+    {{#if onStage}}<button type="button" class="vn-row-remove" data-action="remove" aria-label="Take off the stage" data-tooltip="Take them off the stage"><i class="fa-solid fa-xmark"></i></button>{{/if}}
+  </span>
   <span class="vn-name">{{label}}</span>
-  {{#if note}}<span class="vn-note" data-tooltip="The art this actor uses">{{note}}</span>{{/if}}
   {{#if tags.length}}<span class="vn-row-tags">{{#each tags}}<button type="button" class="vn-tag" data-action="pickTag" data-tag="{{id}}" data-tooltip="Show the tag {{label}}">{{label}}</button>{{/each}}{{#if moreTags}}<span class="vn-tag vn-tag-more" data-tooltip="{{moreTags.tooltip}}">+{{moreTags.count}}</span>{{/if}}</span>{{/if}}
-  {{#if outside}}{{#if @root.addRowLabel}}<button type="button" class="vn-row-add" data-action="addRowToTag" aria-label="{{@root.addRowLabel}}" data-tooltip="{{@root.addRowLabel}}"><i class="fa-solid fa-plus"></i></button>{{/if}}{{/if}}
-  {{#if onStage}}<button type="button" class="vn-row-remove" data-action="remove" aria-label="Take off the stage" data-tooltip="Take them off the stage"><i class="fa-solid fa-xmark"></i></button>{{/if}}
 </li>

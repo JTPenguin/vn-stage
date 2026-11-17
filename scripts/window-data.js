@@ -100,12 +100,14 @@ function folderPath(actor) {
   return [...(folder.ancestors ?? [])].reverse().concat(folder).map((f) => f.name).join(" / ");
 }
 
-const CHIPS = 2; // tag chips a Cast row has room for; the rest are counted
+const CHIPS = 1; // tag chips a Cast tile has room for; the rest are counted
 
+/** A Cast tile. Its hover text holds the full name and the note (Foundry shows tooltips as HTML, so both are escaped). */
 export function rowContext(r) {
   const tags = r.tags ?? [];
   return {
     row: r.row, label: r.label, note: r.note, thumb: r.thumb,
+    tooltip: [esc(r.label), r.note ? esc(r.note) : null].filter(Boolean).join("<br>"),
     onStage: !!r.entry,
     tags: tags.slice(0, CHIPS),
     moreTags: tags.length > CHIPS ? { count: tags.length - CHIPS, tooltip: esc(tags.map((t) => t.label).join(", ")) } : null,

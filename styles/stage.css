@@ -28,23 +28,29 @@
 
 
 .vn-stage .vn-cast input[type=search] { margin-bottom: 0.4rem; }
-.vn-stage .vn-cast-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
-.vn-stage .vn-cast-list li { display: flex; align-items: center; gap: 0.4rem; padding: 0.15rem 0; }
-.vn-stage .vn-cast-list li[hidden] { display: none; }
-.vn-stage .vn-cast-list li img { width: 2rem; height: 2rem; object-fit: cover; object-position: top; border-radius: 3px; border: none; }
-.vn-stage .vn-cast-list li .vn-name { flex: 1; }
-.vn-stage .vn-cast-list li { border-radius: 4px; padding-left: 0.2rem; padding-right: 0.2rem; }
-.vn-stage .vn-cast-list li.on-stage { background: color-mix(in srgb, var(--color-warm-2, #c9593f) 24%, transparent); box-shadow: inset 3px 0 0 var(--color-warm-2, #c9593f); }
-.vn-stage .vn-cast-list li.on-stage .vn-name { font-weight: bold; }
-/* On stage, a small × takes the character (or the whole party) off. */
-.vn-stage .vn-cast-list li .vn-row-remove { flex: none; width: 1.6rem; min-width: 0; height: 1.6rem; min-height: 0; margin: 0; padding: 0; line-height: 1; border: none; background: none; opacity: 0.6; }
-.vn-stage .vn-cast-list li .vn-row-add { flex: none; width: 1.6rem; min-width: 0; height: 1.6rem; min-height: 0; margin: 0; padding: 0; line-height: 1; border: none; background: none; opacity: 0; }
-.vn-stage .vn-cast-list li:hover .vn-row-add, .vn-stage .vn-cast-list li .vn-row-add:focus-visible { opacity: 0.7; }
-.vn-stage .vn-cast-list li .vn-row-add:hover { opacity: 1; background: color-mix(in srgb, var(--color-warm-2, #c9593f) 32%, transparent); }
-/* Dragging a row from outside the tag up into it: the tag's rows light up. */
-.vn-stage .vn-cast-list.vn-drop-tag > li:not(.outside, .vn-cast-divider) { background: color-mix(in srgb, #e0a64a 16%, transparent); }
+.vn-stage .vn-cast-list { list-style: none; margin: 0; padding: 0 0.2rem 0 0; overflow-y: auto; flex: 1; display: grid; grid-template-columns: repeat(auto-fill, 5.5rem); grid-auto-rows: max-content; align-content: start; gap: 0.3rem; }
+.vn-stage .vn-cast-list li[hidden], .vn-stage .vn-cast-list li.vn-tile[hidden] { display: none; }
+/* The divider and the empty note span the grid; the tiles after the divider start a grid of their own below it. */
+.vn-stage .vn-cast-list > li:not(.vn-tile) { grid-column: 1 / -1; }
+/* Cast tiles: a square headshot, the name on one line, one tag chip. On stage: the accent border. Off stage: lightly faded. */
+.vn-stage .vn-cast-list li.vn-tile { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; padding: 2px; border: 2px solid transparent; border-radius: 4px; opacity: 0.6; }
+.vn-stage .vn-cast-list li.vn-tile:hover { opacity: 1; border-color: var(--color-border-highlight, #ff6400aa); }
+.vn-stage .vn-cast-list li.vn-tile.on-stage { opacity: 1; border-color: var(--color-warm-2, #c9593f); }
+.vn-stage .vn-cast-list li.vn-tile.partly-on-stage { opacity: 1; border-color: color-mix(in srgb, var(--color-warm-2, #c9593f) 50%, transparent); }
+.vn-stage .vn-cast-list li.vn-tile.on-stage .vn-name { font-weight: bold; }
+/* A square frame that never grows: tall art keeps its top, wide art its centre. */
+.vn-stage .vn-tile-art { position: relative; display: block; width: 100%; aspect-ratio: 1; min-height: 0; overflow: hidden; border-radius: 3px; }
+.vn-stage .vn-tile-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center top; border-radius: 3px; border: none; display: block; -webkit-user-drag: none; } /* the tile drags, not its image */
+.vn-stage .vn-cast-list li .vn-name { min-width: 0; font-size: var(--font-size-12, 12px); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The × (take off the stage) and + (add to the tag) sit over the image's top corners, shown on hover. */
+.vn-stage .vn-tile-art button { position: absolute; top: 2px; width: 1.4rem; min-width: 0; height: 1.4rem; min-height: 0; margin: 0; padding: 0; line-height: 1; font-size: 0.7rem; border: none; border-radius: 3px; color: #fff; background: rgba(20, 18, 24, 0.7); opacity: 0; }
+.vn-stage .vn-tile-art .vn-row-remove { right: 2px; }
+.vn-stage .vn-tile-art .vn-row-add { left: 2px; }
+.vn-stage li.vn-tile:hover .vn-tile-art button, .vn-stage .vn-tile-art button:focus-visible { opacity: 0.85; }
+.vn-stage .vn-tile-art button:hover { opacity: 1; background: var(--color-warm-2, #c9593f); }
+/* Dragging a tile from outside the tag up into it: the tag's tiles light up. */
+.vn-stage .vn-cast-list.vn-drop-tag > li.vn-tile:not(.outside) { opacity: 1; background: color-mix(in srgb, #e0a64a 16%, transparent); }
 .vn-stage .vn-cast-list.vn-drop-tag > .vn-cast-divider { border-top: 2px solid #e0a64a; }
-.vn-stage .vn-cast-list li .vn-row-remove:hover { opacity: 1; background: color-mix(in srgb, var(--color-warm-2, #c9593f) 32%, transparent); }
 
 /* Adjust window */
 .vn-adjust .vn-adjust-body { padding: 0.5rem 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
@@ -93,7 +99,7 @@
 .vn-stage button.vn-preset-chip.current { border-color: var(--color-warm-2, #c9593f); background: color-mix(in srgb, var(--color-warm-2, #c9593f) 24%, transparent); font-weight: bold; }
 .vn-stage .vn-changed { flex: none; width: 0.45rem; height: 0.45rem; border-radius: 50%; background: #e0a64a; }
 .vn-stage .vn-party-icon { display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; border-radius: 3px; background: color-mix(in srgb, var(--color-warm-2, #c9593f) 25%, transparent); }
-.vn-stage .vn-cast-list li .vn-party-icon { width: 2rem; height: 2rem; }
+.vn-stage .vn-tile-art.vn-party-icon { display: flex; width: 100%; height: auto; font-size: 1.8rem; }
 
 .vn-character-menu .vn-menu-actions { display: flex; align-items: center; gap: 0.25rem; margin-top: 0.4rem; padding-top: 0.35rem; border-top: 1px solid rgba(255, 255, 255, 0.12); }
 .vn-character-menu .vn-expression-list + .vn-menu-actions { margin-top: 0.4rem; }
@@ -134,8 +140,8 @@
 /* Shared: notes beside a name */
 .vn-stage .vn-note { flex: none; font-size: 11px; padding: 0 0.3rem; border-radius: 3px; border: 1px solid var(--color-border, #0003); opacity: 0.75; }
 
-/* Tag chips on Cast rows */
-.vn-stage .vn-cast-list li .vn-row-tags { display: flex; flex: 0 1 auto; min-width: 0; gap: 0.2rem; overflow: hidden; }
+/* Tag chips on Cast tiles */
+.vn-stage .vn-cast-list li .vn-row-tags { display: flex; justify-content: center; min-width: 0; gap: 0.2rem; overflow: hidden; }
 .vn-stage .vn-cast-list li .vn-tag { flex: 0 1 auto; min-width: 0; width: auto; height: 1.3rem; min-height: 0; margin: 0; padding: 0 0.4rem; line-height: 1.2rem; font-size: 11px; border-radius: 0.65rem; border: 1px solid var(--color-border, #0003); background: color-mix(in srgb, var(--color-warm-2, #c9593f) 14%, transparent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 8rem; }
 .vn-stage .vn-cast-list li button.vn-tag:hover { background: color-mix(in srgb, var(--color-warm-2, #c9593f) 32%, transparent); }
 .vn-stage .vn-cast-list li .vn-tag-more { flex: none; opacity: 0.75; }
@@ -167,8 +173,6 @@
 .vn-stage .vn-bg-choice.elsewhere { border-style: dashed; }
 .vn-stage .vn-cast-divider { margin: 0.4rem 0 0.15rem; padding: 0.15rem 0.2rem 0; border-top: 1px solid var(--color-border, #0003); font-size: var(--font-size-12, 12px); text-transform: uppercase; opacity: 0.7; }
 .vn-stage .vn-cast-divider[hidden] { display: none; }
-.vn-stage .vn-cast-list li .vn-note { max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.vn-stage .vn-cast-list li.partly-on-stage { background: color-mix(in srgb, var(--color-warm-2, #c9593f) 10%, transparent); box-shadow: inset 3px 0 0 color-mix(in srgb, var(--color-warm-2, #c9593f) 50%, transparent); }
 
 /* Character menu: forms */
 .vn-character-menu .vn-form-list { display: flex; flex-wrap: wrap; gap: 0.3rem; max-width: calc(4 * 64px + 3 * 0.35rem); margin-bottom: 0.4rem; padding-bottom: 0.35rem; border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
