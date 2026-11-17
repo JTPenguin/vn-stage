@@ -55,8 +55,7 @@ Hooks.once("init", () => {
   registerFades();
   registerShadows();
   foundry.applications.handlebars.loadTemplates({
-    "vn-stage.bg": `modules/${MODULE}/templates/stage-bg.hbs`,
-    "vn-stage.cast-row": `modules/${MODULE}/templates/cast-row.hbs`,
+    "vn-stage.bg": `modules/${MODULE}/templates/stage-bg.hbs`,    "vn-stage.cast-row": `modules/${MODULE}/templates/cast-row.hbs`,
   });
   const api = {
     isStage, makeStage, unmakeStage, setBackground, currentBackground,

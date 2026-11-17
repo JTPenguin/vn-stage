@@ -158,8 +158,8 @@ function tagLine(tags) {
 /**
  * The Background strips: the default background pinned first (and the one shown
  * now, when it's in no strip, so it can be tagged), then the tag's single
- * backgrounds and each of its folders, with a heading each when there's more
- * than one strip; or the stage's own last-browsed folder when no tag is
+ * backgrounds and each of its folders, with a heading each; or the stage's
+ * own last-browsed folder when no tag is
  * selected (under Untagged, only its backgrounds that have no tag). Each
  * background names its tags in its hover text.
  */
@@ -183,10 +183,12 @@ export async function backgroundStrips(scene, selected, collapsed) {
     collapsed: !!collapsed[`folder:${folder}`],
     choices: (await folderImages(folder)).filter(offer).map((src) => choice(src, backgroundLabel(src))),
   })));
-  if (tag?.images.length) {
+  const singles = !!tag?.images.length;
+  if (singles) {
     strips.unshift({
       folder: `images:${tag.id}`,
       heading: "Single backgrounds",
+      singles: true, // its heading carries "+ Add a background"
       collapsed: !!collapsed[`folder:images:${tag.id}`],
       choices: tag.images.filter((src) => !same(src, safety)).map((src) => choice(src, backgroundLabel(src))),
     });
@@ -197,7 +199,7 @@ export async function backgroundStrips(scene, selected, collapsed) {
     const note = tagsOf(current).length ? "shown now" : "shown now; right-click to tag it";
     pinned.push({ ...choice(current, `${backgroundLabel(current)} (${note})`), elsewhere: true });
   }
-  const showHeadings = !!tag && strips.length > 1;
-  for (const s of strips) s.showHeading = showHeadings;
-  return { pinned, strips, folder: tag ? null : folders[0] ?? null, tagged: !!tag };
+  // With a tag, strips always get headings: "+ Add a background" sits on the Single backgrounds one (or stands in for it).
+  const headed = !!tag;
+  return { pinned, strips, folder: tag ? null : folders[0] ?? null, tagged: !!tag, singles, headed };
 }

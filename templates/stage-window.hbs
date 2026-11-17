@@ -60,18 +60,15 @@
     <div class="vn-tab-actions vn-bg-row">
       {{#unless bg.tagged}}{{#if bg.folder}}<span class="vn-bg-folder">{{bg.folder}}</span>{{/if}}{{/unless}}
       <button type="button" data-action="browseBackground" data-tooltip="Show a background without tagging it"><i class="fa-solid fa-folder-open"></i> Browse…</button>
-      {{#if bg.tagged}}
-      <button type="button" class="vn-icon" data-action="addBackgroundToTag" data-tooltip="{{addBackgroundLabel}}" aria-label="{{addBackgroundLabel}}"><i class="fa-solid fa-plus"></i></button>
-      <button type="button" data-action="addFolderToTag" data-tooltip="Add a folder of backgrounds to {{tag.label}}"><i class="fa-solid fa-folder-plus"></i> Add folder…</button>
-      {{/if}}
     </div>
 
     <div class="vn-bg-scroll">
-      {{#if bg.strips.[0].showHeading}}
-      <div class="vn-bg-strip">{{#each bg.pinned}}{{> "vn-stage.bg"}}{{/each}}</div>
+      {{#if bg.headed}}
+      {{#if bg.pinned.length}}<div class="vn-bg-strip">{{#each bg.pinned}}{{> "vn-stage.bg"}}{{/each}}</div>{{/if}}
+      {{#unless bg.singles}}<button type="button" class="vn-bg-add-line" data-action="addBackgroundToTag" data-tooltip="{{addBackgroundLabel}}"><i class="fa-solid fa-plus"></i> Add a background</button>{{/unless}}
       {{#each bg.strips}}
       <div class="vn-bg-folder-group {{#if collapsed}}collapsed{{/if}}" data-folder="{{folder}}">
-        <h4 data-action="toggleFolder"><i class="fa-solid fa-chevron-down vn-chevron"></i> {{heading}}</h4>
+        <h4 data-action="toggleFolder"><i class="fa-solid fa-chevron-down vn-chevron"></i> {{heading}}{{#if singles}}<button type="button" class="vn-bg-add-line" data-action="addBackgroundToTag" data-tooltip="{{@root.addBackgroundLabel}}"><i class="fa-solid fa-plus"></i> Add a background</button>{{else}}<button type="button" class="vn-bg-add-line" data-action="removeFolderFromTag" data-tooltip="Take this folder off {{@root.tag.label}}" aria-label="Take this folder off {{@root.tag.label}}"><i class="fa-solid fa-xmark"></i></button>{{/if}}</h4>
         <div class="vn-bg-strip">{{#each choices}}{{> "vn-stage.bg"}}{{else}}<p class="vn-empty">No images</p>{{/each}}</div>
       </div>
       {{/each}}
@@ -81,7 +78,7 @@
         {{#each bg.strips}}{{#each choices}}{{> "vn-stage.bg"}}{{/each}}{{/each}}
       </div>
       {{/if}}
-      {{#if bg.tagged}}{{#unless bg.strips.length}}<p class="vn-empty">No backgrounds have this tag yet. Add one with +, or a folder with Add folder….</p>{{/unless}}
+      {{#if bg.tagged}}<button type="button" class="vn-bg-add-line" data-action="addFolderToTag" data-tooltip="Add a folder of backgrounds to {{tag.label}}"><i class="fa-solid fa-folder-plus"></i> Add folder…</button>
       {{else}}{{#unless bg.folder}}<p class="vn-empty">Browse to a scenario's scene art to swap between its images here.</p>{{/unless}}{{/if}}
     </div>
   </section>

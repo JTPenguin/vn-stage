@@ -6,7 +6,7 @@ import { openCastMenu } from "./menu.js";
 import { castEntryFor, partyRow, castLists, rowContext, presetRows, backgroundStrips } from "./window-data.js";
 import { getPreset, savePreset, loadPreset, deletePreset, findPresetByName, updatePreset, renamePreset, setPresetTag, stagePreset } from "./presets.js";
 import { isStage, makeStage, setBackground, currentBackground, pickBackground, clearFolderCache, decodePath } from "./stage.js";
-import { ALL, RECENT, UNTAGGED, listTags, getTag, stageTag, setStageTag, addImage, removeImage, addMember } from "./tags.js";
+import { ALL, RECENT, UNTAGGED, listTags, getTag, stageTag, setStageTag, addImage, removeImage, addMember, removeFolder } from "./tags.js";
 import { TagsWindow, pickTagFolder } from "./tags-window.js";
 import { tagItemLabel, avatarsThatFit } from "./rules.js";
 import { TagEditor } from "./tag-editor.js";
@@ -54,6 +54,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       toggleViewLock: StageWindow.#onToggleViewLock,
       addBackgroundToTag: StageWindow.#onAddBackgroundToTag,
       addFolderToTag: StageWindow.#onAddFolderToTag,
+      removeFolderFromTag: StageWindow.#onRemoveFolderFromTag,
       addRowToTag: StageWindow.#onAddRowToTag,
     },
   };
@@ -404,6 +405,11 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   static #onAddFolderToTag() {
     const tag = getTag(stageTag());
     if (tag) pickTagFolder(tag.id, tag.folders.at(-1));
+  }
+  /** The × on a folder heading: takes that folder off the current tag, as Manage tags does. */
+  static async #onRemoveFolderFromTag(_event, target) {
+    const tag = getTag(stageTag());
+    if (tag) await removeFolder(tag.id, target.closest("[data-folder]").dataset.folder);
   }
 
   /** The + on a Cast row from outside the tag. */
