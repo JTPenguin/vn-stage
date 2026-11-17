@@ -27,7 +27,7 @@ The module shouldn't assume Justin's file layout. Chase wants it for his *Season
 
 **Repo (Justin, 2026-11-16):** public, with an MIT licence like Subsystems. The README's "shared privately; not published" line goes, and the install steps change to the manifest URL.
 
-**Manifest and download (Justin, 2026-11-16):** added at build time, not kept in the working copy. The build script writes `manifest` and `download` into the zip's `module.json` only, and the release uploads that file. The README rule stays.
+**Manifest and download (Justin, 2026-11-16):** added at build time, not kept in the working copy. The build script writes `manifest` and `download` into the zip's `module.json` only, and the release uploads that file. The rule in `docs/development.md` (Conventions) stays.
 
 **items/ (Justin, 2026-11-16):** stays in the public repo, campaign names and all.
 

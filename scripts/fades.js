@@ -20,7 +20,7 @@ import { tweenBox, sameBox, snapsBox } from "./rules.js";
  * update option `{ [MODULE]: { instant: true } }` (layout.js) and jump instead:
  * Adjust is for setting up, not for moves in play.
  *
- * This leans on Foundry's drawing internals (see the README's update checklist),
+ * This leans on Foundry's drawing internals (see the update checklist in docs/development.md),
  * so every hook is guarded: the first error turns fades and moves off for the session,
  * and changes simply show at once.
  */

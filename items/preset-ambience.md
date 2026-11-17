@@ -19,4 +19,4 @@ A preset can also start music, so loading a scene brings its sound too.
 - **A preset without ambience** leaves the music alone.
 - **Saving** a preset records the playlist (or single track) playing at that moment. The edit form can change or clear it.
 
-**Data:** a new optional `ambience` field on presets (playlist id, and track id when it's one track). Add it to the README's stored-data table.
+**Data:** a new optional `ambience` field on presets (playlist id, and track id when it's one track). Add it to the stored-data table in docs/development.md.

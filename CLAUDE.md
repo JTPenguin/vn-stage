@@ -1,6 +1,6 @@
 # VN Stage
 
-A Foundry VTT module (v14) for visual-novel scenes on a native Foundry scene. Every campaign Justin runs uses it, and it is released publicly on GitHub (`JTPenguin/vn-stage`) for friends' tables. See `README.md` for settings and the console API.
+A Foundry VTT module (v14) for visual-novel scenes on a native Foundry scene. Every campaign Justin runs uses it, and it is released publicly on GitHub (`JTPenguin/vn-stage`) for friends' tables. `README.md` is the GM guide; `docs/development.md` holds the console API, stored data, checks and conventions.
 
 ## Checks
 

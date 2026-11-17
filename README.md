@@ -1,12 +1,23 @@
 # VN Stage
 
-A Foundry VTT module for visual-novel scenes on a native Foundry scene: portraits in one or more clusters across the stage, expressions players can change, and swappable static backgrounds. Not tied to any campaign.
+VN Stage turns a Foundry scene into a visual-novel stage. Characters stand in front of a full-screen background as large portraits. Players change their own characters' expressions, and the GM swaps backgrounds and casts with a click. It works with any game system, and it adds a few extras for Pathfinder 2e.
 
-Released on GitHub under the MIT licence: <https://github.com/JTPenguin/vn-stage>.
+Released under the MIT licence: <https://github.com/JTPenguin/vn-stage>.
+
+## What you get
+
+- **A stage on any scene.** Your players' view fits the stage and stays put. They can't pan or zoom away by accident.
+- **Portraits in groups.** Characters stand in one or more groups (clusters) spread across the stage. Drag a portrait to move it, or to start a new group.
+- **Expressions and forms.** Each character can have any number of expressions, and other forms (a disguise, a werewolf shape). Players switch their own characters; the GM can switch anyone.
+- **Backgrounds** that crossfade when you change them. Still images and videos both work.
+- **Presets.** Save a background and cast as a preset, then load the whole scene again with one click.
+- **Tags** that gather the characters, backgrounds and presets for one adventure or place, so the lists stay short.
+- **Smooth movement.** Portraits fade in and out, slide to new places, and cast a soft shadow.
 
 ## Requirements
 
-- Foundry VTT 14
+- Foundry VTT 14.
+- Any game system. With Pathfinder 2e, the party actor and creature sizes from character sheets are used too.
 
 ## Install
 
@@ -18,122 +29,126 @@ Released on GitHub under the MIT licence: <https://github.com/JTPenguin/vn-stage
 
    Foundry then offers updates by itself. Without internet access, unzip a release's `vn-stage.zip` into `<Foundry data folder>/Data/modules/` instead.
 2. Restart Foundry, then turn on **VN Stage** under **Manage Modules** in your world.
-3. In **Configure Settings → VN Stage**, set the **Art folder** to the folder that holds your character folders. [docs/art-format.md](docs/art-format.md) explains the layout.
+3. In **Configure Settings → VN Stage**, set the **Art folder** (see the next section).
 
 **Coming from 0.2.0:** install over it with the manifest URL. The first time the GM loads the world, VN Stage upgrades its stored stages and presets once. Older versions can't read them afterwards.
 
-## Install (development)
+## Set up your art
 
-This repository is the module folder. Foundry loads it through a symlink:
+VN Stage finds character art by folder name. **A character is a folder with a `portrait` image in it.** Put all the character folders in one folder and choose that folder as the **Art folder**.
 
-```bash
-ln -s "<path to this folder>" "<Foundry data folder>/Data/modules/vn-stage"
+```
+VN Art/
+├── Mira Voss/
+│   ├── portrait.webp          the neutral portrait (required)
+│   └── expressions/           one image per expression (optional)
+│       ├── happy.webp
+│       └── angry.webp
+└── Old Tom/
+    └── portrait.png
 ```
 
-## Settings (world)
+- **Make every expression the same canvas size as the portrait,** so the character doesn't jump when the expression changes.
+- **Forms** go in `forms/<name>/` inside the character's folder, laid out the same way.
+- **An optional `vn-stage.json`** sets a display name, a default size and height, and tags.
+- **No art yet?** Any actor works. VN Stage uses the actor's own image until it has a portrait.
 
-- **Art folder:** one subfolder per character, with a `portrait` image and, if you like, `expressions/`, `forms/` and a `vn-stage.json`. The whole format, including how art is sized, is in [docs/art-format.md](docs/art-format.md).
-- **Safety-net background:** set once as the scene's own background when it becomes a stage. The background shown during play is a tile above it, because changing a scene's own background redraws the canvas on every screen.
-- **Tag background folders:** a folder every tag finds its backgrounds in by itself, when it exists; `{tag}` stands for the tag's name (`scenes/{tag}/`). Other modules can add folders with the `vn-stage.tagFolders` hook.
-- **Portrait shadows** and **Shadow strength:** a soft shadow behind every portrait, drawn by each screen. Strength is how dark it is.
+The full format, including how sizing works, is in [docs/art-format.md](docs/art-format.md).
 
-## Console API
+**Matching art to actors:** an actor uses the art folder with its name, or the folder its portrait or token image comes from. To point an actor at a different folder, use **VN art…** in its character menu (see below).
 
-`VNStage` (also `game.modules.get("vn-stage").api`). GM only where it changes anything.
+**Don't rename a character's art folder** once you've used it. Flip, size, height, tags and form locks are saved under the folder's name, so a renamed folder loses them. Renaming actors is safe.
 
-| Area | Functions |
+## Run a scene
+
+### Open the Stage window
+
+Click the **VN Stage** button (theatre masks) in the token controls on the left. You can also set a key for it in **Configure Controls**.
+
+On a scene that isn't a stage yet, the window offers **Make stage**. That resizes the scene to the stage's frame, turns off the grid and vision, and shows the first background.
+
+The window has three tabs: **Cast**, **Background** and **Presets**. The tag menu beside the tabs filters all three (see [Tags](#tags)).
+
+### Cast
+
+- **Put someone on stage:** drag their tile onto the stage, where they should stand. You can also drag an actor straight from the Actors sidebar.
+- **Move someone:** drag their portrait on the stage. A drop between two groups, or at either edge, starts a new group there.
+- **Take someone off:** drag their portrait up into the red band at the top of the stage, or click **×** on their tile.
+- **The Party** tile (PF2e) puts every party member on stage at once, where you drop it.
+- **Search** finds characters by name or tag. Under a tag, it also finds characters outside the tag.
+- **Buttons:** reset everyone's expression to neutral, re-read the art folder after adding art, and clear the stage.
+
+### The character menu
+
+Click a portrait on the stage, or right-click a Cast tile, to open the character's menu. It shows their forms and expressions. Click one to switch.
+
+The GM also gets these buttons:
+
+| Button | What it does |
 |---|---|
-| Stage | `isStage`, `makeStage`, `unmakeStage`, `setBackground(src)`, `currentBackground` |
-| Cast | `getCast`, `addToCast({ name, actorUuid, cluster, index, newCluster })`, `addParty(cluster, { index, newCluster })`, `removeParty`, `partyCluster`, `setCast`, `removeFromCast(id)`, `moveToCluster(id, cluster, { index, newCluster })`, `clearCast`, `setFlip`, `layout` |
-| Art | `artIndex`, `characterArt(key)`, `clearArtCache` |
-| Expressions and forms | `setExpression(castId, key)`, `setForm(castId, artKey)` (refused for players when the form is locked), `resetAllExpressions`, `currentExpression` |
-| Presets | `listPresets(tagId)`, `savePreset(name)`, `loadPreset(id)`, `deletePreset`, `updatePreset`, `renamePreset`, `setPresetTags` |
-| Tags | `listTags`, `getTag`, `memberNames`, `createTag`, `addFolder`, `addMember`, `tagFolders`, `stageTag`, `setStageTag` |
-| Windows | `openWindow()`, `openTags()` |
-| View | `toggleViewLock()` (GM only: lock your view to the stage), `viewLocked()` |
-| Debugging | `status()`: what the module sees on this screen |
+| **Flip** | Mirrors the portrait, so the character faces the other way |
+| **Adjust size and height** | Opens the Adjust window (below) |
+| **VN art…** | Chooses which art folder this actor uses |
+| **Tags…** | Adds or removes the character's tags |
+| **Remove from the stage** | Takes the character off |
 
-**Clusters in the API:** `cluster` counts from 0, left to right, as `getCast` and `status()` show it. A number equal to the count starts a new cluster at the right edge, and `newCluster: true` starts one at that number, moving the rest up. `index` is the place in the cluster from the left (leave it out for the right end). `addParty` gathers every party member there as one block.
+**Lock a form:** right-click a form in the menu. Players can't see or switch to a locked form; the GM still can. The lock stays with the actor on every stage.
 
-**Hooks it calls:** `vn-stage.layout(scene, placements)` after each layout (each portrait's box and `cluster`, for other modules); `vn-stage.tagFolders(tag, folders)` to let modules add a tag's automatic folders.
+**Adjust window:** sets the character's size, scale and height on the stage. Line the face up with the blue face guide. **Flying** is for art that floats: VN Stage draws a dark band along the bottom of the stage to hide portraits' cut-off lower edges, and leaves it out for a flying character. **Reset** goes back to the art's own values.
 
-## Stored data
+### Background
 
-Change any of these only with a step in `scripts/migrate.js` (bump `SCHEMA`), so stored data is upgraded once and the code reads one form.
+- **Click a thumbnail** to show it. The old background crossfades into the new one.
+- **Browse…** shows any image without adding it to a tag.
+- **Under a tag,** the tab lists the tag's backgrounds. **Add a background** and **Add folder…** add more, and right-click a background to change its tags.
 
-| Where | Key | Holds |
-|---|---|---|
-| World setting | `artRoot`, `safetyBackground`, `tagFolders` | The settings above |
-| World setting | `portraitShadow`, `portraitShadowStrength` | The shadow settings above: on or off, and how dark (0 to 1) |
-| World setting | `schema` | The last data upgrade run (migrate.js) |
-| World setting | `tags` | `{ [id]: { label, folders, images, add, remove, hideAuto, deleted } }`; characters also come from the art's `tags`. A tag is listed only while something carries it |
-| World setting | `groups`, `groupFolders` | From before tags. Read once by the schema 4 upgrade, then left alone |
-| World setting | `presets` | `{ [id]: { name, tags, background, cast, saved } }`; cast entries carry `cluster` like the scene's, and may carry `partyMember` and `form` |
-| World setting | `recent` | `{ names }`: art keys, newest first (24) |
-| World setting | `artIndex` | `{ root, scanned, art: { [key]: art } }`: the art folder as the GM's screen last scanned it (paths relative to `root`), so players read art without browsing files. Rescanned every time the world loads, when the Art folder setting changes, and by the Stage window's refresh button |
-| World setting | `characterPrefs` | `{ [art key]: { flip, scale, yOffset, size, flying } }`; an actor without art uses `actor:<id>` as its key. `scale` and `yOffset` are the actual values and replace the art file's; absent means the file's |
-| Client setting | `collapsed` | Which Background folder strips this GM collapsed in the Stage window |
-| Client setting | `windowTab`, `windowSize` | The Stage window tab this GM last used (`cast`, `background` or `presets`), and the window's last `{ width, height }` |
-| Client setting | `gmViewLock` | Whether this GM's view is locked to the stage like the players' |
-| Scene flag | `stage` | `{ version }`: the scene is a stage |
-| Scene flag | `cast` | `[{ id, name, actorUuid, cluster, expression?, form? }]` by cluster (from 0, no gaps), each cluster left to right (`expression` and `form` only for art without an actor) |
-| Scene flag | `partyOrder` | Actor ids, the order the party last stood in |
-| Scene flag | `tag`, `backgroundFolder`, `preset` | The tag the stage shows, its last-browsed folder, and the preset last loaded or saved |
-| Actor flag | `expression`, `form`, `art`, `lockedForms` | The actor's expression and form (follow them to every stage), its VN art… link, and the forms players can't switch to (art keys; the GM still can) |
-| Tile flag | `part`, and for portraits `castId`, `name`, `key`, `fallback`; for the shade `shade` | What the module drew (`background`, `portrait`, `shade`) |
+### Presets
 
-## Checks
+- **Save as preset** saves the background and the cast on stage. Under a tag, the preset gets that tag.
+- **Click a preset** to load it. Characters already on stage stay where they are and the rest fade in. A dot by the name means the stage has changed since you loaded it.
+- **Party members fill in by who is in the party now,** so a preset still works after the party changes.
+- **Right-click a preset** to update it from the stage, rename it, change its tags or delete it.
 
-Run both before handing a change to Foundry.
+### Tags
 
-- **Load check:** loads every script with stand-ins for Foundry's globals. Catches clashing names, broken imports and import cycles, which a syntax check misses.
+A tag gathers the characters, backgrounds and presets you need for one adventure, chapter or place. Pick a tag from the menu beside the tabs, and all three tabs show only what has it.
 
-  ```bash
-  ELECTRON_RUN_AS_NODE=1 ~/foundryvtt/foundryvtt tools/check-load.mjs
-  ```
+- **Recent** lists the characters you used last. **Untagged** lists what has no tag yet.
+- **Tags…** (in any right-click menu) opens a small window. Type a tag and press Enter to add it, or click **×** to take it off. A new name makes a new tag.
+- **Manage tags** (the gear) renames, merges and deletes tags, and adds folders of backgrounds to them. **New tag from a folder…** starts a tag from a folder of backgrounds.
+- **A tag disappears** when nothing carries it any more.
 
-- **Tests:** the rules that need no Foundry (`scripts/rules.js`, the layout arithmetic in `scripts/arrange.js`), with Node's test runner. New rules that can live without Foundry go in `rules.js`, with a test.
+### Your own view
 
-  ```bash
-  ELECTRON_RUN_AS_NODE=1 ~/foundryvtt/foundryvtt tools/test.mjs
-  ```
+As GM you can pan and zoom as usual. **Lock view** in the Stage window's header fits your view to the stage like the players' views. You can set a key for it in **Configure Controls**.
 
-## After a Foundry update
+## What players see
 
-These rely on Foundry or PIXI behaviour that isn't a promised API. Check each on a stage after updating Foundry:
+- **The stage fills their screen.** The view refits when they open or close the sidebar.
+- **They click a portrait of a character they own** to change its expression or form. Other portraits do nothing for them.
 
-| What to try | What it relies on | Where |
-|---|---|---|
-| Click and drag a portrait: the character menu opens, the drag moves them (or, dropped in the red band across the top, takes them off the stage), and Foundry's selection box doesn't appear | Our window-level `pointerdown` listener (capture phase) runs before the canvas's own | `interact.js` |
-| Add, remove and swap: portraits fade, backgrounds crossfade | Stand-in `PrimarySpriteMesh`es added to `canvas.primary` (`sortDirty`), and the `refreshTile` hook scaling `tile.mesh.alpha` | `fades.js` (turns itself off on error; look for a console warning) |
-| Drag a character to another cluster, or load a preset that keeps some of the cast: portraits slide and scale to their new places. Drag an Adjust slider: they jump | The `refreshTile` hook running after `Tile#_refreshPosition` and `_refreshSize`, then writing `tile.mesh.position` and `PrimarySpriteMesh#resize`; the mesh being kept across redraws (`PrimaryCanvasGroup.addTile`); custom update options (`{ "vn-stage": { instant: true } }`) reaching every client's `updateTile` hook before the refresh | `fades.js` (turns itself off on error; look for a console warning) |
-| Put two characters on stage: each has a soft shadow. Add or remove one: the shadow fades with them. Zoom (GM, view unlocked): the shadow keeps its size against the portrait | A custom `PIXI.Filter` (with `PIXI.BlurFilter`) on each portrait's `tile.mesh`: `PrimarySpriteMesh`'s filter rendering, `FilterSystem#applyFilter`, `getFilterTexture`, the `inputSize` uniform, and `canvas.stage.scale` | `shadows.js` (turns itself off on error; look for a console warning) |
-| Drag a portrait: it dims while dragged | Setting `tile.mesh.alpha` until the next `refreshState` | `interact.js` |
-| Right-click a Cast tile: the menu opens above the Stage window | `ApplicationV2._maxZ` (internal), with the open windows' z-index as a fallback | `interact.js` (`topZ`) |
-| As a player, try to pan or zoom: the view stays fitted | Shadowing `canvas.pan` and `canvas.animatePan` | `view.js` |
-| Make stage on a new scene: the safety-net background shows | `scene.initialLevel` and the Level's `background.src` (v14 Levels) | `stage.js` |
-| Click a portrait's see-through edge: nothing happens | `PrimarySpriteMesh#containsCanvasPoint(point, alpha)` | `interact.js` (`portraitAt`) |
+## Settings
 
-## Keys to keep stable
+All in **Configure Settings → VN Stage**. They apply to the whole world.
 
-Saved choices (Flip, size, height), tags, Recent and VN art… links are keyed by the art folder's name under the art root (`Rahadin`, `Rahadin/forms/corrupted`). Form locks too. **Renaming a character's art folder loses them**; renaming actors is safe.
+| Setting | What it does |
+|---|---|
+| **Art folder** | The folder that holds your character folders |
+| **Safety-net background** | Shown when a scene becomes a stage, and if anything goes wrong with the background on screen |
+| **Tag background folders** | A folder each tag finds its backgrounds in by itself. `{tag}` stands for the tag's name, as in `scenes/{tag}/`. Leave it blank for none |
+| **Portrait shadows** | A soft shadow behind every portrait |
+| **Shadow strength** | How dark the shadows are |
 
-## Actors with the same name, and shared art
+## Two actors with the same name
 
-An actor's name is only a label. Every cast entry with an actor belongs to that actor, so two actors called "Guard" are two characters and can stand on a stage together. Each actor stands on a stage once.
+Two actors called "Guard" are two characters, and both can stand on a stage.
 
-- **Different art for the same name:** give each its own art folder ("Guard (5-04)", with `label: "Guard"` in its `vn-stage.json` if the folder name shouldn't show). An actor whose portrait or token image lives in that folder finds it by itself, even when a plain "Guard" folder exists. Otherwise link it with VN art….
-- **Shared art:** point each actor at the one folder with VN art…. Foundry copies the link when it duplicates an actor. Actors that share art share Flip, size and height.
-- **In the Cast tab,** tiles with the same name show their art's label in their hover text, and copies that share art also show the actor's sidebar folder there.
-- **From the console,** `addToCast({ name })` links the one actor with that name. With several, pass `actorUuid`.
+- **Different art:** give each its own art folder, such as `Guard (Docks)` and `Guard (Gate)`. Set `label` to "Guard" in each folder's `vn-stage.json` if the folder name shouldn't show.
+- **Shared art:** point both actors at one folder with **VN art…**. Actors that share art also share Flip, size and height.
+- **In the Cast tab,** hover over a tile to tell them apart.
 
-## Conventions
+## More
 
-- **No build step.** Plain ES modules, CSS and Handlebars templates, loaded by Foundry as they are.
-- **No `manifest` or `download` URL** in `module.json`, so Foundry's updater can never overwrite the working copy. `tools/build-zip.mjs` writes both into the released `module.json` only.
-- **Versioning:** bump `version` in `module.json`, move the `CHANGELOG.md` entries under the new version, and tag the release (`v0.3.0`).
-- **Releases:** pushing a `v*` tag runs `.github/workflows/release.yml`. It runs the checks, builds the zip and publishes a GitHub release with `vn-stage.zip` and `module.json`. The steps are at the top of that file. To build the zip locally: `ELECTRON_RUN_AS_NODE=1 ~/foundryvtt/foundryvtt tools/build-zip.mjs`.
-
-## Design
-
-The art format is in [docs/art-format.md](docs/art-format.md).
+- [docs/art-format.md](docs/art-format.md): the full art format.
+- [docs/development.md](docs/development.md): the console API, hooks for other modules, stored data and the checks, for people changing or building on the module.
+- [CHANGELOG.md](CHANGELOG.md): what changed in each version.

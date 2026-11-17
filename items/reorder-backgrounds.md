@@ -18,4 +18,4 @@ Let Justin change the order of the backgrounds in the VN Stage window by draggin
 - **Drag within a strip:** a thumbnail moves within its own folder strip or the "Single backgrounds" strip, not between strips.
 - **Saved per tag.** New files that aren't in the saved order go at the end, sorted as now.
 
-**Where:** `backgroundStrips` in `window-data.js` builds the strips. A new stored field (on the tag, or a new world setting for the built-in "All" view) needs a README stored-data row.
+**Where:** `backgroundStrips` in `window-data.js` builds the strips. A new stored field (on the tag, or a new world setting for the built-in "All" view) needs a stored-data row in docs/development.md.

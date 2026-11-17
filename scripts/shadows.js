@@ -10,7 +10,7 @@ import { shadowLook } from "./rules.js";
  * and the portrait itself on top. Offset and blur follow the view's zoom, so
  * the shadow keeps its size against the portrait on every screen.
  *
- * This leans on PIXI's filter internals (see the README's update checklist).
+ * This leans on PIXI's filter internals (see the update checklist in docs/development.md).
  * The first error, in a hook or while drawing, turns shadows off for the
  * session and portraits show without them.
  */

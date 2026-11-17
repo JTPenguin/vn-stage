@@ -22,6 +22,6 @@ Build the cast hidden from the players, then show it with one click. Also reveal
 - **Per character:** Hide and Reveal in the GM's character menu.
 - **Reveal all:** one Stage window button reveals every hidden character at once.
 
-**Data:** a `hidden` mark on the cast entry. Changing the cast entry's shape needs a step in `migrate.js` and a README stored-data update only if existing data must change; a new optional field doesn't.
+**Data:** a `hidden` mark on the cast entry. Changing the cast entry's shape needs a step in `migrate.js` and a stored-data update in docs/development.md only if existing data must change; a new optional field doesn't.
 
 **Open for build:** whether presets save the hidden mark. Default: no, a preset loads visible unless Secret mode is on.
