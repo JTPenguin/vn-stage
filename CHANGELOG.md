@@ -4,12 +4,19 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-16
+
 ### Added
+- **Released on GitHub** under the MIT licence. Install and update with the manifest URL in the README.
 - **Drag a character off the stage.** Drag a portrait up into the band across the top of the stage: the band lights red, the floating name reads "Take … off the stage", and dropping there takes them off. They stay in the Cast list. Moving back down before letting go makes it an ordinary move again.
 - **The GM can lock a character's forms.** In the character menu, the GM right-clicks a form of an actor-linked character to lock or open it; a locked form is dimmed. Players don't see locked forms and can't switch to them; the GM still can. Locks are saved on the actor, so they follow it to every stage.
 - **The GM can lock their own view to the stage, like the players'.** A lock button in the Stage window header, or the Lock my view keybinding (no key by default), keeps the view fitted to the stage frame and ignores pans, drags and zooms. Each GM's choice is remembered on their machine.
 - **Characters slide to their new places.** When a side switch, an added or removed character, or a preset load moves or resizes portraits, they slide and scale there over about 0.4 seconds instead of jumping. The bottom shade moves with them. Changes made in the Adjust window still jump, since Adjust is for setting up. Off for viewers who ask their system for reduced motion.
 - **Portraits cast a soft shadow,** so characters stand out from the background. Two world settings, Portrait shadows (on by default) and Shadow strength (how dark), apply to every portrait. Each screen draws its own shadows, and they move and fade with their characters.
+
+- The art format, written down (`docs/art-format.md`, with a JSON Schema in `docs/vn-stage.schema.json`): a character is a folder with a portrait, plus an optional `vn-stage.json`. `normaliseArt` in `scripts/rules.js` turns a folder listing and that file into the module's own shape, with tests.
+- Clear the stage (broom button in the Cast heading): everyone off this stage at once. Disabled when the stage is empty.
+- A keyboard shortcut to open the Stage window (GM), set in Configure Controls under VN Stage. No key by default.
 
 ### Changed
 - **Actors with the same name are separate characters.** A cast entry with an actor now belongs to that actor alone, so two actors called "Guard" can stand on a stage together; before, adding the second moved the first. Each actor still stands on a stage once.
@@ -48,11 +55,6 @@ All notable changes to this module. Versions follow [Semantic Versioning](https:
 
 ### Removed
 - Face measurements (`facePx`, `faceBox`, `frame`, `adjust`) and the object-shaped `forms` list.
-
-### Added
-- The art format, written down (`docs/art-format.md`, with a JSON Schema in `docs/vn-stage.schema.json`): a character is a folder with a portrait, plus an optional `vn-stage.json`. `normaliseArt` in `scripts/rules.js` turns a folder listing and that file into the module's own shape, with tests.
-- Clear the stage (broom button in the Cast heading): everyone off this stage at once. Disabled when the stage is empty.
-- A keyboard shortcut to open the Stage window (GM), set in Configure Controls under VN Stage. No key by default.
 
 ## [0.2.0] - 2026-10-21
 

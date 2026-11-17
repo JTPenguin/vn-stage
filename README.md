@@ -2,17 +2,25 @@
 
 A Foundry VTT module for visual-novel scenes on a native Foundry scene: portraits in one or more clusters across the stage, expressions players can change, and swappable static backgrounds. Not tied to any campaign.
 
-Shared privately with friends' tables; not published.
+Released on GitHub under the MIT licence: <https://github.com/JTPenguin/vn-stage>.
 
 ## Requirements
 
 - Foundry VTT 14
 
-## Install from a zip
+## Install
 
-1. Unzip `vn-stage-<version>.zip` into `<Foundry data folder>/Data/modules/`. You should end up with `Data/modules/vn-stage/module.json`.
+1. In Foundry's **Add-on Modules** tab, choose **Install Module** and paste this manifest URL:
+
+   ```
+   https://github.com/JTPenguin/vn-stage/releases/latest/download/module.json
+   ```
+
+   Foundry then offers updates by itself. Without internet access, unzip a release's `vn-stage.zip` into `<Foundry data folder>/Data/modules/` instead.
 2. Restart Foundry, then turn on **VN Stage** under **Manage Modules** in your world.
 3. In **Configure Settings → VN Stage**, set the **Art folder** to the folder that holds your character folders. [docs/art-format.md](docs/art-format.md) explains the layout.
+
+**Coming from 0.2.0:** install over it with the manifest URL. The first time the GM loads the world, VN Stage upgrades its stored stages and presets once. Older versions can't read them afterwards.
 
 ## Install (development)
 
@@ -122,8 +130,9 @@ An actor's name is only a label. Every cast entry with an actor belongs to that 
 ## Conventions
 
 - **No build step.** Plain ES modules, CSS and Handlebars templates, loaded by Foundry as they are.
-- **No `manifest` or `download` URL** in `module.json`, so Foundry's updater can never overwrite the working copy.
-- **Versioning:** bump `version` in `module.json`, add a `CHANGELOG.md` entry, and tag releases (`v0.1.0`).
+- **No `manifest` or `download` URL** in `module.json`, so Foundry's updater can never overwrite the working copy. `tools/build-zip.mjs` writes both into the released `module.json` only.
+- **Versioning:** bump `version` in `module.json`, move the `CHANGELOG.md` entries under the new version, and tag the release (`v0.3.0`).
+- **Releases:** pushing a `v*` tag runs `.github/workflows/release.yml`. It runs the checks, builds the zip and publishes a GitHub release with `vn-stage.zip` and `module.json`. The steps are at the top of that file. To build the zip locally: `ELECTRON_RUN_AS_NODE=1 ~/foundryvtt/foundryvtt tools/build-zip.mjs`.
 
 ## Design
 

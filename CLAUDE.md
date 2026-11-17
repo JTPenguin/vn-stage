@@ -1,6 +1,6 @@
 # VN Stage
 
-A Foundry VTT module (v14) for visual-novel scenes on a native Foundry scene. Every campaign Justin runs uses it, and it is shared privately with friends' tables. See `README.md` for settings and the console API.
+A Foundry VTT module (v14) for visual-novel scenes on a native Foundry scene. Every campaign Justin runs uses it, and it is released publicly on GitHub (`JTPenguin/vn-stage`) for friends' tables. See `README.md` for settings and the console API.
 
 ## Checks
 
@@ -10,6 +10,11 @@ A Foundry VTT module (v14) for visual-novel scenes on a native Foundry scene. Ev
 - The pre-commit gate (`.githooks/pre-commit`, enabled by `git config core.hooksPath .githooks`) runs the two JS checks when `scripts/`, `tools/`, `lang/` or `module.json` is staged, and the items check when `items/` is staged. Skip once with `git commit --no-verify`.
 - Node isn't installed; Foundry's Electron runs the JavaScript.
 - Start or stop Foundry for a live check: `foundry-ctl start|stop|restart|status` (`~/.local/bin/foundry-ctl`). It opens the desktop app, so it needs Justin's login session. Tell him before `stop` or `restart`: players may be connected.
+
+## Releases
+
+- The steps are at the top of `.github/workflows/release.yml`. A version tag builds the zip and publishes the GitHub release.
+- Keep `manifest` and `download` out of `module.json`: `tools/build-zip.mjs` adds them to the release only, and refuses to build if they are there.
 
 ## Work
 

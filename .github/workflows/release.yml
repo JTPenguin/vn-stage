@@ -1,0 +1,42 @@
+# Builds the module zip when a version tag is pushed, and attaches it and the built module.json to a GitHub release.
+# tools/build-zip.mjs writes "manifest" (the latest release's module.json) and "download" (this tag's zip) into the released module.json only.
+#
+# To release: set "version" in module.json, move "Unreleased" in CHANGELOG.md under a heading for the version, commit, then
+#   git tag v0.3.0 && git push origin main v0.3.0
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the tag matches module.json
+        run: |
+          version=$(jq -r .version module.json)
+          [ "${GITHUB_REF_NAME}" = "v$version" ] || { echo "Tag ${GITHUB_REF_NAME} does not match module.json version $version"; exit 1; }
+
+      - name: Run the checks
+        run: |
+          node tools/test.mjs
+          node tools/check-load.mjs
+
+      - name: Build the zip
+        run: |
+          node tools/build-zip.mjs
+          cp "dist/vn-stage-$(jq -r .version module.json).zip" vn-stage.zip
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes=$(awk -v v="${GITHUB_REF_NAME#v}" 'index($0, "## [" v "]")==1{on=1;next} /^## /{on=0} on' CHANGELOG.md)
+          gh release create "$GITHUB_REF_NAME" vn-stage.zip dist/module.json \
+            --title "$GITHUB_REF_NAME" --notes "${notes:-See CHANGELOG.md}"
