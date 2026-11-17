@@ -6,7 +6,7 @@ import { ALL, RECENT, UNTAGGED, getTag, tagFolders, memberNames, listTags, backg
 import { folderLabel } from "./tags-window.js";
 import { esc } from "./dialogs.js";
 import { safetyBackground } from "./settings.js";
-import { familyOf, isEntryFor, tellApart } from "./rules.js";
+import { familyOf, isEntryFor, tellApart, backgroundTagItem } from "./rules.js";
 
 /**
  * What the Stage window shows, worked out from the stage, the art and the
@@ -158,6 +158,7 @@ export async function backgroundStrips(scene, selected, collapsed) {
   const same = (a, b) => !!a && !!b && decodePath(a) === decodePath(b);
   const choice = (src, label, pinned = false) => ({
     src, label, pinned, video: isVideo(src), current: same(src, current),
+    tagItem: tag ? backgroundTagItem(tagsOf(src), tag.id) : null, // what its right-click menu offers for the tag
     tooltip: [esc(label), tagLine(tagsOf(src))].filter(Boolean).join("<br>"),
   });
 

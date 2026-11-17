@@ -875,3 +875,16 @@ test("Cast rows with one name: told apart by art, then by the actor's folder", (
     null, "Mira Voss",
   ]);
 });
+
+test("tag items: one wording everywhere", () => {
+  assert.equal(R.tagItemLabel(true, "Gatehouse"), "Add to Gatehouse");
+  assert.equal(R.tagItemLabel(false, "Gatehouse"), "Remove from Gatehouse");
+});
+
+test("a background's tag item: remove its own tag, point to the folder otherwise", () => {
+  assert.equal(R.backgroundTagItem([], "a"), null);
+  assert.equal(R.backgroundTagItem([{ id: "b", viaFolder: false }], "a"), null);
+  assert.equal(R.backgroundTagItem([{ id: "a", viaFolder: false }], "a"), "remove");
+  assert.equal(R.backgroundTagItem([{ id: "a", viaFolder: true }], "a"), "folder");
+  assert.equal(R.backgroundTagItem([{ id: "a", viaFolder: false }, { id: "a", viaFolder: true }], "a"), "remove");
+});

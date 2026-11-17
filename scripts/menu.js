@@ -1,10 +1,11 @@
 import { characterArt, artKeyOf, baseArtKeyOf, prefsKeyOf, formsFor, lockedForms } from "./art.js";
-import { visibleForms } from "./rules.js";
+import { visibleForms, tagItemLabel } from "./rules.js";
 import { ArtPicker } from "./art-picker.js";
 import { characterPrefs, setFlip, removeFromCast, displayName } from "./cast.js";
 import { currentExpression, chooseExpression, chooseForm, setFormLocked, offstageEntry } from "./expressions.js";
 import { AdjustWindow } from "./adjust.js";
 import { TagEditor } from "./tag-editor.js";
+import { getTag, stageTag, memberNames, addMember, removeMember } from "./tags.js";
 
 /**
  * The character menu: clicking a portrait on the stage (interact.js), or
@@ -14,6 +15,10 @@ import { TagEditor } from "./tag-editor.js";
  * right-clicking it; players don't see locked forms. Players get the forms and expressions of
  * characters they own, nothing else. Off stage, the forms and expressions
  * they'll arrive with, plus Flip and Tags….
+ *
+ * While the stage shows a tag, the GM's menu also tags or untags the
+ * character: Add to [tag] at the top when they don't have it, Remove from
+ * [tag] beside Tags… when they do.
  */
 
 let menu = null;
@@ -49,7 +54,9 @@ export async function openMenu(entry, clientX, clientY) {
   const locked = lockedForms(entry);
   const forms = visibleForms(await formsFor(key), locked, { isGM: game.user.isGM });
   const name = entry.actorUuid ? displayName(entry) : (await characterArt(baseKey))?.label ?? entry.name;
-  const actions = game.user.isGM ? await gmActions(onStage ? entry : null, await prefsKeyOf(entry), baseKey) : [];
+  const tag = game.user.isGM ? getTag(stageTag()) : null;
+  const tagged = !!tag && memberNames(tag.id).includes(baseKey);
+  const actions = game.user.isGM ? await gmActions(onStage ? entry : null, await prefsKeyOf(entry), baseKey, tagged ? tag : null) : [];
   if (expressions.length < 2 && !forms.some((f) => f.key !== key) && !actions.length) return;
   const current = currentExpression(entry);
   if (mine !== closes) return;
@@ -58,6 +65,11 @@ export async function openMenu(entry, clientX, clientY) {
   el.className = "vn-character-menu";
   el.setAttribute("role", "menu");
   el.innerHTML = `<div class="vn-menu-name">${esc(name)}${onStage ? "" : ' <span class="vn-menu-note">· arrives like this</span>'}</div>`;
+
+  if (tag && !tagged) {
+    el.append(menuButton("vn-menu-add-tag", `<i class="fa-solid fa-plus"></i> ${esc(tagItemLabel(true, tag.label))}`,
+      () => addMember(tag.id, baseKey)));
+  }
 
   // Shown while there's an open form besides the current one.
   if (forms.some((f) => f.key !== key)) {
@@ -114,8 +126,12 @@ export async function openMenu(entry, clientX, clientY) {
   });
 }
 
-/** The GM's row: what this character (or party member) can have done to them. Off stage (no `entry`), only Flip and Tags…. */
-async function gmActions(entry, key, baseKey) {
+/**
+ * The GM's row: what this character (or party member) can have done to them.
+ * Off stage (no `entry`), only Flip and Tags…. `tag`: the stage's tag, when
+ * the character has it (Remove from it).
+ */
+async function gmActions(entry, key, baseKey, tag) {
   const flip = !!characterPrefs(key).flip;
   const actions = [{ label: "Flip", icon: "fa-solid fa-left-right", active: flip, run: () => setFlip(key, !flip) }];
   if (entry) actions.push({ label: "Adjust size and height", icon: "fa-solid fa-sliders", run: () => AdjustWindow.open(entry.id) });
@@ -123,6 +139,7 @@ async function gmActions(entry, key, baseKey) {
     actions.push({ label: "VN art…: which character's art this actor uses", icon: "fa-solid fa-image-portrait", run: () => ArtPicker.open(entry.actorUuid) });
   }
   actions.push({ label: "Tags…", icon: "fa-solid fa-tags", run: () => TagEditor.open({ kind: "character", key: baseKey }) });
+  if (tag) actions.push({ label: tagItemLabel(false, tag.label), icon: "fa-solid fa-minus", run: () => removeMember(tag.id, baseKey) });
   if (!entry) return actions;
   actions.push("|", { label: "Remove from the stage", icon: "fa-solid fa-xmark", run: () => removeFromCast(entry.id) });
   return actions;

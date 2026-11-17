@@ -68,9 +68,13 @@
     </div>
 
     <div class="vn-bg-row">
-      <button type="button" data-action="browseBackground"><i class="fa-solid fa-folder-open"></i> Browse…</button>
+      <button type="button" data-action="browseBackground" data-tooltip="Show a background without tagging it"><i class="fa-solid fa-folder-open"></i> Browse…</button>
+      {{#if bg.tagged}}
+      <button type="button" class="vn-icon" data-action="addBackgroundToTag" data-tooltip="{{addBackgroundLabel}}" aria-label="{{addBackgroundLabel}}"><i class="fa-solid fa-plus"></i></button>
+      <button type="button" data-action="addFolderToTag" data-tooltip="Add a folder of backgrounds to {{tag.label}}"><i class="fa-solid fa-folder-plus"></i> Add folder…</button>
+      {{/if}}
       <span class="vn-bg-folder">
-        {{#if bg.tagged}}{{#unless bg.strips.length}}No backgrounds have this tag yet. Browse to one, then right-click it and choose Tags….{{/unless}}
+        {{#if bg.tagged}}{{#unless bg.strips.length}}No backgrounds have this tag yet. Add one with +, or a folder with Add folder….{{/unless}}
         {{else}}{{#if bg.folder}}{{bg.folder}}{{else}}Browse to a scenario's scene art to swap between its images here.{{/if}}{{/if}}
       </span>
     </div>

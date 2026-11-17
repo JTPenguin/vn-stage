@@ -100,22 +100,9 @@ export class TagsWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     await retagStages(tag.id, ALL);
   }
 
-  static #pickFolder(id, current) {
-    const FilePicker = foundry.applications.apps.FilePicker.implementation;
-    new FilePicker({
-      type: "folder",
-      current: current ?? backgroundFolder() ?? "",
-      callback: (path) => {
-        let folder = decodePath(path);
-        if (!folder.endsWith("/")) folder += "/";
-        return addFolder(id, folder);
-      },
-    }).render({ force: true });
-  }
-
   static #onAddFolder(_event, target) {
     const tag = TagsWindow.#tagOf(target);
-    if (tag) TagsWindow.#pickFolder(tag.id, tag.folders.at(-1));
+    if (tag) pickTagFolder(tag.id, tag.folders.at(-1));
   }
 
   static async #onRemoveFolder(_event, target) {
@@ -126,8 +113,22 @@ export class TagsWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   /** A tag that starts with a folder of backgrounds (a tag is listed once something has it, so the folder comes with the name). */
   static async #onNewFromFolder() {
     const name = await askName("New tag from a folder", "", "Choose folder…");
-    if (name) TagsWindow.#pickFolder(await tagNamed(name));
+    if (name) pickTagFolder(await tagNamed(name));
   }
+}
+
+/** Pick a folder of backgrounds for tag `id` (a folder picker) and add it to the tag. */
+export function pickTagFolder(id, current) {
+  const FilePicker = foundry.applications.apps.FilePicker.implementation;
+  new FilePicker({
+    type: "folder",
+    current: current ?? backgroundFolder() ?? "",
+    callback: (path) => {
+      let folder = decodePath(path);
+      if (!folder.endsWith("/")) folder += "/";
+      return addFolder(id, folder);
+    },
+  }).render({ force: true });
 }
 
 /** ".../scenarios/99-1/scenes/" → "99-1/scenes". */

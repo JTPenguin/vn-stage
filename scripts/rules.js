@@ -659,3 +659,20 @@ export function shadowLook({ on, strength, scale }, look) {
     padding: Math.ceil(Math.max(Math.abs(shiftX), Math.abs(shiftY)) + 2 * blur + 1),
   };
 }
+
+/** The words for a tag item, the same in every right-click menu and button. */
+export function tagItemLabel(add, label) {
+  return add ? `Add to ${label}` : `Remove from ${label}`;
+}
+
+/**
+ * What a background's right-click menu offers for tag `id`, from the
+ * background's tags ([{ id, viaFolder }]): "remove" when the background itself
+ * has the tag, "folder" when it has it only through a tagged folder (taken off
+ * in Manage tags), or null.
+ */
+export function backgroundTagItem(tags, id) {
+  const mine = tags.filter((t) => t.id === id);
+  if (mine.some((t) => !t.viaFolder)) return "remove";
+  return mine.length ? "folder" : null;
+}

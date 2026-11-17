@@ -4,10 +4,11 @@ import { getCast, findEntry, removeParty, clearCast, partyEntryIds, removeFromCa
 import { setWindowDrag } from "./interact.js";
 import { openCastMenu } from "./menu.js";
 import { castEntryFor, partyRow, castLists, rowContext, presetRows, backgroundStrips } from "./window-data.js";
-import { getPreset, savePreset, loadPreset, deletePreset, findPresetByName, updatePreset, renamePreset } from "./presets.js";
-import { isStage, makeStage, setBackground, currentBackground, pickBackground, clearFolderCache } from "./stage.js";
-import { ALL, RECENT, UNTAGGED, listTags, getTag, stageTag, setStageTag } from "./tags.js";
-import { TagsWindow } from "./tags-window.js";
+import { getPreset, savePreset, loadPreset, deletePreset, findPresetByName, updatePreset, renamePreset, setPresetTag } from "./presets.js";
+import { isStage, makeStage, setBackground, currentBackground, pickBackground, clearFolderCache, decodePath } from "./stage.js";
+import { ALL, RECENT, UNTAGGED, listTags, getTag, stageTag, setStageTag, addImage, removeImage, addMember } from "./tags.js";
+import { TagsWindow, pickTagFolder } from "./tags-window.js";
+import { tagItemLabel } from "./rules.js";
 import { TagEditor } from "./tag-editor.js";
 import { askName, confirm, esc } from "./dialogs.js";
 import { resetAllExpressions } from "./expressions.js";
@@ -52,6 +53,9 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       loadPreset: StageWindow.#onLoadPreset,
       updatePreset: StageWindow.#onUpdatePreset,
       toggleViewLock: StageWindow.#onToggleViewLock,
+      addBackgroundToTag: StageWindow.#onAddBackgroundToTag,
+      addFolderToTag: StageWindow.#onAddFolderToTag,
+      addRowToTag: StageWindow.#onAddRowToTag,
     },
   };
 
@@ -87,6 +91,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   #filter = "";
   #tagLabel = null;
   #rows = new Map(); // Cast row id → its row (from the last render): who it adds, and their entry on stage
+  #dragRow = null; // the Cast row being dragged, while it is
   #sizeTimer = null;
 
   get title() {
@@ -134,6 +139,8 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       emptyPresets: tag ? "No presets have this tag yet. Save the stage with +."
         : selected === UNTAGGED ? "Every preset has a tag." : "No presets yet. Save the stage with +.",
       outsideLabel: tag ? "Not tagged " + tag.label : selected === UNTAGGED ? "Tagged" : "Not recent",
+      addRowLabel: tag ? tagItemLabel(true, tag.label) : null,
+      addBackgroundLabel: tag ? `Add a background to ${tag.label}` : null,
     };
   }
 
@@ -200,14 +207,6 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       button.addEventListener("mouseleave", () => { video.pause(); video.currentTime = 0; });
     }
 
-    // Right-click a background: its tags.
-    for (const button of this.element.querySelectorAll(".vn-bg-choice")) {
-      button.addEventListener("contextmenu", (event) => {
-        event.preventDefault();
-        TagEditor.open({ kind: "image", src: button.dataset.src });
-      });
-    }
-
     // Drag a Cast row (or The Party) onto the stage to put them where they're dropped.
     for (const li of this.element.querySelectorAll(".vn-cast-list li[draggable]")) {
       li.addEventListener("dragstart", (event) => {
@@ -219,8 +218,13 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
         event.dataTransfer.setData("text/plain", JSON.stringify(data));
         event.dataTransfer.effectAllowed = "copyMove";
         setWindowDrag({ ignore });
+        this.#dragRow = party ? null : li;
       });
-      li.addEventListener("dragend", () => setWindowDrag(null));
+      li.addEventListener("dragend", () => {
+        setWindowDrag(null);
+        this.#dragRow = null;
+        this.element.querySelector(".vn-cast-list")?.classList.remove("vn-drop-tag");
+      });
       // Right-click a character's row: the same character menu as on the stage.
       if (!li.hasAttribute("data-party")) {
         li.addEventListener("contextmenu", (event) => {
@@ -231,21 +235,90 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       }
     }
 
+    this.#listenForTagDrop();
+
     this.element.querySelector("select[name=tag]")?.addEventListener("change", (event) => setStageTag(event.target.value));
   }
 
-  /** The preset menu: right-click a preset chip. Made once; the window's element outlives its renders. */
+  /**
+   * The right-click menus for presets and backgrounds (the Cast rows' is the
+   * character menu, menu.js). Made once; the window's element outlives its
+   * renders. Each offers Tags…, and Remove from the selected tag when that can
+   * be done here; labels naming the tag are getters, read as the menu opens.
+   */
   _onFirstRender(context, options) {
     super._onFirstRender(context, options);
     const ContextMenu = foundry.applications.ux.ContextMenu.implementation;
+    const tag = () => getTag(stageTag());
+    const removeLabel = () => tagItemLabel(false, tag()?.label ?? "");
+
     const row = (target) => target.closest("[data-preset]");
-    const items = [
+    const presetItems = [
       { label: "Update from stage", icon: "fa-solid fa-floppy-disk", onClick: (_e, t) => StageWindow.#updatePreset(row(t).dataset.preset) },
       { label: "Rename…", icon: "fa-solid fa-pen", onClick: (_e, t) => StageWindow.#renamePreset(row(t).dataset.preset) },
       { label: "Tags…", icon: "fa-solid fa-tags", onClick: (_e, t) => TagEditor.open({ kind: "preset", id: row(t).dataset.preset }) },
+      {
+        get label() { return removeLabel(); }, icon: "fa-solid fa-minus",
+        visible: (t) => !!tag() && !!getPreset(row(t).dataset.preset)?.tags.includes(tag().id),
+        onClick: (_e, t) => setPresetTag(row(t).dataset.preset, tag()?.id, false),
+      },
       { label: "Delete", icon: "fa-solid fa-trash", onClick: (_e, t) => StageWindow.#deletePreset(row(t).dataset.preset) },
     ];
-    new ContextMenu(this.element, ".vn-preset-list li[data-preset]", items, { jQuery: false, fixed: true });
+    new ContextMenu(this.element, ".vn-preset-list li[data-preset]", presetItems, { jQuery: false, fixed: true });
+
+    // A background's data-tag-item says what it offers for the tag (backgroundStrips).
+    const bgItems = [
+      { label: "Tags…", icon: "fa-solid fa-tags", onClick: (_e, t) => TagEditor.open({ kind: "image", src: t.dataset.src }) },
+      {
+        get label() { return removeLabel(); }, icon: "fa-solid fa-minus",
+        visible: (t) => !!tag() && t.dataset.tagItem === "remove",
+        onClick: (_e, t) => { const id = tag()?.id; if (id) return removeImage(id, t.dataset.src); },
+      },
+      {
+        get label() { return `In ${tag()?.label ?? ""} through its folder: Manage tags…`; }, icon: "fa-solid fa-folder",
+        visible: (t) => !!tag() && t.dataset.tagItem === "folder",
+        onClick: () => TagsWindow.open(),
+      },
+    ];
+    new ContextMenu(this.element, ".vn-bg-choice", bgItems, { jQuery: false, fixed: true });
+  }
+
+  /**
+   * Drag a Cast row from outside the tag (shown while searching) up above the
+   * divider to add them to the tag. Dropping on the stage works as before.
+   */
+  #listenForTagDrop() {
+    const list = this.element.querySelector(".vn-cast-list");
+    const divider = list?.querySelector(".vn-cast-divider");
+    if (!list || !divider) return;
+    const over = (event) => {
+      const li = this.#dragRow;
+      return !!li && li.classList.contains("outside") && !divider.hidden && !!getTag(stageTag())
+        && event.clientY < divider.getBoundingClientRect().top;
+    };
+    list.addEventListener("dragover", (event) => {
+      const on = over(event);
+      list.classList.toggle("vn-drop-tag", on);
+      if (!on) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "copy";
+    });
+    list.addEventListener("dragleave", (event) => {
+      if (!list.contains(event.relatedTarget)) list.classList.remove("vn-drop-tag");
+    });
+    list.addEventListener("drop", async (event) => {
+      list.classList.remove("vn-drop-tag");
+      if (!over(event)) return;
+      event.preventDefault();
+      await this.#addRowToTag(this.#dragRow.dataset.row);
+    });
+  }
+
+  /** Add a Cast row's character to the selected tag. */
+  async #addRowToTag(rowId) {
+    const tag = getTag(stageTag());
+    const row = this.#rows.get(rowId);
+    if (tag && row) await addMember(tag.id, row.key);
   }
 
   /** Searching filters the tag's rows and brings in matching rows from outside it, under a divider. */
@@ -279,6 +352,29 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       current: currentBackground() ?? "",
       callback: (path) => pickBackground(path, { keepFolder: tagged }),
     }).render({ force: true });
+  }
+
+  /** +: pick a background and add it to the selected tag. The stage doesn't change; Browse… is for that. */
+  static #onAddBackgroundToTag() {
+    const tag = getTag(stageTag());
+    if (!tag) return;
+    const FilePicker = foundry.applications.apps.FilePicker.implementation;
+    new FilePicker({
+      type: "imagevideo",
+      current: tag.images.at(-1) ?? currentBackground() ?? "",
+      callback: (path) => addImage(tag.id, decodePath(path)),
+    }).render({ force: true });
+  }
+
+  /** Add folder…: pick a folder of backgrounds and add it to the selected tag. */
+  static #onAddFolderToTag() {
+    const tag = getTag(stageTag());
+    if (tag) pickTagFolder(tag.id, tag.folders.at(-1));
+  }
+
+  /** The + on a Cast row from outside the tag. */
+  static async #onAddRowToTag(_event, target) {
+    await this.#addRowToTag(target.closest("[data-row]").dataset.row);
   }
 
   static async #onSetBackground(_event, target) {

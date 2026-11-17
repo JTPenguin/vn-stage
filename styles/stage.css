@@ -15,6 +15,8 @@
 /* Thumbnails are a fixed 5.5rem wide (16:9, 2px border); the strip shows three rows, then scrolls. */
 .vn-stage .vn-bg-scroll { flex: 1; min-height: 0; overflow-y: auto; padding-right: 0.2rem; }
 .vn-stage .vn-bg-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.4rem; }
+.vn-stage .vn-bg-row > button { flex: none; width: auto; }
+.vn-stage .vn-bg-row > .vn-icon { align-self: stretch; height: auto; }
 .vn-stage .vn-bg-folder { font-size: var(--font-size-12, 12px); opacity: 0.7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vn-stage .vn-bg-strip { display: grid; grid-template-columns: repeat(auto-fill, 5.5rem); gap: 0.3rem; }
 .vn-stage .vn-bg-choice { position: relative; width: 100%; height: auto; padding: 0; border: 2px solid transparent; border-radius: 4px; background: none; overflow: hidden; line-height: 0; }
@@ -36,6 +38,12 @@
 .vn-stage .vn-cast-list li.on-stage .vn-name { font-weight: bold; }
 /* On stage, a small × takes the character (or the whole party) off. */
 .vn-stage .vn-cast-list li .vn-row-remove { flex: none; width: 1.6rem; min-width: 0; height: 1.6rem; min-height: 0; margin: 0; padding: 0; line-height: 1; border: none; background: none; opacity: 0.6; }
+.vn-stage .vn-cast-list li .vn-row-add { flex: none; width: 1.6rem; min-width: 0; height: 1.6rem; min-height: 0; margin: 0; padding: 0; line-height: 1; border: none; background: none; opacity: 0; }
+.vn-stage .vn-cast-list li:hover .vn-row-add, .vn-stage .vn-cast-list li .vn-row-add:focus-visible { opacity: 0.7; }
+.vn-stage .vn-cast-list li .vn-row-add:hover { opacity: 1; background: color-mix(in srgb, var(--color-warm-2, #c9593f) 32%, transparent); }
+/* Dragging a row from outside the tag up into it: the tag's rows light up. */
+.vn-stage .vn-cast-list.vn-drop-tag > li:not(.outside, .vn-cast-divider) { background: color-mix(in srgb, #e0a64a 16%, transparent); }
+.vn-stage .vn-cast-list.vn-drop-tag > .vn-cast-divider { border-top: 2px solid #e0a64a; }
 .vn-stage .vn-cast-list li .vn-row-remove:hover { opacity: 1; background: color-mix(in srgb, var(--color-warm-2, #c9593f) 32%, transparent); }
 
 /* Adjust window */
@@ -97,6 +105,12 @@
 }
 .vn-character-menu button.vn-menu-action:hover { background: rgba(255, 255, 255, 0.16); }
 .vn-character-menu button.vn-menu-action.active { border-color: #e0a64a; color: #e0a64a; }
+.vn-character-menu button.vn-menu-add-tag {
+  display: flex; align-items: center; gap: 0.4rem; width: 100%; height: auto; min-height: 0; margin: 0 0 0.35rem; padding: 0.25rem 0.5rem;
+  border: 1px solid #e0a64a; border-radius: 4px; background: rgba(224, 166, 74, 0.14); box-shadow: none;
+  color: inherit; cursor: pointer; font-size: 12px; line-height: 1.2; text-align: left;
+}
+.vn-character-menu button.vn-menu-add-tag:hover { background: rgba(224, 166, 74, 0.28); }
 .vn-character-menu .vn-menu-divider { width: 1px; align-self: stretch; margin: 0 0.2rem; background: rgba(255, 255, 255, 0.15); }
 
 /* Dragging on the stage */
