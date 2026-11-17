@@ -6,35 +6,32 @@
   </section>
   {{else}}
 
-  <section class="vn-tagbar">
-    <i class="fa-solid fa-tag" data-tooltip="Tag: sets the Presets, the Background strip and the Cast list"></i>
-    <select name="tag" aria-label="Tag">
-      <option value="" {{#if allSelected}}selected{{/if}}>All characters</option>
-      <option value="__recent" {{#if recentSelected}}selected{{/if}}>Recent</option>
-      <option value="__untagged" {{#if untaggedSelected}}selected{{/if}}>Untagged</option>
-      {{#if tags.length}}
-      <optgroup label="Tags">
-        {{#each tags}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
-      </optgroup>
-      {{/if}}
-    </select>
-    <button type="button" class="vn-icon" data-action="manageTags" data-tooltip="Manage tags: rename, merge, delete, folders"><i class="fa-solid fa-gear"></i></button>
-  </section>
-
   <div class="vn-tabrow">
     <nav class="tabs vn-tabs" data-group="main" aria-label="Stage window tabs">
       <a data-action="tab" data-group="main" data-tab="cast" class="{{tabs.cast.cssClass}}">Cast</a>
       <a data-action="tab" data-group="main" data-tab="background" class="{{tabs.background.cssClass}}">Background</a>
       <a data-action="tab" data-group="main" data-tab="presets" class="{{tabs.presets.cssClass}}">Presets</a>
     </nav>
-    <span class="vn-stage-tools">
-      {{#if changedPreset}}<button type="button" class="vn-preset-update" data-action="updatePreset" data-preset="{{changedPreset.id}}" data-tooltip="Update {{changedPreset.name}}: save what's on stage now over it"><i class="fa-solid fa-floppy-disk"></i> Update</button>{{/if}}
-      <button type="button" class="vn-icon" data-action="savePreset" data-tooltip="Save stage as preset{{#if tag}} tagged {{tag.label}}{{/if}}"><i class="fa-solid fa-plus"></i></button>
-      <button type="button" class="vn-icon" data-action="clearStage" data-tooltip="Clear the stage: take everyone off" {{#unless anyoneOnStage}}disabled{{/unless}}><i class="fa-solid fa-broom"></i></button>
+    <span class="vn-tagbar">
+      <i class="fa-solid fa-tag" data-tooltip="Tag: sets the Presets, the Background strip and the Cast list"></i>
+      <select name="tag" aria-label="Tag">
+        <option value="" {{#if allSelected}}selected{{/if}}>All characters</option>
+        <option value="__recent" {{#if recentSelected}}selected{{/if}}>Recent</option>
+        <option value="__untagged" {{#if untaggedSelected}}selected{{/if}}>Untagged</option>
+        {{#if tags.length}}
+        <optgroup label="Tags">
+          {{#each tags}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+        </optgroup>
+        {{/if}}
+      </select>
+      <button type="button" class="vn-icon" data-action="manageTags" data-tooltip="Manage tags: rename, merge, delete, folders"><i class="fa-solid fa-gear"></i></button>
     </span>
   </div>
 
   <section class="vn-section vn-presets tab {{tabs.presets.cssClass}}" data-group="main" data-tab="presets">
+    <div class="vn-tab-actions">
+      <button type="button" data-action="savePreset" data-tooltip="Save what's on stage as a new preset{{#if tag}} tagged {{tag.label}}{{/if}}"><i class="fa-solid fa-plus"></i> Save as preset</button>
+    </div>
     <ul class="vn-preset-list">
       {{#each presets}}
       <li data-preset="{{id}}" data-name="{{name}}">
@@ -49,6 +46,14 @@
   </section>
 
   <section class="vn-section vn-background tab {{tabs.background.cssClass}}" data-group="main" data-tab="background">
+    <div class="vn-tab-actions vn-bg-row">
+      {{#unless bg.tagged}}{{#if bg.folder}}<span class="vn-bg-folder">{{bg.folder}}</span>{{/if}}{{/unless}}
+      <button type="button" data-action="browseBackground" data-tooltip="Show a background without tagging it"><i class="fa-solid fa-folder-open"></i> Browse…</button>
+      {{#if bg.tagged}}
+      <button type="button" class="vn-icon" data-action="addBackgroundToTag" data-tooltip="{{addBackgroundLabel}}" aria-label="{{addBackgroundLabel}}"><i class="fa-solid fa-plus"></i></button>
+      <button type="button" data-action="addFolderToTag" data-tooltip="Add a folder of backgrounds to {{tag.label}}"><i class="fa-solid fa-folder-plus"></i> Add folder…</button>
+      {{/if}}
+    </div>
 
     <div class="vn-bg-scroll">
       {{#if bg.strips.[0].showHeading}}
@@ -65,26 +70,17 @@
         {{#each bg.strips}}{{#each choices}}{{> "vn-stage.bg"}}{{/each}}{{/each}}
       </div>
       {{/if}}
-    </div>
-
-    <div class="vn-bg-row">
-      <button type="button" data-action="browseBackground" data-tooltip="Show a background without tagging it"><i class="fa-solid fa-folder-open"></i> Browse…</button>
-      {{#if bg.tagged}}
-      <button type="button" class="vn-icon" data-action="addBackgroundToTag" data-tooltip="{{addBackgroundLabel}}" aria-label="{{addBackgroundLabel}}"><i class="fa-solid fa-plus"></i></button>
-      <button type="button" data-action="addFolderToTag" data-tooltip="Add a folder of backgrounds to {{tag.label}}"><i class="fa-solid fa-folder-plus"></i> Add folder…</button>
-      {{/if}}
-      <span class="vn-bg-folder">
-        {{#if bg.tagged}}{{#unless bg.strips.length}}No backgrounds have this tag yet. Add one with +, or a folder with Add folder….{{/unless}}
-        {{else}}{{#if bg.folder}}{{bg.folder}}{{else}}Browse to a scenario's scene art to swap between its images here.{{/if}}{{/if}}
-      </span>
+      {{#if bg.tagged}}{{#unless bg.strips.length}}<p class="vn-empty">No backgrounds have this tag yet. Add one with +, or a folder with Add folder….</p>{{/unless}}
+      {{else}}{{#unless bg.folder}}<p class="vn-empty">Browse to a scenario's scene art to swap between its images here.</p>{{/unless}}{{/if}}
     </div>
   </section>
 
   <section class="vn-section vn-cast tab {{tabs.cast.cssClass}}" data-group="main" data-tab="cast">
-    <div class="vn-cast-tools">
+    <div class="vn-tab-actions vn-cast-tools">
       <input type="search" name="filter" value="{{filter}}" placeholder="{{#if allSelected}}Search{{else}}Search (finds everyone){{/if}}" autocomplete="off">
       <button type="button" class="vn-icon" data-action="resetExpressions" data-tooltip="Reset everyone's expression to neutral, on every stage"><i class="fa-solid fa-face-meh"></i></button>
       <button type="button" class="vn-icon" data-action="refreshCast" data-tooltip="Re-read the art folder"><i class="fa-solid fa-rotate"></i></button>
+      <button type="button" class="vn-icon vn-clear-stage" data-action="clearStage" data-tooltip="Clear the stage: take everyone off (asks first)" aria-label="Clear the stage" {{#unless anyoneOnStage}}disabled{{/unless}}><i class="fa-solid fa-broom"></i></button>
     </div>
     <ul class="vn-cast-list">
       {{#if party}}

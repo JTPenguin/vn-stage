@@ -4,7 +4,7 @@ import { getCast, findEntry, removeParty, clearCast, partyEntryIds, removeFromCa
 import { setWindowDrag } from "./interact.js";
 import { openCastMenu } from "./menu.js";
 import { castEntryFor, partyRow, castLists, rowContext, presetRows, backgroundStrips } from "./window-data.js";
-import { getPreset, savePreset, loadPreset, deletePreset, findPresetByName, updatePreset, renamePreset, setPresetTag } from "./presets.js";
+import { getPreset, savePreset, loadPreset, deletePreset, findPresetByName, updatePreset, renamePreset, setPresetTag, stagePreset } from "./presets.js";
 import { isStage, makeStage, setBackground, currentBackground, pickBackground, clearFolderCache, decodePath } from "./stage.js";
 import { ALL, RECENT, UNTAGGED, listTags, getTag, stageTag, setStageTag, addImage, removeImage, addMember } from "./tags.js";
 import { TagsWindow, pickTagFolder } from "./tags-window.js";
@@ -51,7 +51,6 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       removeParty: StageWindow.#onRemoveParty,
       savePreset: StageWindow.#onSavePreset,
       loadPreset: StageWindow.#onLoadPreset,
-      updatePreset: StageWindow.#onUpdatePreset,
       toggleViewLock: StageWindow.#onToggleViewLock,
       addBackgroundToTag: StageWindow.#onAddBackgroundToTag,
       addFolderToTag: StageWindow.#onAddFolderToTag,
@@ -127,7 +126,6 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       bg: await backgroundStrips(scene, selected, collapsed),
       party: hasParty() ? partyRow(scene) : null,
       presets,
-      changedPreset: presets.find((p) => p.changed) ?? null,
       anyoneOnStage: getCast(scene).length > 0,
       cast: mine.map(rowContext),
       others: others.map(rowContext),
@@ -136,8 +134,8 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
         : selected === RECENT ? "Nobody yet: characters you put on a stage appear here."
           : selected === UNTAGGED ? "Every character has a tag."
             : "Nobody has this tag yet. Search for a character, then right-click them and choose Tags….",
-      emptyPresets: tag ? "No presets have this tag yet. Save the stage with +."
-        : selected === UNTAGGED ? "Every preset has a tag." : "No presets yet. Save the stage with +.",
+      emptyPresets: tag ? "No presets have this tag yet. Save the stage with Save as preset."
+        : selected === UNTAGGED ? "Every preset has a tag." : "No presets yet. Save the stage with Save as preset.",
       outsideLabel: tag ? "Not tagged " + tag.label : selected === UNTAGGED ? "Tagged" : "Not recent",
       addRowLabel: tag ? tagItemLabel(true, tag.label) : null,
       addBackgroundLabel: tag ? `Add a background to ${tag.label}` : null,
@@ -413,8 +411,10 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     await setStageTag(target.dataset.tag);
   }
 
-  /** Everyone off this stage at once (they fade out). Load a preset to bring a scene back. */
+  /** Everyone off this stage at once (they fade out), after asking. Load a preset to bring a scene back. */
   static async #onClearStage() {
+    const ok = await confirm("Clear the stage", "Take everyone off the stage?");
+    if (!ok) return;
     await clearCast();
   }
 
@@ -443,13 +443,14 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     await loadPreset(target.closest("[data-preset]").dataset.preset);
   }
 
-  static async #onUpdatePreset(_event, target) {
-    await StageWindow.#updatePreset(target.dataset.preset);
-  }
-
+  /** Save the stage over a preset. The loaded one saves at once; any other asks first, naming it. */
   static async #updatePreset(id) {
     const preset = getPreset(id);
     if (!preset) return;
+    if (stagePreset()?.id !== id) {
+      const ok = await confirm("Update preset", `Save what's on stage now over the preset <strong>${esc(preset.name)}</strong>? It isn't the one loaded.`);
+      if (!ok) return;
+    }
     await updatePreset(id);
     ui.notifications.info(`VN Stage | Updated preset "${preset.name}".`);
   }

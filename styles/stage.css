@@ -14,7 +14,6 @@
 
 /* Thumbnails are a fixed 5.5rem wide (16:9, 2px border); the strip shows three rows, then scrolls. */
 .vn-stage .vn-bg-scroll { flex: 1; min-height: 0; overflow-y: auto; padding-right: 0.2rem; }
-.vn-stage .vn-bg-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.4rem; }
 .vn-stage .vn-bg-row > button { flex: none; width: auto; }
 .vn-stage .vn-bg-row > .vn-icon { align-self: stretch; height: auto; }
 .vn-stage .vn-bg-folder { font-size: var(--font-size-12, 12px); opacity: 0.7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -63,13 +62,13 @@
 .vn-adjust .vn-adjust-buttons { display: flex; gap: 0.4rem; justify-content: flex-end; }
 
 /* The tag bar */
-.vn-stage .vn-tagbar { display: flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--color-border, #0003); }
-.vn-stage .vn-tagbar select { flex: 1; }
+/* The tag picker shares the tab row, on the right; it wraps below the tabs when the window is too narrow. */
+.vn-stage .vn-tagbar { flex: 1 0 13rem; display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0; }
+.vn-stage .vn-tagbar select { flex: 1; min-width: 8rem; }
 .vn-stage .vn-bg-folder-group { margin-top: 0.4rem; }
 .vn-stage .vn-bg-folder-group h4 { cursor: pointer; user-select: none; text-transform: none; font-family: var(--font-h3); font-size: var(--font-size-12, 12px); opacity: 0.85; }
 .vn-stage .vn-bg-folder-group.collapsed .vn-chevron { transform: rotate(-90deg); }
 .vn-stage .vn-bg-folder-group.collapsed .vn-bg-strip { display: none; }
-.vn-stage .vn-cast-tools { display: flex; gap: 0.4rem; margin-bottom: 0.4rem; }
 .vn-stage .vn-cast-tools input[type=search] { flex: 1; margin-bottom: 0; }
 
 
@@ -189,12 +188,14 @@
 .vn-stage .window-header .header-control.active { color: var(--color-warm-2, #c9593f); }
 
 /* Tabs: one section at a time under a row of tabs and the always-shown stage buttons. Each tab fills the window and scrolls on its own. */
-.vn-stage .vn-tabrow { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; padding: 0 0.75rem; border-bottom: 1px solid var(--color-border, #0003); }
-.vn-stage .vn-tabrow nav.vn-tabs { flex: 1; justify-content: flex-start; gap: 1rem; margin: 0; padding: 0; border: none; }
-.vn-stage .vn-tabrow nav.vn-tabs [data-tab] { padding: 0.4rem 0; border-bottom: 2px solid transparent; }
+.vn-stage .vn-tabrow { display: flex; flex-wrap: wrap; align-items: center; column-gap: 1.5rem; row-gap: 0; padding: 0 0.75rem; border-bottom: 1px solid var(--color-border, #0003); }
+.vn-stage .vn-tabrow nav.vn-tabs { flex: none; align-self: stretch; display: flex; justify-content: flex-start; gap: 1rem; margin: 0; padding: 0; border: none; }
+.vn-stage .vn-tabrow nav.vn-tabs [data-tab] { display: flex; align-items: center; padding: 0.4rem 0; border-bottom: 2px solid transparent; }
 .vn-stage .vn-tabrow nav.vn-tabs [data-tab].active { border-bottom-color: var(--color-warm-2, #c9593f); }
-.vn-stage .vn-stage-tools { display: flex; align-items: center; gap: 0.3rem; margin-left: auto; padding: 0.3rem 0; }
-.vn-stage .vn-stage-tools .vn-preset-update { height: 1.6rem; padding: 0 0.5rem; font-size: var(--font-size-12, 12px); }
 .vn-stage .vn-section.tab:not(.active) { display: none; }
 .vn-stage .vn-section.tab.active { flex: 1; display: flex; flex-direction: column; min-height: 0; border-bottom: none; }
 .vn-stage .vn-cast-tools .vn-icon { height: auto; align-self: stretch; }
+/* Each tab's own action row, at its top. */
+.vn-stage .vn-tab-actions { display: flex; align-items: center; justify-content: flex-end; gap: 0.4rem; margin-bottom: 0.4rem; flex: none; }
+.vn-stage .vn-tab-actions > button { flex: none; width: auto; }
+.vn-stage .vn-tab-actions > .vn-bg-folder { flex: 1; min-width: 0; }
