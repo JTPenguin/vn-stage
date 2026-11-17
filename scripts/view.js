@@ -1,6 +1,11 @@
 import { MODULE, FRAME } from "./constants.js";
 import { isStage } from "./stage.js";
-import { locksView, fitFrame } from "./rules.js";
+import { locksView, fitFrame, cssEase, transitionMs } from "./rules.js";
+
+/** The name of the sidebar glide in CanvasAnimation, so a new one replaces it and a re-fit can stop it. */
+const GLIDE = `${MODULE}.sidebarGlide`;
+/** Foundry's sidebar slide (margin-right 250ms ease), if its style can't be read. */
+const SLIDE_MS = 250;
 
 /**
  * Fit every screen to the stage frame. Players can't pan or zoom away from it:
@@ -30,6 +35,7 @@ export function startView() {
 }
 
 export function stopView() {
+  CanvasAnimation.terminateAnimation(GLIDE);
   fitted = false;
   unlockView?.();
   unlockView = null;
@@ -53,19 +59,50 @@ export async function toggleGmViewLock() {
   return lock;
 }
 
+/** Jump a locked view to its fit (a window resize, the lock turned on). Stops a sidebar glide first. */
 export function refitView() {
+  CanvasAnimation.terminateAnimation(GLIDE);
   if (canvas.ready) canvas.pan();
 }
 
 /**
- * Width of Foundry's sidebar panel on screen, or 0 while it is collapsed. The tab strip beside
- * it is left out, so it overlaps the frame like the controls on the left.
+ * The sidebar opened or closed: glide a locked view to its new fit while the panel slides,
+ * with the slide's length and curve. A second toggle mid-glide starts again from where the view is.
+ */
+export function glideView() {
+  if (!viewLocked() || !canvas.ready) return;
+  const to = fitView();
+  const content = document.getElementById("sidebar-content");
+  const style = content ? getComputedStyle(content) : null;
+  const duration = transitionMs("margin-right", style?.transitionProperty, style?.transitionDuration, SLIDE_MS);
+  const proto = Object.getPrototypeOf(canvas);
+  if (!(duration > 0)) {
+    CanvasAnimation.terminateAnimation(GLIDE);
+    proto.pan.call(canvas, to);
+    return;
+  }
+  // The pan methods are shadowed to jump, so tween by hand and pan through the prototype.
+  const position = { ...canvas.scene._viewPosition };
+  CanvasAnimation.animate([
+    { parent: position, attribute: "x", to: to.x },
+    { parent: position, attribute: "y", to: to.y },
+    { parent: position, attribute: "scale", to: to.scale },
+  ], {
+    name: GLIDE, duration, easing: cssEase,
+    ontick: () => proto.pan.call(canvas, position),
+  });
+}
+
+/**
+ * Width of Foundry's sidebar panel on screen once it has finished sliding, or 0 while it is
+ * collapsed. The slide moves the panel but never resizes it, and an open panel ends at the
+ * window's right edge, so its own width is the answer even mid-slide. The tab strip beside it
+ * is left out, so it overlaps the frame like the controls on the left.
  */
 function sidebarWidth() {
   const el = ui.sidebar?.expanded ? document.getElementById("sidebar-content") : null;
   const rect = el?.isConnected ? el.getBoundingClientRect() : null;
-  if (!rect?.width) return 0;
-  return Math.max(0, window.innerWidth - rect.left);
+  return rect?.width > 0 ? rect.width : 0;
 }
 
 /** Cover the screen with the frame, or fit it beside an open sidebar (see fitFrame). */

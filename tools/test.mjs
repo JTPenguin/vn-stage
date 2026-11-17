@@ -758,6 +758,31 @@ test("view fit: a sidebar wider than half the screen, or none, means cover", () 
   assert.deepEqual(R.fitFrame(1920, 1080, -50, FRAME.width, FRAME.height), cover);
 });
 
+test("sidebar glide: CSS ease runs 0 to 1, rises steadily, and matches the browser's curve", () => {
+  assert.equal(R.cssEase(0), 0);
+  assert.equal(R.cssEase(1), 1);
+  assert.equal(R.cssEase(-1), 0);
+  assert.equal(R.cssEase(2), 1);
+  let last = 0;
+  for (let t = 0.05; t < 1; t += 0.05) {
+    const v = R.cssEase(t);
+    assert.ok(v > last, `rises at ${t.toFixed(2)}`);
+    last = v;
+  }
+  // Known points of cubic-bezier(0.25, 0.1, 0.25, 1).
+  assert.ok(Math.abs(R.cssEase(0.5) - 0.8024) < 0.001);
+  assert.ok(Math.abs(R.cssEase(0.25) - 0.4094) < 0.001);
+});
+
+test("sidebar glide: the slide's length comes from the computed transition lists", () => {
+  assert.equal(R.transitionMs("margin-right", "margin-right, margin-left", "0.25s, 0.25s", 99), 250);
+  assert.equal(R.transitionMs("margin-left", "margin-right, margin-left", "250ms, 400ms", 99), 400);
+  assert.equal(R.transitionMs("margin-left", "margin-right, margin-left", "0.3s", 99), 300, "a short list repeats");
+  assert.equal(R.transitionMs("margin-right", "all", "0s", 99), 0, "no slide");
+  assert.equal(R.transitionMs("margin-right", "opacity", "1s", 99), 99, "not transitioned");
+  assert.equal(R.transitionMs("margin-right", undefined, undefined, 99), 99, "no style");
+});
+
 /* -------------------------------------------- */
 /*  Moves                                       */
 /* -------------------------------------------- */

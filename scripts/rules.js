@@ -36,6 +36,43 @@ export function fitFrame(screenW, screenH, sidebarW, frameW, frameH) {
 }
 
 /**
+ * CSS's `ease` timing curve, cubic-bezier(0.25, 0.1, 0.25, 1), so the view can
+ * glide in step with Foundry's sidebar slide. Takes and returns progress on [0, 1].
+ */
+export function cssEase(t) {
+  if (t <= 0) return 0;
+  if (t >= 1) return 1;
+  const [x1, y1, x2, y2] = [0.25, 0.1, 0.25, 1];
+  const bez = (s, a, b) => 3 * a * s * (1 - s) ** 2 + 3 * b * s * s * (1 - s) + s ** 3;
+  // The curve's x rises steadily from 0 to 1, so bisect for the s where x(s) = t.
+  let lo = 0, hi = 1, s = t;
+  for (let i = 0; i < 30; i++) {
+    s = (lo + hi) / 2;
+    if (bez(s, x1, x2) < t) lo = s;
+    else hi = s;
+  }
+  return bez(s, y1, y2);
+}
+
+/**
+ * How long a CSS transition on `property` runs, in milliseconds, from an
+ * element's computed `transition-property` and `transition-duration` lists
+ * ("margin-right, margin-left" and "0.25s, 250ms"). A list shorter than the
+ * properties repeats, as CSS does. `fallback` when the property isn't there.
+ */
+export function transitionMs(property, properties, durations, fallback) {
+  const props = String(properties ?? "").split(",").map((p) => p.trim());
+  const times = String(durations ?? "").split(",").map((d) => d.trim()).filter(Boolean);
+  let i = props.indexOf(property);
+  if (i < 0) i = props.indexOf("all");
+  if (i < 0 || !times.length) return fallback;
+  const d = times[i % times.length];
+  const n = parseFloat(d);
+  if (!Number.isFinite(n)) return fallback;
+  return d.endsWith("ms") ? n : n * 1000;
+}
+
+/**
  * The most a wide screen crops off the top of the frame, as a share of its
  * height: just above the highest face guide (a Large creature's, near 0.5).
  * Only screens wider than about 3.2:1 reach it.
