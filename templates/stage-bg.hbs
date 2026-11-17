@@ -1,4 +1,4 @@
-<button type="button" class="vn-bg-choice {{#if current}}current{{/if}} {{#if pinned}}pinned{{/if}} {{#if elsewhere}}elsewhere{{/if}}" data-action="setBackground" data-src="{{src}}" {{#if tagItem}}data-tag-item="{{tagItem}}"{{/if}} data-tooltip="{{tooltip}}" aria-label="{{label}}">
+<button type="button" class="vn-bg-choice {{#if current}}current{{/if}} {{#if pinned}}pinned{{/if}} {{#if elsewhere}}elsewhere{{/if}}" data-action="setBackground" data-src="{{src}}" {{#if tagItem}}data-tag-item="{{tagItem}}"{{/if}} aria-label="{{label}}">
   {{#if video}}
   <video src="{{src}}" muted loop playsinline preload="metadata"></video>
   <i class="fa-solid fa-film vn-bg-video"></i>
@@ -6,4 +6,5 @@
   <img src="{{src}}" alt="" loading="lazy">
   {{/if}}
   {{#if pinned}}<i class="fa-solid fa-house vn-bg-pin"></i>{{/if}}
+  <span class="vn-bg-name">{{label}}</span>
 </button>

@@ -94,6 +94,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   #dragRow = null; // the Cast row being dragged, while it is
   #sizeTimer = null;
   #facesObserver = null; // refits the preset rows' avatars when the list's width changes
+  #namesObserver = null; // rechecks which background names are cut short when a strip's width changes
 
   get title() {
     return this.#tagLabel ? `VN Stage · ${this.#tagLabel}` : "VN Stage";
@@ -208,6 +209,13 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       this.#facesObserver = new ResizeObserver(() => this.#fitFaces(presetList));
       this.#facesObserver.observe(presetList);
     }
+
+    // Background names under the thumbnails: a cut-short name shows in full on hover; again whenever a strip's width changes (a resize, its tab or folder opening).
+    this.#namesObserver?.disconnect();
+    const strips = this.element.querySelectorAll(".vn-bg-strip");
+    this.#fitNames();
+    this.#namesObserver = new ResizeObserver(() => this.#fitNames());
+    for (const strip of strips) this.#namesObserver.observe(strip);
 
     // Video backgrounds (and presets' video backgrounds): the thumbnail plays while hovered, then rewinds to its first frame.
     for (const video of this.element.querySelectorAll(".vn-bg-choice video, .vn-preset-row video")) {
@@ -335,6 +343,18 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     super._onClose(options);
     this.#facesObserver?.disconnect();
     this.#facesObserver = null;
+    this.#namesObserver?.disconnect();
+    this.#namesObserver = null;
+  }
+
+  /** Give each background a hover text with its full name, only where the name under its thumbnail is cut short. */
+  #fitNames() {
+    for (const name of this.element.querySelectorAll(".vn-bg-name")) {
+      if (!name.clientWidth) continue; // hidden (its tab or folder is closed); the observer checks it once it shows
+      const button = name.closest(".vn-bg-choice");
+      if (name.scrollWidth > name.clientWidth) button.dataset.tooltip = esc(name.textContent);
+      else delete button.dataset.tooltip;
+    }
   }
 
   /** Trim each preset row's avatars to its width, counting the rest in a "+N" that names them on hover. */

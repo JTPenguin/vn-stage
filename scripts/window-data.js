@@ -150,18 +150,13 @@ async function presetFace(entry, byKey) {
   return { thumb: byKey.get(form ?? base)?.thumb ?? null, name, tooltip: esc(name) };
 }
 
-/** "Tags: A, B" for a hover text (escaped: Foundry shows tooltips as HTML), or null with none. */
-function tagLine(tags) {
-  return tags.length ? `Tags: ${esc(tags.map((t) => t.label).join(", "))}` : null;
-}
-
 /**
  * The Background strips: the default background pinned first (and the one shown
  * now, when it's in no strip, so it can be tagged), then the tag's single
  * backgrounds and each of its folders, with a heading each; or the stage's
  * own last-browsed folder when no tag is
  * selected (under Untagged, only its backgrounds that have no tag). Each
- * background names its tags in its hover text.
+ * background's name shows under its thumbnail.
  */
 export async function backgroundStrips(scene, selected, collapsed) {
   const tag = getTag(selected);
@@ -172,7 +167,6 @@ export async function backgroundStrips(scene, selected, collapsed) {
   const choice = (src, label, pinned = false) => ({
     src, label, pinned, video: isVideo(src), current: same(src, current),
     tagItem: tag ? backgroundTagItem(tagsOf(src), tag.id) : null, // what its right-click menu offers for the tag
-    tooltip: [esc(label), tagLine(tagsOf(src))].filter(Boolean).join("<br>"),
   });
 
   const folders = tag ? (await tagFolders(tag.id)).map((f) => f.folder) : [backgroundFolder(scene)].filter(Boolean);
