@@ -207,6 +207,23 @@ test("an old whole-party entry becomes every member, in its order, skipping memb
   assert.deepEqual(names(R.fitPartyCast(old, [A, B, C])), ["Bo:1", "Cy:0", "Ana:0"]);
 });
 
+test("a preset row: one Party avatar for any party member (old whole-party entries too), everyone else in order", () => {
+  const faces = R.presetFaces(saved);
+  assert.equal(faces.party, true);
+  assert.deepEqual(faces.others.map((e) => e.name), ["Vane", "Pell"]);
+  assert.equal(R.presetFaces([{ party: true, order: [] }, { name: "Vane" }]).party, true);
+  assert.deepEqual(R.presetFaces([{ name: "Vane" }]), { party: false, others: [{ name: "Vane" }] });
+  assert.deepEqual(R.presetFaces(undefined), { party: false, others: [] });
+});
+
+test("a preset row's avatars: all when they fit, else room left for +N", () => {
+  assert.equal(R.avatarsThatFit(3, 100, 20, 4), 3); // 4 slots
+  assert.equal(R.avatarsThatFit(4, 92, 20, 4), 4); // exactly 4 slots
+  assert.equal(R.avatarsThatFit(5, 92, 20, 4), 3); // 3 and +2
+  assert.equal(R.avatarsThatFit(5, 10, 20, 4), 0); // no room at all
+  assert.equal(R.avatarsThatFit(0, 100, 20, 4), 0);
+});
+
 test("a preset with no party members adds nobody", () => {
   assert.deepEqual(names(R.fitPartyCast([{ name: "Vane", cluster: 1 }], [A, B])), ["Vane:1"]);
 });

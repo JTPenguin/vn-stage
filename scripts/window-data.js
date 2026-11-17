@@ -1,4 +1,4 @@
-import { indexedActorKey } from "./art.js";
+import { indexedActorKey, baseArtKeyOf } from "./art.js";
 import { getCast, partyEntryIds, partyCluster, PARTY_LABEL } from "./cast.js";
 import { listPresets, stagePreset } from "./presets.js";
 import { currentBackground, backgroundFolder, folderImages, backgroundLabel, decodePath, isVideo } from "./stage.js";
@@ -6,11 +6,11 @@ import { ALL, RECENT, UNTAGGED, getTag, tagFolders, memberNames, listTags, backg
 import { folderLabel } from "./tags-window.js";
 import { esc } from "./dialogs.js";
 import { safetyBackground } from "./settings.js";
-import { familyOf, isEntryFor, tellApart, backgroundTagItem } from "./rules.js";
+import { familyOf, isEntryFor, tellApart, backgroundTagItem, presetFaces } from "./rules.js";
 
 /**
  * What the Stage window shows, worked out from the stage, the art and the
- * settings: Cast rows, preset chips and background strips. No rendering here
+ * settings: Cast rows, preset rows and background strips. No rendering here
  * (window.js), so the window's class stays about what it does.
  */
 
@@ -117,26 +117,37 @@ export function rowContext(r) {
 
 /**
  * The Presets list: the presets with the selected tag (every preset under All
- * characters and Recent, the ones with no tag under Untagged). Each names its
- * tags in its hover text. The one last loaded or saved on this stage is lit,
- * and marked changed once the stage differs from it.
+ * characters and Recent, the ones with no tag under Untagged). Each row shows
+ * its background, its name and who's in it: one Party avatar for any party
+ * members, then everyone else in standing order (window.js trims them to the
+ * row's width). A row has no hover text of its own, so its avatars' show. The
+ * one last loaded or saved on this stage is lit, and marked changed once the
+ * stage differs from it.
  */
-export function presetRows(scene, selected) {
+export async function presetRows(index, scene, selected) {
   const lit = stagePreset(scene);
   const only = getTag(selected)?.id ?? (selected === UNTAGGED ? UNTAGGED : null);
-  return listPresets(only).map((p) => ({
-    id: p.id,
-    name: p.name,
-    // Foundry shows tooltips as HTML, so the names are escaped.
-    tooltip: [
-      esc(p.name),
-      tagLine(p.tags.map((id) => getTag(id)).filter(Boolean)),
-      lit?.id === p.id && lit.changed ? "The stage has changed since it was loaded" : null,
-      "Click to load · right-click for more",
-    ].filter(Boolean).join("<br>"),
-    current: lit?.id === p.id,
-    changed: lit?.id === p.id && lit.changed,
+  const byKey = new Map(index.map((a) => [a.key, a]));
+  return Promise.all(listPresets(only).map(async (p) => {
+    const { party, others } = presetFaces(p.cast);
+    return {
+      id: p.id,
+      name: p.name,
+      background: p.background ? { src: p.background, video: isVideo(p.background) } : null,
+      party: party ? { label: PARTY_LABEL } : null,
+      faces: await Promise.all(others.map((e) => presetFace(e, byKey))),
+      current: lit?.id === p.id,
+      changed: lit?.id === p.id && lit.changed,
+    };
   }));
+}
+
+/** One avatar on a preset row: the character's thumb (the form the preset saved, if it has art) and name. */
+async function presetFace(entry, byKey) {
+  const base = await baseArtKeyOf(entry);
+  const form = entry.form && base && familyOf(entry.form) === familyOf(base) && byKey.has(entry.form) ? entry.form : null;
+  const name = (entry.actorUuid && fromUuidSync(entry.actorUuid)?.name) || byKey.get(base)?.label || entry.name;
+  return { thumb: byKey.get(form ?? base)?.thumb ?? null, name, tooltip: esc(name) };
 }
 
 /** "Tags: A, B" for a hover text (escaped: Foundry shows tooltips as HTML), or null with none. */

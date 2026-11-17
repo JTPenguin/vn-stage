@@ -35,8 +35,19 @@
     <ul class="vn-preset-list">
       {{#each presets}}
       <li data-preset="{{id}}" data-name="{{name}}">
-        <button type="button" class="vn-preset-chip {{#if current}}current{{/if}}" data-action="loadPreset" data-tooltip="{{tooltip}}">
-          <i class="fa-solid fa-play"></i><span class="vn-name">{{name}}</span>{{#if changed}}<span class="vn-changed"></span>{{/if}}
+        <button type="button" class="vn-preset-row {{#if current}}current{{/if}}" data-action="loadPreset" aria-label="Load {{name}}">
+          <span class="vn-preset-thumb">
+            {{#if background}}{{#if background.video}}<video src="{{background.src}}" muted loop playsinline preload="metadata"></video><i class="fa-solid fa-film vn-bg-video"></i>{{else}}<img src="{{background.src}}" alt="" loading="lazy">{{/if}}
+            {{else}}<i class="fa-regular fa-image vn-preset-nobg" data-tooltip="No background saved"></i>{{/if}}
+          </span>
+          <span class="vn-preset-body">
+            <span class="vn-preset-name"><span class="vn-name">{{name}}</span>{{#if changed}}<span class="vn-changed" data-tooltip="The stage has changed since it was loaded"></span>{{/if}}</span>
+            <span class="vn-preset-faces">
+              {{#if party}}<span class="vn-face vn-face-party" data-name="{{party.label}}" data-tooltip="{{party.label}}"><i class="fa-solid fa-users"></i></span>{{/if}}
+              {{#each faces}}<span class="vn-face" data-name="{{name}}" data-tooltip="{{tooltip}}">{{#if thumb}}<img src="{{thumb}}" alt="" loading="lazy">{{else}}<i class="fa-solid fa-user"></i>{{/if}}</span>{{/each}}
+              <span class="vn-face vn-face-more" hidden></span>
+            </span>
+          </span>
         </button>
       </li>
       {{else}}

@@ -136,6 +136,26 @@ export function stable(value) {
   return JSON.stringify(value ?? null);
 }
 
+/**
+ * Who a preset's row shows: `party` when it has any party member (one Party
+ * avatar stands for them all, since loading re-fits the party anyway), and
+ * everyone else in standing order.
+ */
+export function presetFaces(cast = []) {
+  const party = cast.some((e) => e.partyMember || isOldPartyEntry(e));
+  return { party, others: cast.filter((e) => !e.partyMember && !isOldPartyEntry(e)) };
+}
+
+/**
+ * How many of `count` avatars (each `size` wide, `gap` apart) to show in
+ * `width`: all of them when they fit, else as many as leave room for a "+N"
+ * badge of the same size.
+ */
+export function avatarsThatFit(count, width, size, gap) {
+  const slots = Math.max(0, Math.floor((width + gap) / (size + gap)));
+  return count <= slots ? count : Math.max(0, slots - 1);
+}
+
 /* -------------------------------------------- */
 /*  Art                                         */
 /* -------------------------------------------- */

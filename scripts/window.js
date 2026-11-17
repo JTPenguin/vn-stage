@@ -8,7 +8,7 @@ import { getPreset, savePreset, loadPreset, deletePreset, findPresetByName, upda
 import { isStage, makeStage, setBackground, currentBackground, pickBackground, clearFolderCache, decodePath } from "./stage.js";
 import { ALL, RECENT, UNTAGGED, listTags, getTag, stageTag, setStageTag, addImage, removeImage, addMember } from "./tags.js";
 import { TagsWindow, pickTagFolder } from "./tags-window.js";
-import { tagItemLabel } from "./rules.js";
+import { tagItemLabel, avatarsThatFit } from "./rules.js";
 import { TagEditor } from "./tag-editor.js";
 import { askName, confirm, esc } from "./dialogs.js";
 import { resetAllExpressions } from "./expressions.js";
@@ -92,6 +92,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   #rows = new Map(); // Cast row id → its row (from the last render): who it adds, and their entry on stage
   #dragRow = null; // the Cast row being dragged, while it is
   #sizeTimer = null;
+  #facesObserver = null; // refits the preset rows' avatars when the list's width changes
 
   get title() {
     return this.#tagLabel ? `VN Stage · ${this.#tagLabel}` : "VN Stage";
@@ -110,7 +111,7 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     const tag = getTag(selected);
     this.#tagLabel = tag?.label ?? (selected === RECENT ? "Recent" : selected === UNTAGGED ? "Untagged" : null);
 
-    const presets = presetRows(scene, selected);
+    const presets = await presetRows(index, scene, selected);
 
     // The Cast list: the characters with the tag, then everyone else (shown only while searching).
     const { rows, mine, others } = await castLists(index, scene, selected);
@@ -198,9 +199,18 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     });
     this.#applyFilter();
 
-    // Video backgrounds: the thumbnail plays while hovered, then rewinds to its first frame.
-    for (const video of this.element.querySelectorAll(".vn-bg-choice video")) {
-      const button = video.closest(".vn-bg-choice");
+    // Preset rows show as many avatars as fit, then +N; again whenever the list's width changes (a resize, or its tab opening).
+    this.#facesObserver?.disconnect();
+    const presetList = this.element.querySelector(".vn-preset-list");
+    if (presetList) {
+      this.#fitFaces(presetList);
+      this.#facesObserver = new ResizeObserver(() => this.#fitFaces(presetList));
+      this.#facesObserver.observe(presetList);
+    }
+
+    // Video backgrounds (and presets' video backgrounds): the thumbnail plays while hovered, then rewinds to its first frame.
+    for (const video of this.element.querySelectorAll(".vn-bg-choice video, .vn-preset-row video")) {
+      const button = video.closest(".vn-bg-choice, .vn-preset-row");
       button.addEventListener("mouseenter", () => video.play().catch(() => {}));
       button.addEventListener("mouseleave", () => { video.pause(); video.currentTime = 0; });
     }
@@ -320,6 +330,32 @@ export class StageWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   /** Searching filters the tag's rows and brings in matching rows from outside it, under a divider. */
+  _onClose(options) {
+    super._onClose(options);
+    this.#facesObserver?.disconnect();
+    this.#facesObserver = null;
+  }
+
+  /** Trim each preset row's avatars to its width, counting the rest in a "+N" that names them on hover. */
+  #fitFaces(list) {
+    for (const row of list.querySelectorAll(".vn-preset-faces")) {
+      const width = row.clientWidth;
+      if (!width) continue; // its tab is hidden; the observer fits it once it shows
+      const faces = [...row.querySelectorAll(".vn-face:not(.vn-face-more)")];
+      const more = row.querySelector(".vn-face-more");
+      for (const f of faces) f.hidden = false;
+      const size = faces[0]?.offsetWidth ?? 0;
+      const gap = parseFloat(getComputedStyle(row).columnGap) || 0;
+      const shown = size ? avatarsThatFit(faces.length, width, size, gap) : faces.length;
+      faces.forEach((f, i) => { f.hidden = i >= shown; });
+      const rest = faces.slice(shown);
+      more.hidden = !rest.length;
+      more.textContent = rest.length ? `+${rest.length}` : "";
+      if (rest.length) more.dataset.tooltip = rest.map((f) => esc(f.dataset.name)).join("<br>");
+      else delete more.dataset.tooltip;
+    }
+  }
+
   #applyFilter() {
     const q = this.#filter.trim().toLowerCase();
     let outside = 0;
