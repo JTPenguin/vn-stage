@@ -1,8 +1,9 @@
 ---
 title: "Cast as a grid instead of a list"
 kind: feature
-status: in-progress
-waits_on: Justin
+status: done
+waits_on: none
+outcome: "Done: the Cast tab is a grid of square tiles. Checked in Foundry by Justin, 2026-11-16."
 blocked_by: []
 source: "Justin's words, 2026-11-16"
 added: 2026-11-16
@@ -43,5 +44,3 @@ Show the Stage window's Cast tab as a grid of tiles instead of a list of rows.
 **Others divider (Justin, 2026-11-16):** a full-width heading, with the others in their own grid below it, hidden until a search as today.
 
 **Built (2026-11-16):** one grid in `.vn-cast-list`, so drag, search and the tag drop work unchanged. Tiles are in [cast-row.hbs](templates/cast-row.hbs); the Party tile is in [stage-window.hbs](templates/stage-window.hbs); `rowContext` builds the hover text and `CHIPS` is 1 ([window-data.js](scripts/window-data.js)); the styles are at the top of [stage.css](styles/stage.css). The divider and the empty note span the grid. Tests and the load check pass.
-
-**Next step:** Justin checks it in Foundry: drag a tile and the Party tile to the stage, search, the right-click menu, the tag chip and "+N", × and + on hover, the faded and bordered tiles, the hover text, and dragging an outside tile above the divider.
